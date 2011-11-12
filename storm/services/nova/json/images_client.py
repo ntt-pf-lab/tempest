@@ -1,6 +1,7 @@
 import json
-import zodiac.common.rest_client as rest_client
+import storm.common.rest_client as rest_client
 import time
+from storm import exceptions
 
 class ImagesClient(object):
 
@@ -77,7 +78,3 @@ class ImagesClient(object):
 
             if (int(time.time()) - start >= self.build_timeout):
                 raise exceptions.BuildErrorException
-        
-        
-        
-        
