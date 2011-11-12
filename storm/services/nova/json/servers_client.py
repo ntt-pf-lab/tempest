@@ -1,14 +1,15 @@
 import json
-import zodiac.common.rest_client as rest_client
+import storm.common.rest_client as rest_client
 import time
-import zodiac.config
-from zodiac import exceptions
+from storm import exceptions
+import storm.config
+
 
 class ServersClient(object):
 
     def __init__(self, username, key, auth_url, tenant_name):
         self.client = rest_client.RestClient(username, key, auth_url, tenant_name)
-        self.config = zodiac.config.ZodiacConfig()
+        self.config = storm.config.StormConfig()
         self.build_interval = self.config.nova.build_interval
         self.build_timeout = self.config.nova.build_timeout
         self.headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
@@ -153,7 +154,7 @@ class ServersClient(object):
                                     (str(server_id), network_id))
         body = json.loads(body)
         return resp, body
-    
+
     def change_password(self, server_id, password):
         """Changes the root password for the server."""
         post_body = {
@@ -215,7 +216,7 @@ class ServersClient(object):
         resp, body = self.client.post('servers/%s/action' % 
                                       str(server_id), post_body, self.headers)
         return resp, body
-    
+
     def confirm_resize(self, server_id):
         """Confirms the flavor change for a server."""
         post_body = {
@@ -226,7 +227,6 @@ class ServersClient(object):
         resp, body = self.client.post('servers/%s/action' % 
                                       str(server_id), post_body, self.headers)
         return resp, body
-    
     def revert_resize(self, server_id):
         """Reverts a server back to its original flavor."""
         post_body = {
