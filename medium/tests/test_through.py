@@ -1,10 +1,22 @@
 import subprocess
+import time
+import urllib
 from nose.plugins.attrib import attr
 from storm import openstack
 from storm.common.utils.data_utils import rand_name
 import base64
-import storm.config
+import medium.config
 import unittest2 as unittest
+
+
+def wait_to_be_launched(host, port):
+    while True:
+        try:
+            urllib.urlopen('http://%(host)s:%(port)s/' % locals())
+            time.sleep(.1)
+            break
+        except IOError:
+            pass
 
 
 class GlanceRegistryProcess(object):
@@ -16,7 +28,46 @@ class GlanceRegistryProcess(object):
     def start(self):
         self._process = subprocess.Popen(["bin/glance-registry",
                                           "--config-file=%s" % self.config],
-                                         shell=True, cwd=self.directory)
+                                         cwd=self.directory)
+
+    def stop(self):
+        self._process.terminate()
+        self._process = None
+
+
+class GlanceApiProcess(object):
+    def __init__(self, directory, config, host, port):
+        self.directory = directory
+        self.config = config
+        self.host = host
+        self.port = port
+        self._process = None
+
+    def start(self):
+        self._process = subprocess.Popen(["bin/glance-api",
+                                          "--config-file=%s" % self.config],
+                                         cwd=self.directory)
+        wait_to_be_launched(self.host, self.port)
+
+    def stop(self):
+        self._process.terminate()
+        self._process = None
+
+
+class KeystoneProcess(object):
+    def __init__(self, directory, config, host, port):
+        self.directory = directory
+        self.config = config
+        self.host = host
+        self.port = port
+        self._process = None
+
+    def start(self):
+        self._process = subprocess.Popen(["bin/keystone",
+                                          "--config-file", self.config,
+                                          "-d"],
+                                         cwd=self.directory)
+        wait_to_be_launched(self.host, self.port)
 
     def stop(self):
         self._process.terminate()
@@ -29,13 +80,27 @@ class ServersTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.config = storm.config.StormConfig(cls.config_path)
+        cls.config = medium.config.MediumConfig(cls.config_path)
 
         # boot glance.
         cls.glance_registry = GlanceRegistryProcess(
                 cls.config.glance.directory,
                 cls.config.glance.registry_config)
+        cls.glance_api = GlanceApiProcess(
+                cls.config.glance.directory,
+                cls.config.glance.api_config,
+                cls.config.glance.host,
+                cls.config.glance.port)
         cls.glance_registry.start()
+        cls.glance_api.start()
+
+        # boot keystone.
+        cls.keystone = KeystoneProcess(
+                cls.config.keystone.directory,
+                cls.config.keystone.config,
+                cls.config.keystone.host,
+                cls.config.keystone.port)
+        cls.keystone.start()
 
         # cls.os = openstack.Manager()
         # cls.client = cls.os.servers_client
@@ -46,6 +111,8 @@ class ServersTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.glance_registry.stop()
+        cls.glance_api.stop()
+        cls.keystone.stop()
 
     @attr(type='smoke')
     def test_through(self):
