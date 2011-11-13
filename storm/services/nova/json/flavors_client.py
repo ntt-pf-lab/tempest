@@ -5,9 +5,10 @@ import time
 
 class FlavorsClient(object):
 
-    def __init__(self, username, key, auth_url, tenant_name=None):
+    def __init__(self, username, key, auth_url, tenant_name=None, config=None):
         self.client = rest_client.RestClient(username, key,
-                                             auth_url, tenant_name)
+                                             auth_url, tenant_name,
+                                             config=config)
 
     def list_flavors(self, params=None):
         url = 'flavors'

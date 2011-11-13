@@ -5,8 +5,9 @@ from storm import exceptions
 
 class ImagesClient(object):
 
-    def __init__(self, username, key, auth_url, tenant_name):
-        self.client = rest_client.RestClient(username, key, auth_url, tenant_name)
+    def __init__(self, username, key, auth_url, tenant_name, config=None):
+        self.client = rest_client.RestClient(username, key, auth_url, tenant_name,
+                                             config=config)
         
     def create_image(self, server_id, name, meta = None):
         """

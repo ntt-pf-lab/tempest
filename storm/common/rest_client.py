@@ -5,8 +5,10 @@ import storm.config
 
 class RestClient(object):
 
-    def __init__(self, user, key, auth_url, tenant_name=None):
-        self.config = storm.config.StormConfig()
+    def __init__(self, user, key, auth_url, tenant_name=None, config=None):
+        if config is None:
+            config = storm.config.StormConfig()
+        self.config = config
 
         if self.config.env.authentication == 'keystone_v2':
             self.token, self.base_url = self.keystone_v2_auth(user,

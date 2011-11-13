@@ -7,9 +7,13 @@ import storm.config
 
 class ServersClient(object):
 
-    def __init__(self, username, key, auth_url, tenant_name):
-        self.client = rest_client.RestClient(username, key, auth_url, tenant_name)
-        self.config = storm.config.StormConfig()
+    def __init__(self, username, key, auth_url, tenant_name, config=None):
+        if config is None:
+            config = storm.config.StormConfig()
+        self.config = config
+
+        self.client = rest_client.RestClient(username, key, auth_url, tenant_name,
+                                             config=config)
         self.build_interval = self.config.nova.build_interval
         self.build_timeout = self.config.nova.build_timeout
         self.headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
