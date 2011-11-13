@@ -49,6 +49,21 @@ class NovaConfig(object):
         """Timeout in seconds to wait for an entity to build."""
         return float(self.get("build_timeout", 300))
 
+    @property
+    def host(self):
+        """IP address of nova daemon running. Defaults to 127.0.0.1"""
+        return self.get("host", "127.0.0.1")
+
+    @property
+    def port(self):
+        """Port number of nova daemon running. Defaults to 8774"""
+        return self.get("port", "8774")
+
+    @property
+    def directory(self):
+        """Directory of nova home. Defaults to /opt/stack/nova"""
+        return self.get("directory", "/opt/stack/nova")
+
 
 class EnvironmentConfig(object):
     def __init__(self, conf):

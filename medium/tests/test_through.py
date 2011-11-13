@@ -77,34 +77,68 @@ class KeystoneProcess(object):
         self._process = None
 
 
+class NovaApiProcess(object):
+    def __init__(self, directory, host, port):
+        self.directory = directory
+        self.host = host
+        self.port = port
+        self._process = None
+
+    def start(self):
+        self._process = subprocess.Popen(["bin/nova-api"],
+                                         cwd=self.directory)
+        assert self._process.returncode is None
+        wait_to_be_launched(self.host, self.port)
+
+    def stop(self):
+        self._process.terminate()
+        self._process = None
+
+
+class NovaComputeProcess(object):
+    def __init__(self, directory):
+        self.directory = directory
+        self._process = None
+
+    def start(self):
+        self._process = subprocess.Popen(["sg", "libvirtd",
+                                          "bin/nova-compute"],
+                                         cwd=self.directory)
+        assert self._process.returncode is None
+
+    def stop(self):
+        self._process.terminate()
+        self._process = None
+
+
 class ServersTest(unittest.TestCase):
 
     config_path = 'etc/medium.config.ini'
 
     @classmethod
     def setUpClass(cls):
+        cls.environment_processes = processes = []
         cls.config = medium.config.MediumConfig(cls.config_path)
 
-        # boot glance.
-        cls.glance_registry = GlanceRegistryProcess(
+        # glance.
+        processes.append(GlanceRegistryProcess(
                 cls.config.glance.directory,
-                cls.config.glance.registry_config)
-        cls.glance_api = GlanceApiProcess(
+                cls.config.glance.registry_config))
+        processes.append(GlanceApiProcess(
                 cls.config.glance.directory,
                 cls.config.glance.api_config,
                 cls.config.glance.host,
-                cls.config.glance.port)
-        cls.glance_registry.start()
-        cls.glance_api.start()
+                cls.config.glance.port))
 
-        # boot keystone.
-        cls.keystone = KeystoneProcess(
+        # keystone.
+        processes.append(KeystoneProcess(
                 cls.config.keystone.directory,
                 cls.config.keystone.config,
                 cls.config.keystone.host,
-                cls.config.keystone.port)
-        cls.keystone.start()
+                cls.config.keystone.port))
 
+        for process in processes:
+            process.start()
         # cls.os = openstack.Manager()
         # cls.client = cls.os.servers_client
         # cls.image_ref = cls.config.env.image_ref
@@ -113,9 +147,26 @@ class ServersTest(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.glance_registry.stop()
-        cls.glance_api.stop()
-        cls.keystone.stop()
+        for process in cls.environment_processes:
+            process.stop()
+
+    def setUp(self):
+        self.testing_processes = processes = []
+
+        # nova.
+        processes.append(NovaApiProcess(
+                self.config.nova.directory,
+                self.config.nova.host,
+                self.config.nova.port))
+        processes.append(NovaComputeProcess(
+                self.config.nova.directory))
+
+        for process in processes:
+            process.start()
+
+    def tearDown(self):
+        for process in self.testing_processes:
+            process.stop()
 
     @attr(type='smoke')
     def test_through(self):
