@@ -6,25 +6,31 @@ import storm.config
 
 class Manager(object):
 
-    def __init__(self):
+    def __init__(self, config=None):
         """
         Top level manager for all Openstack APIs
         """
 
-        self.config = storm.config.StormConfig()
+        if config is None:
+            config = storm.config.StormConfig()
+        self.config = config
+
         if self.config.env.authentication == 'keystone_v2':
             self.servers_client = ServersClient(self.config.nova.username,
                                                 self.config.nova.api_key,
                                                 self.config.nova.auth_url,
-                                                self.config.nova.tenant_name)
+                                                self.config.nova.tenant_name,
+                                                config=config)
             self.flavors_client = FlavorsClient(self.config.nova.username,
                                                 self.config.nova.api_key,
                                                 self.config.nova.auth_url,
-                                                self.config.nova.tenant_name)
+                                                self.config.nova.tenant_name,
+                                                config=config)
             self.images_client = ImagesClient(self.config.nova.username,
                                               self.config.nova.api_key,
                                               self.config.nova.auth_url,
-                                              self.config.nova.tenant_name)
+                                              self.config.nova.tenant_name,
+                                              config=config)
         else:
             #Assuming basic/native authentication
             self.servers_client = ServersClient(self.config.nova.username,
