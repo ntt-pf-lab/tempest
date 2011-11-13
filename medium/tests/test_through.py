@@ -4,9 +4,9 @@ import time
 import urllib
 from nose.plugins.attrib import attr
 from storm import openstack
+import storm.config
 from storm.common.utils.data_utils import rand_name
 import base64
-import medium.config
 import unittest2 as unittest
 
 
@@ -150,12 +150,12 @@ class QuantumPluginOvsAgentProcess(Process):
 
 class ServersTest(unittest.TestCase):
 
-    config_path = 'etc/medium.config.ini'
+    config_path = 'etc/medium.conf'
 
     @classmethod
     def setUpClass(cls):
         cls.environment_processes = processes = []
-        cls.config = medium.config.MediumConfig(cls.config_path)
+        cls.config = storm.config.StormConfig(cls.config_path)
 
         # glance.
         processes.append(GlanceRegistryProcess(
@@ -178,18 +178,19 @@ class ServersTest(unittest.TestCase):
         processes.append(QuantumProcess(
             cls.config.quantum.directory,
             cls.config.quantum.config))
-        time.sleep(10)
+        time.sleep(5)
         processes.append(QuantumPluginOvsAgentProcess(
             cls.config.quantum.directory,
             cls.config.quantum.agent_config))
 
         for process in processes:
             process.start()
-        # cls.os = openstack.Manager()
-        # cls.client = cls.os.servers_client
-        # cls.image_ref = cls.config.env.image_ref
-        # cls.flavor_ref = cls.config.env.flavor_ref
-        # cls.ssh_timeout = cls.config.nova.ssh_timeout
+
+        cls.os = openstack.Manager(config=cls.config)
+        cls.client = cls.os.servers_client
+        cls.image_ref = cls.config.env.image_ref
+        cls.flavor_ref = cls.config.env.flavor_ref
+        cls.ssh_timeout = cls.config.nova.ssh_timeout
 
     @classmethod
     def tearDownClass(cls):
@@ -211,6 +212,8 @@ class ServersTest(unittest.TestCase):
         processes.append(NovaSchedulerProcess(
                 self.config.nova.directory))
 
+        # sync db
+
         for process in processes:
             process.start()
 
@@ -218,10 +221,10 @@ class ServersTest(unittest.TestCase):
         for process in self.testing_processes:
             process.stop()
 
+        # drop db
+
     @attr(type='smoke')
     def test_through(self):
-        pass
-        """
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -229,6 +232,8 @@ class ServersTest(unittest.TestCase):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
+        #import pudb; pudb.set_trace()
+        assert False, "Poison pill"
         resp, server = self.client.create_server(name,
                                                  self.image_ref,
                                                  self.flavor_ref,
@@ -250,4 +255,3 @@ class ServersTest(unittest.TestCase):
 
         #Teardown
         self.client.delete_server(self.id)
-        """
