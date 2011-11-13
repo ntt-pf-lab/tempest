@@ -10,7 +10,7 @@ import medium.config
 import unittest2 as unittest
 
 
-def wait_to_be_launched(host, port):
+def wait_to_launch(host, port):
     while True:
         try:
             urllib.urlopen('http://%(host)s:%(port)s/' % locals())
@@ -73,7 +73,7 @@ class GlanceApiProcess(Process):
 
     def start(self):
         super(GlanceApiProcess, self).start()
-        wait_to_be_launched(self.host, self.port)
+        wait_to_launch(self.host, self.port)
 
 
 class KeystoneProcess(Process):
@@ -88,7 +88,7 @@ class KeystoneProcess(Process):
 
     def start(self):
         super(KeystoneProcess, self).start()
-        wait_to_be_launched(self.host, self.port)
+        wait_to_launch(self.host, self.port)
 
 
 class NovaApiProcess(Process):
@@ -100,7 +100,7 @@ class NovaApiProcess(Process):
 
     def start(self):
         super(NovaApiProcess, self).start()
-        wait_to_be_launched(self.host, self.port)
+        wait_to_launch(self.host, self.port)
 
 
 class NovaComputeProcess(Process):
