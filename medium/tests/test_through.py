@@ -213,6 +213,9 @@ class ServersTest(unittest.TestCase):
                 self.config.nova.directory))
 
         # sync db
+        subprocess.Popen('mysql -uroot -ppassword -e "DROP DATABASE IF EXISTS nova;"', shell=True)
+        subprocess.Popen('mysql -uroot -ppassword -e "CREATE DATABASE nova;"', shell=True)
+        subprocess.call(['bin/nova-manage', 'db', 'sync'], cwd=self.config.nova.directory)
 
         for process in processes:
             process.start()
@@ -222,6 +225,8 @@ class ServersTest(unittest.TestCase):
             process.stop()
 
         # drop db
+        subprocess.Popen('mysql -uroot -ppassword -e "DROP DATABASE IF EXISTS nova;"', shell=True)
+
 
     @attr(type='smoke')
     def test_through(self):
