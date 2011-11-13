@@ -1,3 +1,5 @@
+import os
+import signal
 import subprocess
 import time
 import urllib
@@ -17,6 +19,24 @@ def wait_to_be_launched(host, port):
             break
         except IOError:
             pass
+
+
+def kill_children_process(pid, force=False):
+    pid = int(pid)
+    for line in subprocess.check_output(
+            '/bin/ps -eo "ppid pid"',
+            shell=True).split('\n')[1:]:
+        line = line.strip()
+        if line:
+            ppid, child_pid = line.split()
+            ppid = int(ppid)
+            child_pid = int(child_pid)
+            if ppid == pid:
+                kill_children_process(child_pid, force=force)
+                if force:
+                    os.system('/usr/bin/sudo /bin/kill %d' % child_pid)
+                else:
+                    os.system('/bin/kill %d' % child_pid)
 
 
 class GlanceRegistryProcess(object):
@@ -107,7 +127,77 @@ class NovaComputeProcess(object):
         assert self._process.returncode is None
 
     def stop(self):
+        kill_children_process(self._process.pid)
         self._process.terminate()
+        self._process = None
+
+
+class NovaNetworkProcess(object):
+    def __init__(self, directory):
+        self.directory = directory
+        self._process = None
+
+    def start(self):
+        self._process = subprocess.Popen(["bin/nova-network"],
+                                         cwd=self.directory)
+        assert self._process.returncode is None
+
+    def stop(self):
+        self._process.terminate()
+        self._process = None
+
+
+class NovaSchedulerProcess(object):
+    def __init__(self, directory):
+        self.directory = directory
+        self._process = None
+
+    def start(self):
+        self._process = subprocess.Popen(["bin/nova-scheduler"],
+                                         cwd=self.directory)
+        assert self._process.returncode is None
+
+    def stop(self):
+        self._process.terminate()
+        self._process = None
+
+
+class QuantumProcess(object):
+    def __init__(self, directory, config):
+        self.directory = directory
+        self.config = config
+        self._process = None
+
+    def start(self):
+        self._process = subprocess.Popen(["bin/quantum",
+                                          self.config],
+                                         cwd=self.directory)
+        assert self._process.returncode is None
+
+    def stop(self):
+        self._process.terminate()
+        self._process = None
+
+
+class QuantumPluginOvsAgentProcess(object):
+    def __init__(self, directory, config):
+        self.directory = directory
+        self.config = config
+        self._process = None
+
+    def start(self):
+        self._process = subprocess.Popen(["sudo", "python",
+                                          "quantum/plugins/"
+                                              "openvswitch/agent/"
+                                              "ovs_quantum_agent.py",
+                                          self.config,
+                                          "-v"],
+                                         cwd=self.directory)
+        assert self._process.returncode is None
+
+    def stop(self):
+        kill_children_process(self._process.pid, force=True)
+        os.system('/usr/bin/sudo /bin/kill %d' % self._process.pid)
         self._process = None
 
 
@@ -137,6 +227,15 @@ class ServersTest(unittest.TestCase):
                 cls.config.keystone.host,
                 cls.config.keystone.port))
 
+        # quantum
+        processes.append(QuantumProcess(
+            cls.config.quantum.directory,
+            cls.config.quantum.config))
+        time.sleep(10)
+        processes.append(QuantumPluginOvsAgentProcess(
+            cls.config.quantum.directory,
+            cls.config.quantum.agent_config))
+
         for process in processes:
             process.start()
         # cls.os = openstack.Manager()
@@ -159,6 +258,10 @@ class ServersTest(unittest.TestCase):
                 self.config.nova.host,
                 self.config.nova.port))
         processes.append(NovaComputeProcess(
+                self.config.nova.directory))
+        processes.append(NovaNetworkProcess(
+                self.config.nova.directory))
+        processes.append(NovaSchedulerProcess(
                 self.config.nova.directory))
 
         for process in processes:

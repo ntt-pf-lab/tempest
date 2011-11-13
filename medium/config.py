@@ -76,8 +76,38 @@ class KeystoneConfig(object):
         return self.get("config", "etc/keystone.conf")
 
 
+class QuantumConfig(object):
+    """Provides configuration information for connecting to Quantum."""
+
+    def __init__(self, conf):
+        """Initialize a quantum-specific configuration object."""
+        self.conf = conf
+
+    def get(self, item_name, default_value):
+        try:
+            return self.conf.get("quantum", item_name)
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+            return default_value
+
+    @property
+    def directory(self):
+        """Directory of quantum home. Defaults to /opt/stack/quantum"""
+        return self.get("directory", "/opt/stack/quantum")
+
+    @property
+    def config(self):
+        """Path to quantum manager config. Defaults to etc/quantum.conf"""
+        return self.get("config", "etc/quantum.conf")
+
+    @property
+    def agent_config(self):
+        """Path to quantum agent plugin config. Defaults to quantum/plugins/openvswitch/ovs_quantum_plugin.ini"""
+        return self.get("agent_config", "quantum/plugins/openvswitch/ovs_quantum_plugin.ini")
+
+
 class MediumConfig(config.StormConfig):
     def __init__(self, path="etc/medium.conf"):
         super(MediumConfig, self).__init__(path)
         self.glance = GlanceConfig(self._conf)
         self.keystone = KeystoneConfig(self._conf)
+        self.quantum = QuantumConfig(self._conf)
