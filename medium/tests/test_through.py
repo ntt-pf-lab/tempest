@@ -38,161 +38,109 @@ def kill_children_process(pid, force=False):
                     os.system('/bin/kill %d' % child_pid)
 
 
-class GlanceRegistryProcess(object):
+class Process(object):
+    def __init__(self, cwd, command):
+        self._process = None
+        self.cwd = cwd
+        self.command = command
+
+    def start(self):
+        self._process = subprocess.Popen(self.command,
+                                         cwd=self.cwd)
+        assert self._process.returncode is None
+
+    def stop(self):
+        self._process.terminate()
+        self._process = None
+
+
+class GlanceRegistryProcess(Process):
     def __init__(self, directory, config):
-        self.directory = directory
-        self.config = config
-        self._process = None
-
-    def start(self):
-        self._process = subprocess.Popen(["bin/glance-registry",
-                                          "--config-file=%s" % self.config],
-                                         cwd=self.directory)
-        assert self._process.returncode is None
-
-    def stop(self):
-        self._process.terminate()
-        self._process = None
+        super(GlanceRegistryProcess, self)\
+                .__init__(directory,
+                          ["bin/glance-registry",
+                           "--config-file=%s" % config])
 
 
-class GlanceApiProcess(object):
+class GlanceApiProcess(Process):
     def __init__(self, directory, config, host, port):
-        self.directory = directory
-        self.config = config
+        super(GlanceApiProcess, self)\
+                .__init__(directory,
+                          ["bin/glance-api",
+                           "--config-file=%s" % config])
         self.host = host
         self.port = port
-        self._process = None
 
     def start(self):
-        self._process = subprocess.Popen(["bin/glance-api",
-                                          "--config-file=%s" % self.config],
-                                         cwd=self.directory)
-        assert self._process.returncode is None
+        super(GlanceApiProcess, self).start()
         wait_to_be_launched(self.host, self.port)
 
-    def stop(self):
-        self._process.terminate()
-        self._process = None
 
-
-class KeystoneProcess(object):
+class KeystoneProcess(Process):
     def __init__(self, directory, config, host, port):
-        self.directory = directory
-        self.config = config
+        super(KeystoneProcess, self)\
+                .__init__(directory,
+                          ["bin/keystone",
+                           "--config-file", config,
+                           "-d"])
         self.host = host
         self.port = port
-        self._process = None
 
     def start(self):
-        self._process = subprocess.Popen(["bin/keystone",
-                                          "--config-file", self.config,
-                                          "-d"],
-                                         cwd=self.directory)
-        assert self._process.returncode is None
+        super(KeystoneProcess, self).start()
         wait_to_be_launched(self.host, self.port)
 
-    def stop(self):
-        self._process.terminate()
-        self._process = None
 
-
-class NovaApiProcess(object):
+class NovaApiProcess(Process):
     def __init__(self, directory, host, port):
-        self.directory = directory
+        super(NovaApiProcess, self)\
+                .__init__(directory, ["bin/nova-api"])
         self.host = host
         self.port = port
-        self._process = None
 
     def start(self):
-        self._process = subprocess.Popen(["bin/nova-api"],
-                                         cwd=self.directory)
-        assert self._process.returncode is None
+        super(NovaApiProcess, self).start()
         wait_to_be_launched(self.host, self.port)
 
-    def stop(self):
-        self._process.terminate()
-        self._process = None
 
-
-class NovaComputeProcess(object):
+class NovaComputeProcess(Process):
     def __init__(self, directory):
-        self.directory = directory
-        self._process = None
-
-    def start(self):
-        self._process = subprocess.Popen(["sg", "libvirtd",
-                                          "bin/nova-compute"],
-                                         cwd=self.directory)
-        assert self._process.returncode is None
+        super(NovaComputeProcess, self)\
+                .__init__(directory, ["sg", "libvirtd",
+                                      "bin/nova-compute"])
 
     def stop(self):
         kill_children_process(self._process.pid)
-        self._process.terminate()
-        self._process = None
+        super(NovaComputeProcess, self).stop()
 
 
-class NovaNetworkProcess(object):
+class NovaNetworkProcess(Process):
     def __init__(self, directory):
-        self.directory = directory
-        self._process = None
-
-    def start(self):
-        self._process = subprocess.Popen(["bin/nova-network"],
-                                         cwd=self.directory)
-        assert self._process.returncode is None
-
-    def stop(self):
-        self._process.terminate()
-        self._process = None
+        super(NovaNetworkProcess, self)\
+                .__init__(directory, ["bin/nova-network"])
 
 
-class NovaSchedulerProcess(object):
+class NovaSchedulerProcess(Process):
     def __init__(self, directory):
-        self.directory = directory
-        self._process = None
-
-    def start(self):
-        self._process = subprocess.Popen(["bin/nova-scheduler"],
-                                         cwd=self.directory)
-        assert self._process.returncode is None
-
-    def stop(self):
-        self._process.terminate()
-        self._process = None
+        super(NovaSchedulerProcess, self)\
+                .__init__(directory, ["bin/nova-scheduler"])
 
 
-class QuantumProcess(object):
+class QuantumProcess(Process):
     def __init__(self, directory, config):
-        self.directory = directory
-        self.config = config
-        self._process = None
-
-    def start(self):
-        self._process = subprocess.Popen(["bin/quantum",
-                                          self.config],
-                                         cwd=self.directory)
-        assert self._process.returncode is None
-
-    def stop(self):
-        self._process.terminate()
-        self._process = None
+        super(QuantumProcess, self)\
+                .__init__(directory, ["bin/quantum", config])
 
 
-class QuantumPluginOvsAgentProcess(object):
+class QuantumPluginOvsAgentProcess(Process):
     def __init__(self, directory, config):
-        self.directory = directory
-        self.config = config
-        self._process = None
-
-    def start(self):
-        self._process = subprocess.Popen(["sudo", "python",
-                                          "quantum/plugins/"
-                                              "openvswitch/agent/"
-                                              "ovs_quantum_agent.py",
-                                          self.config,
-                                          "-v"],
-                                         cwd=self.directory)
-        assert self._process.returncode is None
+        super(QuantumPluginOvsAgentProcess, self)\
+                .__init__(directory, ["sudo", "python",
+                                      "quantum/plugins/"
+                                          "openvswitch/agent/"
+                                          "ovs_quantum_agent.py",
+                                      config,
+                                      "-v"])
 
     def stop(self):
         kill_children_process(self._process.pid, force=True)
