@@ -29,6 +29,7 @@ class GlanceRegistryProcess(object):
         self._process = subprocess.Popen(["bin/glance-registry",
                                           "--config-file=%s" % self.config],
                                          cwd=self.directory)
+        assert self._process.returncode is None
 
     def stop(self):
         self._process.terminate()
@@ -47,6 +48,7 @@ class GlanceApiProcess(object):
         self._process = subprocess.Popen(["bin/glance-api",
                                           "--config-file=%s" % self.config],
                                          cwd=self.directory)
+        assert self._process.returncode is None
         wait_to_be_launched(self.host, self.port)
 
     def stop(self):
@@ -67,6 +69,7 @@ class KeystoneProcess(object):
                                           "--config-file", self.config,
                                           "-d"],
                                          cwd=self.directory)
+        assert self._process.returncode is None
         wait_to_be_launched(self.host, self.port)
 
     def stop(self):
