@@ -93,7 +93,25 @@ class KeystoneProcess(Process):
         wait_to_launch(self.host, self.port)
 
 
-class NovaApiProcess(Process):
+class NovaProcess(Process):
+    lock_path = '/tmp/nova_locks'
+
+    def __init__(self, cwd, command):
+        command = list(command)
+        command.append('--lock_path=%s' % self.lock_path)
+        super(NovaProcess, self)\
+                .__init__(cwd, command)
+
+    def start(self):
+        subprocess.check_call('mkdir -p %s' % self.lock_path, shell=True)
+        super(NovaProcess, self).start()
+
+    def stop(self):
+        super(NovaProcess, self).stop()
+        subprocess.check_call('rm -rf %s' % self.lock_path, shell=True)
+
+
+class NovaApiProcess(NovaProcess):
     def __init__(self, directory, host, port):
         super(NovaApiProcess, self)\
                 .__init__(directory, ["bin/nova-api"])
@@ -105,7 +123,7 @@ class NovaApiProcess(Process):
         wait_to_launch(self.host, self.port)
 
 
-class NovaComputeProcess(Process):
+class NovaComputeProcess(NovaProcess):
     def __init__(self, directory):
         super(NovaComputeProcess, self)\
                 .__init__(directory, ["sg", "libvirtd",
@@ -116,13 +134,13 @@ class NovaComputeProcess(Process):
         super(NovaComputeProcess, self).stop()
 
 
-class NovaNetworkProcess(Process):
+class NovaNetworkProcess(NovaProcess):
     def __init__(self, directory):
         super(NovaNetworkProcess, self)\
                 .__init__(directory, ["bin/nova-network"])
 
 
-class NovaSchedulerProcess(Process):
+class NovaSchedulerProcess(NovaProcess):
     def __init__(self, directory):
         super(NovaSchedulerProcess, self)\
                 .__init__(directory, ["bin/nova-scheduler"])
@@ -180,7 +198,6 @@ class ServersTest(unittest.TestCase):
         processes.append(QuantumProcess(
             cls.config.quantum.directory,
             cls.config.quantum.config))
-        time.sleep(5)
         processes.append(QuantumPluginOvsAgentProcess(
             cls.config.quantum.directory,
             cls.config.quantum.agent_config))
@@ -215,20 +232,17 @@ class ServersTest(unittest.TestCase):
                 self.config.nova.directory))
 
         # sync db
-        subprocess.Popen('mysql -uroot -ppassword -e "DROP DATABASE IF EXISTS nova;"', shell=True)
-        subprocess.Popen('mysql -uroot -ppassword -e "CREATE DATABASE nova;"', shell=True)
+        subprocess.check_call('mysql -uroot -ppassword -e "DROP DATABASE IF EXISTS nova;"', shell=True)
+        subprocess.check_call('mysql -uroot -ppassword -e "CREATE DATABASE nova;"', shell=True)
         subprocess.call(['bin/nova-manage', 'db', 'sync'], cwd=self.config.nova.directory)
 
         for process in processes:
             process.start()
 
     def tearDown(self):
+        # shutdown nova processes.
         for process in self.testing_processes:
             process.stop()
-
-        # drop db
-        subprocess.Popen('mysql -uroot -ppassword -e "DROP DATABASE IF EXISTS nova;"', shell=True)
-
 
     @attr(type='smoke')
     def test_through(self):
@@ -239,8 +253,6 @@ class ServersTest(unittest.TestCase):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        #import pudb; pudb.set_trace()
-        assert False, "Poison pill"
         resp, server = self.client.create_server(name,
                                                  self.image_ref,
                                                  self.flavor_ref,
@@ -257,8 +269,19 @@ class ServersTest(unittest.TestCase):
         self.assertEqual('1.1.1.1', server['accessIPv4'])
         self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
         self.assertEqual(name, server['name'])
-        self.assertEqual(self.image_ref, server['image']['id'])
+        self.assertEqual(str(self.image_ref), server['image']['id'])
         self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
 
         #Teardown
-        self.client.delete_server(self.id)
+        self.client.delete_server(server['id'])
+
+        current_time = time.time()
+        while True:
+            # wait N seconds for deleting.
+            N = 10
+            resp, data = self.client.list_servers()
+            if len(data['servers']) == 0:
+                break
+            if time.time() - current_time > N:
+                assert False, "Deleting timeout"
+            time.sleep(1)
