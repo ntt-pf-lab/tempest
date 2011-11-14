@@ -11,6 +11,10 @@ from storm import openstack
 import storm.config
 from storm.common.utils.data_utils import rand_name
 
+"""
+To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
+"""
+
 
 def wait_to_launch(host, port):
     while True:
