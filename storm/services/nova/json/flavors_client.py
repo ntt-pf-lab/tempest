@@ -1,4 +1,5 @@
 from storm.common import rest_client
+from storm import exceptions
 import json
 import time
 
@@ -39,4 +40,6 @@ class FlavorsClient(object):
     def get_flavor_details(self, flavor_id):
         resp, body = self.client.get("flavors/%s" % str(flavor_id))
         body = json.loads(body)
+        if resp['status'] == '404':
+            raise exceptions.ItemNotFoundException(body['itemNotFound'])
         return resp, body['flavor']

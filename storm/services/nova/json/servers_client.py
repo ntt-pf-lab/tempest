@@ -93,6 +93,8 @@ class ServersClient(object):
         """Returns the properties of an existing server."""
         resp, body = self.client.get("servers/%s" % str(server_id))
         body = json.loads(body)
+        if resp['status'] == '404':
+            raise exceptions.ItemNotFoundException(body['itemNotFound'])
         return resp, body['server']
         
     def delete_server(self, server_id):
@@ -253,7 +255,9 @@ class ServersClient(object):
         post_body = json.dumps(post_body)
         resp, body = self.client.post('servers/%s/action' % 
                                       str(server_id), post_body, self.headers)
-        body = json.loads(body)
+        # Normal response has no content.
+        if int(resp['content-length']) > 0:
+            body = json.loads(body)
         return resp, body
             
             
