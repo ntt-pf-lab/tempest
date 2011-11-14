@@ -172,81 +172,94 @@ class QuantumPluginOvsAgentProcess(Process):
         self._process = None
 
 
-class ServersTest(unittest.TestCase):
+default_config = storm.config.StormConfig('etc/medium.conf')
+config = default_config
+environ_processes = []
 
-    config_path = 'etc/medium.conf'
 
-    @classmethod
-    def setUpClass(cls):
-        cls.environment_processes = processes = []
-        cls.config = storm.config.StormConfig(cls.config_path)
+def setUpModule(module):
+    environ_processes = module.environ_processes
+    config = module.config
 
-        # glance.
-        processes.append(GlanceRegistryProcess(
-                cls.config.glance.directory,
-                cls.config.glance.registry_config))
-        processes.append(GlanceApiProcess(
-                cls.config.glance.directory,
-                cls.config.glance.api_config,
-                cls.config.glance.host,
-                cls.config.glance.port))
+    # glance.
+    environ_processes.append(GlanceRegistryProcess(
+            config.glance.directory,
+            config.glance.registry_config))
+    environ_processes.append(GlanceApiProcess(
+            config.glance.directory,
+            config.glance.api_config,
+            config.glance.host,
+            config.glance.port))
 
-        # keystone.
-        processes.append(KeystoneProcess(
-                cls.config.keystone.directory,
-                cls.config.keystone.config,
-                cls.config.keystone.host,
-                cls.config.keystone.port))
+    # keystone.
+    environ_processes.append(KeystoneProcess(
+            config.keystone.directory,
+            config.keystone.config,
+            config.keystone.host,
+            config.keystone.port))
 
-        # quantum
-        processes.append(QuantumProcess(
-            cls.config.quantum.directory,
-            cls.config.quantum.config))
-        processes.append(QuantumPluginOvsAgentProcess(
-            cls.config.quantum.directory,
-            cls.config.quantum.agent_config))
+    # quantum.
+    environ_processes.append(QuantumProcess(
+        config.quantum.directory,
+        config.quantum.config))
+    environ_processes.append(QuantumPluginOvsAgentProcess(
+        config.quantum.directory,
+        config.quantum.agent_config))
 
-        for process in processes:
-            process.start()
+    for process in environ_processes:
+        process.start()
 
-        cls.os = openstack.Manager(config=cls.config)
-        cls.client = cls.os.servers_client
-        cls.image_ref = cls.config.env.image_ref
-        cls.flavor_ref = cls.config.env.flavor_ref
-        cls.ssh_timeout = cls.config.nova.ssh_timeout
 
-    @classmethod
-    def tearDownClass(cls):
-        for process in cls.environment_processes:
-            process.stop()
+def tearDownModule(module):
+    for process in module.environ_processes:
+        process.stop()
+    del module.environ_processes[:]
+
+
+class FunctionalTest(unittest.TestCase):
+
+    config = default_config
 
     def setUp(self):
-        self.testing_processes = processes = []
+        self.os = openstack.Manager(config=self.config)
+        self.testing_processes = []
 
         # nova.
-        processes.append(NovaApiProcess(
+        self.testing_processes.append(NovaApiProcess(
                 self.config.nova.directory,
                 self.config.nova.host,
                 self.config.nova.port))
-        processes.append(NovaComputeProcess(
+        self.testing_processes.append(NovaComputeProcess(
                 self.config.nova.directory))
-        processes.append(NovaNetworkProcess(
+        self.testing_processes.append(NovaNetworkProcess(
                 self.config.nova.directory))
-        processes.append(NovaSchedulerProcess(
+        self.testing_processes.append(NovaSchedulerProcess(
                 self.config.nova.directory))
 
-        # sync db
-        subprocess.check_call('mysql -uroot -ppassword -e "DROP DATABASE IF EXISTS nova;"', shell=True)
-        subprocess.check_call('mysql -uroot -ppassword -e "CREATE DATABASE nova;"', shell=True)
-        subprocess.call(['bin/nova-manage', 'db', 'sync'], cwd=self.config.nova.directory)
+        # reset db.
+        subprocess.check_call('mysql -uroot -ppassword -e "'
+                              'DROP DATABASE IF EXISTS nova;'
+                              'CREATE DATABASE nova;'
+                              '"',
+                              shell=True)
+        subprocess.call(['bin/nova-manage', 'db', 'sync'],
+                        cwd=self.config.nova.directory)
 
-        for process in processes:
+        for process in self.testing_processes:
             process.start()
 
     def tearDown(self):
-        # shutdown nova processes.
         for process in self.testing_processes:
             process.stop()
+        del self.testing_processes[:]
+
+
+class ServersTest(FunctionalTest):
+    def setUp(self):
+        super(ServersTest, self).setUp()
+        self.image_ref = self.config.env.image_ref
+        self.flavor_ref = self.config.env.flavor_ref
+        self.client = self.os.servers_client
 
     @attr(type='smoke')
     def test_through(self):
@@ -276,9 +289,7 @@ class ServersTest(unittest.TestCase):
         self.assertEqual(str(self.image_ref), server['image']['id'])
         self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
 
-        #Teardown
         self.client.delete_server(server['id'])
-
         current_time = time.time()
         while True:
             # wait N seconds for deleting.
@@ -289,3 +300,37 @@ class ServersTest(unittest.TestCase):
             if time.time() - current_time > N:
                 assert False, "Deleting timeout"
             time.sleep(1)
+
+
+class FlavorsTest(FunctionalTest):
+    # Almost same as storm.tests.test_flavors, but extends MT environment behavior.
+
+    def setUp(self):
+        super(FlavorsTest, self).setUp()
+        self.flavor_ref = self.config.env.flavor_ref
+        self.client = self.os.flavors_client
+
+    @attr(type='smoke')
+    def test_list_flavors(self):
+        """ List of all flavors should contain the expected flavor """
+        resp, body = self.client.list_flavors()
+        flavors = body['flavors']
+
+        resp, flavor = self.client.get_flavor_details(self.flavor_ref)
+        flavor_min_detail = {'id': flavor['id'], 'links': flavor['links'],
+                             'name': flavor['name']}
+        self.assertTrue(flavor_min_detail in flavors)
+
+    @attr(type='smoke')
+    def test_list_flavors_with_detail(self):
+        """ Detailed list of all flavors should contain the expected flavor """
+        resp, body = self.client.list_flavors_with_detail()
+        flavors = body['flavors']
+        resp, flavor = self.client.get_flavor_details(self.flavor_ref)
+        self.assertTrue(flavor in flavors)
+
+    @attr(type='smoke')
+    def test_get_flavor(self):
+        """ The expected flavor details should be returned """
+        resp, flavor = self.client.get_flavor_details(self.flavor_ref)
+        self.assertEqual(self.flavor_ref, flavor['id'])
