@@ -1,13 +1,15 @@
+import base64
 import os
 import subprocess
 import time
 import urllib
+
+import unittest2 as unittest
 from nose.plugins.attrib import attr
+
 from storm import openstack
 import storm.config
 from storm.common.utils.data_utils import rand_name
-import base64
-import unittest2 as unittest
 
 
 def wait_to_launch(host, port):
