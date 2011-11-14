@@ -8,3 +8,8 @@ class BuildErrorException(Exception):
     """ Exception on server build """
     def __repr__(self):
         return "Server failed into error status"
+
+
+class ItemNotFoundException(Exception):
+    """ Exception on not found """
+    pass
