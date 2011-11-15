@@ -1,5 +1,6 @@
 import base64
 import os
+import re
 import subprocess
 import time
 import urllib
@@ -7,6 +8,7 @@ import urllib
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 
+from storm import exceptions
 from storm import openstack
 import storm.config
 from storm.common.utils.data_utils import rand_name
@@ -259,7 +261,8 @@ class ServersTest(FunctionalTest):
         super(ServersTest, self).setUp()
         self.image_ref = self.config.env.image_ref
         self.flavor_ref = self.config.env.flavor_ref
-        self.client = self.os.servers_client
+        self.ss_client = self.os.servers_client
+        self.img_client = self.os.images_client
 
     @attr(type='smoke')
     def test_through(self):
@@ -270,35 +273,89 @@ class ServersTest(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        resp, server = self.client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 meta=meta,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6,
-                                                 personality=personality)
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
 
-        #Wait for the server to become active
-        self.client.wait_for_server_status(server['id'], 'ACTIVE')
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
-        #Verify the specified attributes are set correctly
-        resp, server = self.client.get_server(server['id'])
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(server['id'])
         self.assertEqual('1.1.1.1', server['accessIPv4'])
         self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
         self.assertEqual(name, server['name'])
         self.assertEqual(str(self.image_ref), server['image']['id'])
         self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
 
-        self.client.delete_server(server['id'])
+        print """
+
+        creating snapshot.
+
+        """
+        # Make snapshot of the instance.
+        alt_name = rand_name('server')
+        resp, _ = self.ss_client.create_image(server['id'], alt_name)
+        alt_img_url = resp['location']
+        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
+        self.assertIsNotNone(match)
+        alt_img_id = match.groupdict()['image_id']
+        current_time = time.time()
+        while True:
+            # wait N seconds for making.
+            N = 30
+            try:
+                resp, image = self.img_client.get_image(alt_img_id)
+                if image['status'] == 'ACTIVE':
+                    break
+                elif image['status'] != 'SAVING':
+                    self.fail(image['status'])
+            except exceptions.ItemNotFoundException:
+                pass
+            if time.time() - current_time > N:
+                self.fail("Creating snapshot timeout")
+            time.sleep(1)
+
+        print """
+
+        deleting server.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
         current_time = time.time()
         while True:
             # wait N seconds for deleting.
             N = 10
-            resp, data = self.client.list_servers()
-            if len(data['servers']) == 0:
+            try:
+                self.ss_client.get_server(server['id'])
+            except exceptions.ItemNotFoundException:
                 break
             if time.time() - current_time > N:
-                assert False, "Deleting timeout"
+                self.fail("Deleting server timeout")
+            time.sleep(1)
+
+        print """
+
+        deleting snapshot.
+
+        """
+        # Delete the snapshot
+        self.img_client.delete_image(alt_img_id)
+        current_time = time.time()
+        while True:
+            # wait N seconds for deleting.
+            N = 10
+            try:
+                self.img_client.get_image(alt_img_id)
+            except exceptions.ItemNotFoundException:
+                break
+            if time.time() - current_time > N:
+                self.fail("Deleting snapshot timeout")
             time.sleep(1)
 
 
