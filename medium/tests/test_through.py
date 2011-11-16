@@ -255,6 +255,14 @@ class FunctionalTest(unittest.TestCase):
             process.start()
 
     def tearDown(self):
+        # kill still existing virtual instances.
+        for line in subprocess.check_output('virsh list --all',
+                                            shell=True).split('\n')[2:-2]:
+            (id, name, state) = line.split()
+            if state == 'running':
+                subprocess.check_call('virsh destroy %s' % id, shell=True)
+            subprocess.check_call('virsh undefine %s' % name, shell=True)
+
         for process in self.testing_processes:
             process.stop()
         del self.testing_processes[:]
