@@ -147,7 +147,27 @@ class ServersClient(object):
                 
             if (int(time.time()) - start >= self.build_timeout):
                 raise exceptions.TimeoutException
-                
+
+    def wait_for_server_not_existing(self, server_id):
+        """Waits for a server to reach not existing."""
+        start = int(time.time())
+
+        while True:
+            try:
+                resp, body = self.get_server(server_id)
+            except exceptions.ItemNotFoundException:
+                return
+
+            server_status = body['status']
+
+            if(server_status == 'ERROR'):
+                raise exceptions.TimeoutException
+
+            if (int(time.time()) - start >= self.build_timeout):
+                raise exceptions.BuildErrorException
+
+            time.sleep(self.build_interval)
+
     def list_addresses(self, server_id):
         """Lists all addresses for a server."""
         resp, body = self.client.get("servers/%s/ips" % str(server_id))
