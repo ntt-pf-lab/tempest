@@ -266,6 +266,11 @@ class ServersTest(FunctionalTest):
 
     @attr(type='smoke')
     def test_through(self):
+        print """
+
+        creating server.
+
+        """
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -323,6 +328,41 @@ class ServersTest(FunctionalTest):
         print """
 
         deleting server.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+        current_time = time.time()
+        while True:
+            # wait N seconds for deleting.
+            N = 10
+            try:
+                self.ss_client.get_server(server['id'])
+            except exceptions.ItemNotFoundException:
+                break
+            if time.time() - current_time > N:
+                self.fail("Deleting server timeout")
+            time.sleep(1)
+
+        print """
+
+        creating server from snapshot.
+
+        """
+        resp, server = self.ss_client.create_server(name,
+                                                    image['id'],
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        print """
+
+        deleting server again.
 
         """
         # Delete the server
