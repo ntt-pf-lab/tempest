@@ -135,6 +135,10 @@ class NovaComputeProcess(NovaProcess):
                 .__init__(directory, ["sg", "libvirtd",
                                       "bin/nova-compute"])
 
+    def start(self):
+        super(NovaComputeProcess, self).start()
+        time.sleep(5)
+
     def stop(self):
         kill_children_process(self._process.pid)
         super(NovaComputeProcess, self).stop()
