@@ -321,21 +321,7 @@ class ServersTest(FunctionalTest):
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
         alt_img_id = match.groupdict()['image_id']
-        current_time = time.time()
-        while True:
-            # wait N seconds for making.
-            N = 30
-            try:
-                resp, image = self.img_client.get_image(alt_img_id)
-                if image['status'] == 'ACTIVE':
-                    break
-                elif image['status'] != 'SAVING':
-                    self.fail(image['status'])
-            except exceptions.ItemNotFoundException:
-                pass
-            if time.time() - current_time > N:
-                self.fail("Creating snapshot timeout")
-            time.sleep(1)
+        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
 
         print """
 
@@ -344,17 +330,7 @@ class ServersTest(FunctionalTest):
         """
         # Delete the server
         self.ss_client.delete_server(server['id'])
-        current_time = time.time()
-        while True:
-            # wait N seconds for deleting.
-            N = 10
-            try:
-                self.ss_client.get_server(server['id'])
-            except exceptions.ItemNotFoundException:
-                break
-            if time.time() - current_time > N:
-                self.fail("Deleting server timeout")
-            time.sleep(1)
+        self.ss_client.wait_for_server_not_existing(server['id'])
 
         print """
 
@@ -362,7 +338,7 @@ class ServersTest(FunctionalTest):
 
         """
         resp, server = self.ss_client.create_server(name,
-                                                    image['id'],
+                                                    alt_img_id,
                                                     self.flavor_ref,
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
@@ -379,17 +355,7 @@ class ServersTest(FunctionalTest):
         """
         # Delete the server
         self.ss_client.delete_server(server['id'])
-        current_time = time.time()
-        while True:
-            # wait N seconds for deleting.
-            N = 10
-            try:
-                self.ss_client.get_server(server['id'])
-            except exceptions.ItemNotFoundException:
-                break
-            if time.time() - current_time > N:
-                self.fail("Deleting server timeout")
-            time.sleep(1)
+        self.ss_client.wait_for_server_not_existing(server['id'])
 
         print """
 
@@ -398,17 +364,7 @@ class ServersTest(FunctionalTest):
         """
         # Delete the snapshot
         self.img_client.delete_image(alt_img_id)
-        current_time = time.time()
-        while True:
-            # wait N seconds for deleting.
-            N = 10
-            try:
-                self.img_client.get_image(alt_img_id)
-            except exceptions.ItemNotFoundException:
-                break
-            if time.time() - current_time > N:
-                self.fail("Deleting snapshot timeout")
-            time.sleep(1)
+        self.img_client.wait_for_image_not_existing(alt_img_id)
 
 
 class FlavorsTest(FunctionalTest):

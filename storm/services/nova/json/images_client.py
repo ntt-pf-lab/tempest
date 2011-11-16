@@ -1,14 +1,22 @@
 import json
 import storm.common.rest_client as rest_client
 import time
+import storm.config
 from storm import exceptions
+
 
 class ImagesClient(object):
 
     def __init__(self, username, key, auth_url, tenant_name, config=None):
+        if config is None:
+            config = storm.config.StormConfig()
+        self.config = config
+
         self.client = rest_client.RestClient(username, key, auth_url, tenant_name,
                                              config=config)
-        
+        self.build_interval = self.config.nova.build_interval
+        self.build_timeout = self.config.nova.build_timeout
+
     def create_image(self, server_id, name, meta = None):
         """
         Creates an image of the original server.
@@ -71,16 +79,36 @@ class ImagesClient(object):
     def wait_for_image_status(self, image_id, status):
         """Waits for an image to reach a given status."""
         resp, body = self.get_image(image_id)
-        image_status = body['image']['status']
+        image_status = body['status']
         start = int(time.time())
 
         while(image_status != status):
             time.sleep(self.build_interval)
             resp, body = self.get_image(image_id)
-            image_status = body['image']['status']
+            image_status = body['status']
 
             if(image_status == 'ERROR'):
                 raise exceptions.TimeoutException
 
             if (int(time.time()) - start >= self.build_timeout):
                 raise exceptions.BuildErrorException
+
+    def wait_for_image_not_existing(self, image_id):
+        """Waits for an image to reach not existing."""
+        start = int(time.time())
+
+        while True:
+            try:
+                resp, body = self.get_image(image_id)
+            except exceptions.ItemNotFoundException:
+                return
+
+            image_status = body['status']
+
+            if(image_status == 'ERROR'):
+                raise exceptions.TimeoutException
+
+            if (int(time.time()) - start >= self.build_timeout):
+                raise exceptions.BuildErrorException
+
+            time.sleep(self.build_interval)
