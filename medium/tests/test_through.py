@@ -244,7 +244,7 @@ class FunctionalTest(unittest.TestCase):
                 self.config.nova.directory))
 
         # reset db.
-        subprocess.check_call('mysql -uroot -ppassword -e "'
+        subprocess.check_call('mysql -uroot -pnova -e "'
                               'DROP DATABASE IF EXISTS nova;'
                               'CREATE DATABASE nova;'
                               '"',
