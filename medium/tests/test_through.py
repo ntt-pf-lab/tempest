@@ -214,6 +214,7 @@ def setUpModule(module):
 
     for process in environ_processes:
         process.start()
+    time.sleep(10)
 
 
 def tearDownModule(module):
@@ -253,6 +254,7 @@ class FunctionalTest(unittest.TestCase):
 
         for process in self.testing_processes:
             process.start()
+        time.sleep(10)
 
     def tearDown(self):
         # kill still existing virtual instances.
