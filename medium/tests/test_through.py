@@ -208,6 +208,7 @@ def setUpModule(module):
 
     for process in environ_processes:
         process.start()
+    time.sleep(10)
 
 
 def tearDownModule(module):
@@ -237,7 +238,7 @@ class FunctionalTest(unittest.TestCase):
                 self.config.nova.directory))
 
         # reset db.
-        subprocess.check_call('mysql -uroot -ppassword -e "'
+        subprocess.check_call('mysql -uroot -pnova -e "'
                               'DROP DATABASE IF EXISTS nova;'
                               'CREATE DATABASE nova;'
                               '"',
@@ -247,6 +248,7 @@ class FunctionalTest(unittest.TestCase):
 
         for process in self.testing_processes:
             process.start()
+        time.sleep(10)
 
         # create users.
         subprocess.check_call('bin/nova-manage user create '
