@@ -54,11 +54,12 @@ class Process(object):
 
     def start(self):
         self._process = subprocess.Popen(self.command,
-                                         cwd=self.cwd)
+                                         cwd=self.cwd, shell=True)
         assert self._process.returncode is None
 
     def stop(self):
-        self._process.terminate()
+        kill_children_process(self._process.pid, force=True)
+        os.system('/usr/bin/sudo /bin/kill %d' % self._process.pid)
         self._process = None
 
 
@@ -66,16 +67,14 @@ class GlanceRegistryProcess(Process):
     def __init__(self, directory, config):
         super(GlanceRegistryProcess, self)\
                 .__init__(directory,
-                          ["bin/glance-registry",
-                           "--config-file=%s" % config])
+                          "bin/glance-registry --config-file=%s" % config)
 
 
 class GlanceApiProcess(Process):
     def __init__(self, directory, config, host, port):
         super(GlanceApiProcess, self)\
                 .__init__(directory,
-                          ["bin/glance-api",
-                           "--config-file=%s" % config])
+                          "bin/glance-api --config-file=%s" % config)
         self.host = host
         self.port = port
 
@@ -88,9 +87,7 @@ class KeystoneProcess(Process):
     def __init__(self, directory, config, host, port):
         super(KeystoneProcess, self)\
                 .__init__(directory,
-                          ["bin/keystone",
-                           "--config-file", config,
-                           "-d"])
+                          "bin/keystone --config-file %s -d" % config)
         self.host = host
         self.port = port
 
@@ -103,8 +100,7 @@ class NovaProcess(Process):
     lock_path = '/tmp/nova_locks'
 
     def __init__(self, cwd, command):
-        command = list(command)
-        command.append('--lock_path=%s' % self.lock_path)
+        command += ' --lock_path=%s' % self.lock_path
         super(NovaProcess, self)\
                 .__init__(cwd, command)
 
@@ -120,7 +116,7 @@ class NovaProcess(Process):
 class NovaApiProcess(NovaProcess):
     def __init__(self, directory, host, port):
         super(NovaApiProcess, self)\
-                .__init__(directory, ["bin/nova-api"])
+                .__init__(directory, "bin/nova-api")
         self.host = host
         self.port = port
 
@@ -132,8 +128,7 @@ class NovaApiProcess(NovaProcess):
 class NovaComputeProcess(NovaProcess):
     def __init__(self, directory):
         super(NovaComputeProcess, self)\
-                .__init__(directory, ["sg", "libvirtd",
-                                      "bin/nova-compute"])
+                .__init__(directory, "sg libvirtd bin/nova-compute")
 
     def start(self):
         super(NovaComputeProcess, self).start()
@@ -147,30 +142,29 @@ class NovaComputeProcess(NovaProcess):
 class NovaNetworkProcess(NovaProcess):
     def __init__(self, directory):
         super(NovaNetworkProcess, self)\
-                .__init__(directory, ["bin/nova-network"])
+                .__init__(directory, "bin/nova-network")
 
 
 class NovaSchedulerProcess(NovaProcess):
     def __init__(self, directory):
         super(NovaSchedulerProcess, self)\
-                .__init__(directory, ["bin/nova-scheduler"])
+                .__init__(directory, "bin/nova-scheduler")
 
 
 class QuantumProcess(Process):
     def __init__(self, directory, config):
         super(QuantumProcess, self)\
-                .__init__(directory, ["bin/quantum", config])
+                .__init__(directory, "bin/quantum " + config)
 
 
 class QuantumPluginOvsAgentProcess(Process):
     def __init__(self, directory, config):
         super(QuantumPluginOvsAgentProcess, self)\
-                .__init__(directory, ["sudo", "python",
-                                      "quantum/plugins/"
-                                          "openvswitch/agent/"
-                                          "ovs_quantum_agent.py",
-                                      config,
-                                      "-v"])
+                .__init__(directory, "sudo python "
+                                     "quantum/plugins/"
+                                         "openvswitch/agent/"
+                                         "ovs_quantum_agent.py "
+                                     "-v " + config)
 
     def stop(self):
         kill_children_process(self._process.pid, force=True)
@@ -248,37 +242,52 @@ class FunctionalTest(unittest.TestCase):
                               'CREATE DATABASE nova;'
                               '"',
                               shell=True)
-        subprocess.call(['bin/nova-manage', 'db', 'sync'],
-                        cwd=self.config.nova.directory)
+        subprocess.check_call('bin/nova-manage db sync',
+                              cwd=self.config.nova.directory, shell=True)
 
         for process in self.testing_processes:
             process.start()
 
+        # create users.
+        subprocess.check_call('bin/nova-manage user create '
+                              '--name=admin --access=secrete --secret=secrete',
+                              cwd=self.config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage user create '
+                              '--name=demo --access=secrete --secret=secrete',
+                              cwd=self.config.nova.directory, shell=True)
+
+        # create projects.
+        subprocess.check_call('bin/nova-manage project create '
+                              '--project=1 --user=admin',
+                              cwd=self.config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage project create '
+                              '--project=2 --user=demo',
+                              cwd=self.config.nova.directory, shell=True)
         # allocate networks.
-        subprocess.call('bin/nova-manage network create '
-                        '--label=private_1-1 '
-                        '--project_id=1 '
-                        '--fixed_range_v4=10.0.0.0/24 '
-                        '--bridge_interface=br-int '
-                        '--num_networks=1 '
-                        '--network_size=32 ',
-                        cwd=self.config.nova.directory, shell=True)
-        subprocess.call('bin/nova-manage network create '
-                        '--label=private_1-2 '
-                        '--project_id=1 '
-                        '--fixed_range_v4=10.0.1.0/24 '
-                        '--bridge_interface=br-int '
-                        '--num_networks=1 '
-                        '--network_size=32 ',
-                        cwd=self.config.nova.directory, shell=True)
-        subprocess.call('bin/nova-manage network create '
-                        '--label=private_2-1 '
-                        '--project_id=2 '
-                        '--fixed_range_v4=10.0.2.0/24 '
-                        '--bridge_interface=br-int '
-                        '--num_networks=1 '
-                        '--network_size=32 ',
-                        cwd=self.config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_1-1 '
+                              '--project_id=1 '
+                              '--fixed_range_v4=10.0.0.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=self.config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_1-2 '
+                              '--project_id=1 '
+                              '--fixed_range_v4=10.0.1.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=self.config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_2-1 '
+                              '--project_id=2 '
+                              '--fixed_range_v4=10.0.2.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=self.config.nova.directory, shell=True)
 
     def tearDown(self):
         # kill still existing virtual instances.
