@@ -254,6 +254,32 @@ class FunctionalTest(unittest.TestCase):
         for process in self.testing_processes:
             process.start()
 
+        # allocate networks.
+        subprocess.call('bin/nova-manage network create '
+                        '--label=private_1-1 '
+                        '--project_id=1 '
+                        '--fixed_range_v4=10.0.0.0/24 '
+                        '--bridge_interface=br-int '
+                        '--num_networks=1 '
+                        '--network_size=32 ',
+                        cwd=self.config.nova.directory, shell=True)
+        subprocess.call('bin/nova-manage network create '
+                        '--label=private_1-2 '
+                        '--project_id=1 '
+                        '--fixed_range_v4=10.0.1.0/24 '
+                        '--bridge_interface=br-int '
+                        '--num_networks=1 '
+                        '--network_size=32 ',
+                        cwd=self.config.nova.directory, shell=True)
+        subprocess.call('bin/nova-manage network create '
+                        '--label=private_2-1 '
+                        '--project_id=2 '
+                        '--fixed_range_v4=10.0.2.0/24 '
+                        '--bridge_interface=br-int '
+                        '--num_networks=1 '
+                        '--network_size=32 ',
+                        cwd=self.config.nova.directory, shell=True)
+
     def tearDown(self):
         # kill still existing virtual instances.
         for line in subprocess.check_output('virsh list --all',
