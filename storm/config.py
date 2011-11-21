@@ -215,6 +215,28 @@ class QuantumConfig(object):
         return self.get("agent_config", "quantum/plugins/openvswitch/ovs_quantum_plugin.ini")
 
 
+class MySQLConfig(object):
+    """Provides configuration information for connecting to MySQL."""
+
+    def __init__(self, conf):
+        """Initialize a mysql-specific configuration object."""
+        self.conf = conf
+
+    def get(self, item_name, default_value):
+        try:
+            return self.conf.get("mysql", item_name)
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+            return default_value
+
+    @property
+    def user(self):
+        return self.get('user', 'root')
+
+    @property
+    def password(self):
+        return self.get('password', 'password')
+
+
 class StormConfig(object):
     """Provides OpenStack configuration information."""
 
@@ -230,6 +252,7 @@ class StormConfig(object):
         self.glance = GlanceConfig(self._conf)
         self.keystone = KeystoneConfig(self._conf)
         self.quantum = QuantumConfig(self._conf)
+        self.mysql = MySQLConfig(self._conf)
 
     def load_config(self, path=None):
         """Read configuration from given path and return a config object."""
