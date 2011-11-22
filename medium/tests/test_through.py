@@ -94,12 +94,54 @@ class FunctionalTest(unittest.TestCase):
                                   self.config.mysql.user,
                                   self.config.mysql.password),
                               shell=True)
-        subprocess.call(['bin/nova-manage', 'db', 'sync'],
-                        cwd=self.config.nova.directory)
+        subprocess.call('bin/nova-manage db sync',
+                        cwd=self.config.nova.directory, shell=True)
 
         for process in self.testing_processes:
             process.start()
         time.sleep(10)
+
+        # create users.
+        subprocess.check_call('bin/nova-manage user create '
+                              '--name=admin --access=secrete --secret=secrete',
+                              cwd=self.config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage user create '
+                              '--name=demo --access=secrete --secret=secrete',
+                              cwd=self.config.nova.directory, shell=True)
+
+        # create projects.
+        subprocess.check_call('bin/nova-manage project create '
+                              '--project=1 --user=admin',
+                              cwd=self.config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage project create '
+                              '--project=2 --user=demo',
+                              cwd=self.config.nova.directory, shell=True)
+
+        # allocate networks.
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_1-1 '
+                              '--project_id=1 '
+                              '--fixed_range_v4=10.0.0.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=self.config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_1-2 '
+                              '--project_id=1 '
+                              '--fixed_range_v4=10.0.1.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=self.config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_2-1 '
+                              '--project_id=2 '
+                              '--fixed_range_v4=10.0.2.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=self.config.nova.directory, shell=True)
 
     def tearDown(self):
         # kill still existing virtual instances.
