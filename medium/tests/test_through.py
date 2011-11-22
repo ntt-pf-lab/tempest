@@ -163,7 +163,7 @@ class ServersTest(FunctionalTest):
         self.ss_client = self.os.servers_client
         self.img_client = self.os.images_client
 
-    @attr(type='smoke')
+    @attr(kind='smoke')
     def test_through(self):
         print """
 
@@ -262,7 +262,7 @@ class FlavorsTest(FunctionalTest):
         self.flavor_ref = self.config.env.flavor_ref
         self.client = self.os.flavors_client
 
-    @attr(type='smoke')
+    @attr(kind='smoke')
     def test_list_flavors(self):
         """ List of all flavors should contain the expected flavor """
         resp, body = self.client.list_flavors()
@@ -273,7 +273,7 @@ class FlavorsTest(FunctionalTest):
                              'name': flavor['name']}
         self.assertTrue(flavor_min_detail in flavors)
 
-    @attr(type='smoke')
+    @attr(kind='smoke')
     def test_list_flavors_with_detail(self):
         """ Detailed list of all flavors should contain the expected flavor """
         resp, body = self.client.list_flavors_with_detail()
@@ -281,7 +281,7 @@ class FlavorsTest(FunctionalTest):
         resp, flavor = self.client.get_flavor_details(self.flavor_ref)
         self.assertTrue(flavor in flavors)
 
-    @attr(type='smoke')
+    @attr(kind='smoke')
     def test_get_flavor(self):
         """ The expected flavor details should be returned """
         resp, flavor = self.client.get_flavor_details(self.flavor_ref)
