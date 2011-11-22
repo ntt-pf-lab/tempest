@@ -87,10 +87,12 @@ class FunctionalTest(unittest.TestCase):
                 self.config.nova.directory))
 
         # reset db.
-        subprocess.check_call('mysql -uroot -pnova -e "'
+        subprocess.check_call('mysql -u%s -p%s -e "'
                               'DROP DATABASE IF EXISTS nova;'
                               'CREATE DATABASE nova;'
-                              '"',
+                              '"' % (
+                                  self.config.mysql.user,
+                                  self.config.mysql.password),
                               shell=True)
         subprocess.call(['bin/nova-manage', 'db', 'sync'],
                         cwd=self.config.nova.directory)
