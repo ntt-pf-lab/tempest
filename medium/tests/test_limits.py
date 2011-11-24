@@ -63,6 +63,44 @@ class TestBase(unittest.TestCase):
                               cwd=self.config.nova.directory, shell=True)
 
 
+class LimitsTest(TestBase):
+
+    def setUp(self):
+        super(LimitsTest, self).setUp()
+        self.testing_processes = []
+
+        # nova.
+        nova_api = NovaApiProcess(
+                self.config.nova.directory,
+                self.config.nova.host,
+                self.config.nova.port)
+        self.testing_processes.append(nova_api)
+
+        for process in self.testing_processes:
+            process.start()
+        time.sleep(10)
+
+    def tearDown(self):
+        for process in self.testing_processes:
+            process.stop()
+        del self.testing_processes[:]
+
+    @attr(kind='medium')
+    def test_limits_by_default(self):
+        http_obj = self.rest_client.http_obj
+        limits_url = self.rest_client.base_url + '/limits'
+        token = self.rest_client.token
+
+        headers = {'X-Auth-Token': token}
+        resp, body = http_obj.request(limits_url,
+                                      headers=headers)
+
+        self.assertEqual(resp.status, 200)
+        body = json.loads(body)
+        self.assertEqual(body['limits']['absolute']['maxTotalCores'],
+                         20)  # magic number of default quota of cores.
+
+
 class ApplyingFlagValueTest(TestBase):
 
     cores = 33
