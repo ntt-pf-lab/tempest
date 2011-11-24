@@ -9,7 +9,7 @@ from storm import openstack
 from medium.tests.processes import (
         KeystoneProcess,
         NovaApiProcess, NovaSchedulerProcess)
-from medium.tests.test_through import config, tearDownModule, FunctionalTest
+from medium.tests.test_through import config, tearDownModule
 
 config = config
 environ_processes = []
