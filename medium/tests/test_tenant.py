@@ -107,3 +107,15 @@ class TenantTest(unittest.TestCase):
         self.assertEqual(resp.status, 200)
         body = json.loads(body)
         self.assertEqual(body['version']['id'], 'v1.1')
+
+    @attr(kind='medium')
+    def test_tenant_not_existing(self):
+        http_obj = self.rest_client.http_obj
+        version_top_url, tenant_name = self.rest_client.base_url.rsplit('/', 1)
+        tenant_not_existing_url = version_top_url + '/' + tenant_name + '1'
+        token = self.rest_client.token
+
+        headers = {'X-Auth-Token': token}
+        resp, body = http_obj.request(tenant_not_existing_url, headers=headers)
+
+        self.assertEqual(resp.status, 404)
