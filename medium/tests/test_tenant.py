@@ -8,7 +8,7 @@ from nose.plugins.attrib import attr
 from storm import openstack
 from medium.tests.processes import (
         KeystoneProcess,
-        NovaApiProcess, NovaSchedulerProcess)
+        NovaApiProcess)
 from medium.tests.test_through import config, tearDownModule
 
 config = config
@@ -48,8 +48,6 @@ class TenantTest(unittest.TestCase):
                 self.config.nova.directory,
                 self.config.nova.host,
                 self.config.nova.port))
-        self.testing_processes.append(NovaSchedulerProcess(
-                self.config.nova.directory))
 
         # reset db.
         subprocess.check_call('mysql -u%s -p%s -e "'
