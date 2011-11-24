@@ -101,7 +101,7 @@ class ImagesClient(object):
             time.sleep(self.build_interval)
             resp, image = self.get_image(image_id)
 
-            if(image_status == 'ERROR'):
+            if(image['status'] == 'ERROR'):
                 raise exceptions.TimeoutException
 
             if (int(time.time()) - start >= self.build_timeout):
