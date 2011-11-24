@@ -219,7 +219,7 @@ class ServersTest(FunctionalTest):
         """
         # Delete the server
         self.ss_client.delete_server(server['id'])
-        self.ss_client.wait_for_server_not_existing(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
 
         print """
 
@@ -244,7 +244,7 @@ class ServersTest(FunctionalTest):
         """
         # Delete the server
         self.ss_client.delete_server(server['id'])
-        self.ss_client.wait_for_server_not_existing(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
 
         print """
 
@@ -253,7 +253,7 @@ class ServersTest(FunctionalTest):
         """
         # Delete the snapshot
         self.img_client.delete_image(alt_img_id)
-        self.img_client.wait_for_image_not_existing(alt_img_id)
+        self.img_client.wait_for_image_not_exists(alt_img_id)
 
 
 class FlavorsTest(FunctionalTest):
