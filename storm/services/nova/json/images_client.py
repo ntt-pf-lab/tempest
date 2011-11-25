@@ -24,7 +24,7 @@ class ImagesClient(object):
         """Creates an image of the original server"""
 
         post_body = {
-            'createImage' : {
+            'createImage': {
                 'name': name,
             }
         }
