@@ -97,14 +97,14 @@ class ImagesClient(object):
         resp, image = self.get_image(image_id)
         start = int(time.time())
 
-        while(image['status'] != status):
+        while image['status'] != status:
             time.sleep(self.build_interval)
             resp, image = self.get_image(image_id)
 
-            if(image['status'] == 'ERROR'):
+            if image['status'] == 'ERROR':
                 raise exceptions.TimeoutException
 
-            if (int(time.time()) - start >= self.build_timeout):
+            if int(time.time()) - start >= self.build_timeout:
                 raise exceptions.BuildErrorException
 
     def wait_for_image_not_exists(self, image_id):

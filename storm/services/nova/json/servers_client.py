@@ -141,15 +141,15 @@ class ServersClient(object):
         server_status = body['status']
         start = int(time.time())
 
-        while(server_status != status):
+        while server_status != status:
             time.sleep(self.build_interval)
             resp, body = self.get_server(server_id)
             server_status = body['status']
 
-            if(server_status == 'ERROR'):
+            if server_status == 'ERROR':
                 raise exceptions.BuildErrorException
 
-            if (int(time.time()) - start >= self.build_timeout):
+            if int(time.time()) - start >= self.build_timeout:
                 raise exceptions.TimeoutException
 
     def wait_for_server_not_exists(self, server_id):
