@@ -66,18 +66,14 @@ class TenantTest(unittest.TestCase):
 
         # create users.
         subprocess.check_call('bin/nova-manage user create '
-                              '--name=admin --access=secrete --secret=secrete',
-                              cwd=self.config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage user create '
-                              '--name=demo --access=secrete --secret=secrete',
+                              '--name=%s --access=secrete --secret=secrete'\
+                                      % self.config.nova.username,
                               cwd=self.config.nova.directory, shell=True)
 
         # create projects.
         subprocess.check_call('bin/nova-manage project create '
-                              '--project=1 --user=admin',
-                              cwd=self.config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage project create '
-                              '--project=2 --user=demo',
+                              '--project=1 --user=%s'\
+                                      % self.config.nova.username,
                               cwd=self.config.nova.directory, shell=True)
 
     def tearDown(self):
