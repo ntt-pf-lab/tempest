@@ -117,10 +117,10 @@ class ImagesClient(object):
             except exceptions.ItemNotFoundException:
                 return
 
-            if(image['status'] == 'ERROR'):
+            if image['status'] == 'ERROR':
                 raise exceptions.TimeoutException
 
-            if (int(time.time()) - start >= self.build_timeout):
+            if int(time.time()) - start >= self.build_timeout:
                 raise exceptions.BuildErrorException
 
             time.sleep(self.build_interval)
