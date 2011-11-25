@@ -94,7 +94,7 @@ class ServersClient(object):
         return resp, body['server']
 
     def get_server(self, server_id):
-        """Returns the properties of an existing server"""
+        """Returns the details of an existing server"""
         resp, body = self.client.get("servers/%s" % str(server_id))
         body = json.loads(body)
         if resp['status'] == '404':
@@ -164,10 +164,10 @@ class ServersClient(object):
 
             server_status = body['status']
 
-            if(server_status == 'ERROR'):
+            if server_status == 'ERROR':
                 raise exceptions.TimeoutException
 
-            if (int(time.time()) - start >= self.build_timeout):
+            if int(time.time()) - start >= self.build_timeout:
                 raise exceptions.BuildErrorException
 
             time.sleep(self.build_interval)
@@ -262,7 +262,7 @@ class ServersClient(object):
     def revert_resize(self, server_id):
         """Reverts a server back to its original flavor"""
         post_body = {
-            'revertResize' : None
+            'revertResize': None
         }
 
         post_body = json.dumps(post_body)
@@ -322,3 +322,4 @@ class ServersClient(object):
     def delete_server_metadata_item(self, server_id, key):
         resp, body = self.client.delete("servers/%s/metadata/%s" %
                                     (str(server_id), key))
+        return resp, body
