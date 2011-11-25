@@ -62,8 +62,18 @@ class TestBase(unittest.TestCase):
                               '--project=1 --user=admin',
                               cwd=self.config.nova.directory, shell=True)
 
+    def get_for_limit(self, url):
+        http_obj = self.rest_client.http_obj
+        token = self.rest_client.token
+
+        headers = {'X-Auth-Token': token}
+        return http_obj.request(url, headers=headers)
+
 
 class LimitsTest(TestBase):
+
+    # magic number of default quota of cores.
+    cores = 20
 
     def setUp(self):
         super(LimitsTest, self).setUp()
@@ -86,27 +96,31 @@ class LimitsTest(TestBase):
         del self.testing_processes[:]
 
     @attr(kind='medium')
-    def test_limits_by_default(self):
-        http_obj = self.rest_client.http_obj
-        limits_url = self.rest_client.base_url + '/limits'
-        token = self.rest_client.token
-
-        headers = {'X-Auth-Token': token}
-        resp, body = http_obj.request(limits_url,
-                                      headers=headers)
+    def test_absolute_limits_by_default(self):
+        resp, body = self.get_for_limit(self.rest_client.base_url + '/limits')
 
         self.assertEqual(resp.status, 200)
         body = json.loads(body)
         self.assertEqual(body['limits']['absolute']['maxTotalCores'],
-                         20)  # magic number of default quota of cores.
+                         self.cores)
+
+    @attr(kind='medium')
+    def test_default_limits_by_default(self):
+        resp, body = self.get_for_limit(self.rest_client.base_url\
+                                        + '/os-quota-sets/defaults')
+
+        self.assertEqual(resp.status, 200)
+        body = json.loads(body)
+        self.assertEqual(body['quota_set']['cores'],
+                         self.cores)
 
 
-class ApplyingFlagValueTest(TestBase):
+class AppliedFlagValueTest(TestBase):
 
     cores = 33
 
     def setUp(self):
-        super(ApplyingFlagValueTest, self).setUp()
+        super(AppliedFlagValueTest, self).setUp()
         self.testing_processes = []
 
         # nova.
@@ -127,16 +141,20 @@ class ApplyingFlagValueTest(TestBase):
         del self.testing_processes[:]
 
     @attr(kind='medium')
-    def test_limits_with_flags(self):
-        http_obj = self.rest_client.http_obj
-        limits_url = self.rest_client.base_url + '/limits'
-        token = self.rest_client.token
-
-        headers = {'X-Auth-Token': token}
-        resp, body = http_obj.request(limits_url,
-                                      headers=headers)
+    def test_absolute_limits_with_flags(self):
+        resp, body = self.get_for_limit(self.rest_client.base_url + '/limits')
 
         self.assertEqual(resp.status, 200)
         body = json.loads(body)
         self.assertEqual(body['limits']['absolute']['maxTotalCores'],
+                         self.cores)
+
+    @attr(kind='medium')
+    def test_default_limits_with_flags(self):
+        resp, body = self.get_for_limit(self.rest_client.base_url\
+                                        + '/os-quota-sets/defaults')
+
+        self.assertEqual(resp.status, 200)
+        body = json.loads(body)
+        self.assertEqual(body['quota_set']['cores'],
                          self.cores)
