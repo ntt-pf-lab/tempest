@@ -24,7 +24,7 @@ class ImagesClient(object):
         """Creates an image of the original server"""
 
         post_body = {
-            'createImage' : {
+            'createImage': {
                 'name': name,
             }
         }
@@ -97,14 +97,14 @@ class ImagesClient(object):
         resp, image = self.get_image(image_id)
         start = int(time.time())
 
-        while(image['status'] != status):
+        while image['status'] != status:
             time.sleep(self.build_interval)
             resp, image = self.get_image(image_id)
 
-            if(image_status == 'ERROR'):
+            if image['status'] == 'ERROR':
                 raise exceptions.TimeoutException
 
-            if (int(time.time()) - start >= self.build_timeout):
+            if int(time.time()) - start >= self.build_timeout:
                 raise exceptions.BuildErrorException
 
     def wait_for_image_not_exists(self, image_id):
@@ -117,10 +117,10 @@ class ImagesClient(object):
             except exceptions.ItemNotFoundException:
                 return
 
-            if(image['status'] == 'ERROR'):
+            if image['status'] == 'ERROR':
                 raise exceptions.TimeoutException
 
-            if (int(time.time()) - start >= self.build_timeout):
+            if int(time.time()) - start >= self.build_timeout:
                 raise exceptions.BuildErrorException
 
             time.sleep(self.build_interval)
