@@ -37,6 +37,7 @@ class TestBase(unittest.TestCase):
     config = config
 
     def setUp(self):
+        self.testing_processes = []
         self.os = openstack.Manager(config=self.config)
         # take a rest client from storm internal.
         self.rest_client = self.os.servers_client.client
@@ -64,6 +65,11 @@ class TestBase(unittest.TestCase):
                                       % self.config.nova.username,
                               cwd=self.config.nova.directory, shell=True)
 
+    def tearDown(self):
+        for process in self.testing_processes:
+            process.stop()
+        del self.testing_processes[:]
+
     def request_for_limit(self, url, method='GET', body=None):
         http_obj = self.rest_client.http_obj
         token = self.rest_client.token
@@ -74,10 +80,28 @@ class TestBase(unittest.TestCase):
             body = json.dumps(body)
         resp, body = http_obj.request(url,
                 method=method, body=body, headers=headers)
-        self.assertEqual(resp.status, 200)
         if resp['content-type'] == 'application/json':
             body = json.loads(body)
         return resp, body
+
+    def _tenant_url(self, tenant_id=None):
+        if tenant_id is None:
+            return self.rest_client.base_url
+        else:
+            return self.rest_client.base_url.rsplit('/', 1)[0]\
+                   + '/' + tenant_id
+
+    def get_absolute_limits(self, tenant_id=None):
+        return self.request_for_limit(self._tenant_url(tenant_id=tenant_id)
+                                      + '/limits')
+
+    def get_limits(self, tenant_id=None):
+        tenant_url = self._tenant_url(tenant_id=tenant_id)
+        if tenant_id is None:
+            url = tenant_url + '/os-quota-sets/defaults'
+        else:
+            url = tenant_url + '/os-quota-sets'
+        return self.request_for_limit(url)
 
 
 class LimitsTest(TestBase):
@@ -87,7 +111,6 @@ class LimitsTest(TestBase):
 
     def setUp(self):
         super(LimitsTest, self).setUp()
-        self.testing_processes = []
 
         # nova.
         nova_api = NovaApiProcess(
@@ -100,38 +123,42 @@ class LimitsTest(TestBase):
             process.start()
         time.sleep(10)
 
-    def tearDown(self):
-        for process in self.testing_processes:
-            process.stop()
-        del self.testing_processes[:]
-
     @attr(kind='medium')
-    def test_absolute_limits_by_default(self):
-        resp, body = self.request_for_limit(self.rest_client.base_url\
-                                            + '/limits')
+    def test_absolute_limits(self):
+        resp, body = self.get_absolute_limits()
+        self.assertEqual(resp.status, 200)
         self.assertEqual(body['limits']['absolute']['maxTotalCores'],
                          self.cores)
 
     @attr(kind='medium')
-    def test_default_limits_by_default(self):
-        resp, body = self.request_for_limit(self.rest_client.base_url\
-                                            + '/os-quota-sets/admin')
+    def test_limits(self):
+        resp, body = self.get_limits()
+        self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], self.cores)
+
+    @attr(kind='medium')
+    def test_limits_with_unknown_tenant(self):
+        resp, _body = self.get_limits(tenant_id='unknown')
+        self.assertEqual(resp.status, 404)
 
     @attr(kind='medium')
     def test_update_limit_on_demand(self):
         cores = 5
 
+        resp, body = self.request_for_limit(self.rest_client.base_url\
+                                            + '/os-quota-sets')
+        self.assertEqual(body['quota_set']['cores'], self.cores)
+
         # update
         resp, body = self.request_for_limit(self.rest_client.base_url\
-                                            + '/os-quota-sets/admin',
+                                            + '/os-quota-sets',
                                             method='PUT',
                                             body={'quota_set':
                                                     {'cores': cores}})
         self.assertEqual(body['quota_set']['cores'], cores)
 
         resp, body = self.request_for_limit(self.rest_client.base_url\
-                                            + '/os-quota-sets/admin')
+                                            + '/os-quota-sets')
         self.assertEqual(body['quota_set']['cores'], cores)
 
 
