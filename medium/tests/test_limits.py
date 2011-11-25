@@ -70,12 +70,12 @@ class TestBase(unittest.TestCase):
 
         headers = {'X-Auth-Token': token}
         if body is not None:
-            headers['Content-type'] = 'application/json'
+            headers['content-type'] = 'application/json'
             body = json.dumps(body)
         resp, body = http_obj.request(url,
                 method=method, body=body, headers=headers)
         self.assertEqual(resp.status, 200)
-        if resp.content_type == 'application/json':
+        if resp['content-type'] == 'application/json':
             body = json.loads(body)
         return resp, body
 
@@ -135,12 +135,12 @@ class LimitsTest(TestBase):
         self.assertEqual(body['quota_set']['cores'], cores)
 
 
-class AppliedFlagValueTest(TestBase):
+class AppliedFlagValueTest(LimitsTest):
 
     cores = 33
 
     def setUp(self):
-        super(AppliedFlagValueTest, self).setUp()
+        super(LimitsTest, self).setUp()
         self.testing_processes = []
 
         # nova.
@@ -154,37 +154,3 @@ class AppliedFlagValueTest(TestBase):
         for process in self.testing_processes:
             process.start()
         time.sleep(10)
-
-    def tearDown(self):
-        for process in self.testing_processes:
-            process.stop()
-        del self.testing_processes[:]
-
-    @attr(kind='medium')
-    def test_absolute_limits_with_flags(self):
-        resp, body = self.request_for_limit(self.rest_client.base_url\
-                                            + '/limits')
-        self.assertEqual(body['limits']['absolute']['maxTotalCores'],
-                         self.cores)
-
-    @attr(kind='medium')
-    def test_default_limits_with_flags(self):
-        resp, body = self.request_for_limit(self.rest_client.base_url\
-                                            + '/os-quota-sets/admin')
-        self.assertEqual(body['quota_set']['cores'], self.cores)
-
-    @attr(kind='medium')
-    def test_update_limit_on_demand(self):
-        cores = 5
-
-        # update
-        resp, body = self.request_for_limit(self.rest_client.base_url\
-                                            + '/os-quota-sets/admin',
-                                            method='PUT',
-                                            body={'quota_set':
-                                                    {'cores': cores}})
-        self.assertEqual(body['quota_set']['cores'], cores)
-
-        resp, body = self.request_for_limit(self.rest_client.base_url\
-                                            + '/os-quota-sets/admin')
-        self.assertEqual(body['quota_set']['cores'], cores)
