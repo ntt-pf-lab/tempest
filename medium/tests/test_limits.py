@@ -91,17 +91,25 @@ class TestBase(unittest.TestCase):
             return self.rest_client.base_url.rsplit('/', 1)[0]\
                    + '/' + tenant_id
 
+    def _quota_sets_url(self, tenant_id=None):
+        tenant_url = self._tenant_url(tenant_id=tenant_id)
+        if tenant_id is None:
+            return tenant_url + '/os-quota-sets/defaults'
+        else:
+            return tenant_url + '/os-quota-sets'
+
     def get_absolute_limits(self, tenant_id=None):
         return self.request_for_limit(self._tenant_url(tenant_id=tenant_id)
                                       + '/limits')
 
     def get_limits(self, tenant_id=None):
-        tenant_url = self._tenant_url(tenant_id=tenant_id)
-        if tenant_id is None:
-            url = tenant_url + '/os-quota-sets/defaults'
-        else:
-            url = tenant_url + '/os-quota-sets'
+        url = self._quota_sets_url(tenant_id=tenant_id)
         return self.request_for_limit(url)
+
+    def put_limits(self, tenant_id=None, **kwargs):
+        url = self._quota_sets_url(tenant_id=tenant_id)
+        return self.request_for_limit(url, method='PUT',
+                                      body={'quota_set': kwargs})
 
 
 class LimitsTest(TestBase):
@@ -124,41 +132,110 @@ class LimitsTest(TestBase):
         time.sleep(10)
 
     @attr(kind='medium')
-    def test_absolute_limits(self):
+    def test_A00_04_absolute_limits(self):
         resp, body = self.get_absolute_limits()
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['limits']['absolute']['maxTotalCores'],
                          self.cores)
 
     @attr(kind='medium')
-    def test_limits(self):
+    def test_A00_145_update_limit_on_demand(self):
+        cores = 5
+
+        # update
+        resp, body = self.put_limits(cores=cores)
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(body['quota_set']['cores'], cores)
+
+        resp, body = self.get_limits()
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(body['quota_set']['cores'], cores)
+
+    @attr(kind='medium')
+    def test_A00_146_limits_with_unknown_tenant(self):
+        resp, _body = self.get_limits(tenant_id='unknown')
+        self.assertEqual(resp.status, 404)
+
+    @attr(kind='medium')
+    def test_A00_147_limits(self):
+        resp, body = self.get_limits(tenant_id='admin')
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(body['quota_set']['cores'], self.cores)
+
+    @attr(kind='medium')
+    def test_A00_148_updates_limits(self):
+        cores = 5
+
+        # update
+        resp, body = self.put_limits(tenant_id='admin', cores=cores)
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(body['quota_set']['cores'], cores)
+
+        resp, body = self.get_limits()
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(body['quota_set']['cores'], cores)
+
+    @attr(kind='medium')
+    def test_A00_149_updates_limits_with_unknown_tenant(self):
+        cores = 5
+
+        # update
+        resp, body = self.put_limits(tenant_id='unknown', cores=cores)
+        self.assertEqual(resp.status, 404)
+
+    @attr(kind='medium')
+    def test_A00_151_updates_limits(self):
+        cores = 5
+
+        # update
+        resp, body = self.put_limits(tenant_id='admin', cores=cores)
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(body['quota_set']['cores'], cores)
+
+        resp, body = self.get_limits()
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(body['quota_set']['cores'], cores)
+
+    @attr(kind='medium')
+    def test_A00_152_updates_some_limits(self):
+        cores = 5
+        volumes = 1
+
+        # update
+        resp, body = self.put_limits(tenant_id='admin',
+                                     cores=cores, volumes=volumes)
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(body['quota_set']['cores'], cores)
+        self.assertEqual(body['quota_set']['volumes'], volumes)
+
+        resp, body = self.get_limits()
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(body['quota_set']['cores'], cores)
+        self.assertEqual(body['quota_set']['volumes'], volumes)
+
+    @attr(kind='medium')
+    def test_A00_155_limits(self):
         resp, body = self.get_limits()
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], self.cores)
 
     @attr(kind='medium')
-    def test_limits_with_unknown_tenant(self):
-        resp, _body = self.get_limits(tenant_id='unknown')
+    def test_A00_156_limits_with_unknown_tenant(self):
+        # update
+        resp, body = self.get_limits(tenant_id='unknown')
         self.assertEqual(resp.status, 404)
 
     @attr(kind='medium')
-    def test_update_limit_on_demand(self):
+    def test_A00_157_updates_limits(self):
         cores = 5
 
-        resp, body = self.request_for_limit(self.rest_client.base_url\
-                                            + '/os-quota-sets')
-        self.assertEqual(body['quota_set']['cores'], self.cores)
-
         # update
-        resp, body = self.request_for_limit(self.rest_client.base_url\
-                                            + '/os-quota-sets',
-                                            method='PUT',
-                                            body={'quota_set':
-                                                    {'cores': cores}})
+        resp, body = self.put_limits(cores=cores)
+        self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
 
-        resp, body = self.request_for_limit(self.rest_client.base_url\
-                                            + '/os-quota-sets')
+        resp, body = self.get_limits()
+        self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
 
 
@@ -181,3 +258,23 @@ class AppliedFlagValueTest(LimitsTest):
         for process in self.testing_processes:
             process.start()
         time.sleep(10)
+
+    @attr(kind='medium')
+    def test_A00_02_absolute_limits(self):
+        resp, body = self.get_absolute_limits()
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(body['limits']['absolute']['maxTotalCores'],
+                         self.cores)
+
+    @attr(kind='medium')
+    def test_A00_03_update_limit_on_demand(self):
+        cores = 5
+
+        # update
+        resp, body = self.put_limits(cores=cores)
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(body['quota_set']['cores'], cores)
+
+        resp, body = self.get_absolute_limits()
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(body['limits']['absolute']['maxTotalCores'], cores)
