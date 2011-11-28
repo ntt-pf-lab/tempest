@@ -70,6 +70,25 @@ class TestBase(unittest.TestCase):
             process.stop()
         del self.testing_processes[:]
 
+    def get_quota_data_from_mysql(self, resource=None):
+        if resource is not None:
+            if not isinstance(resource, list):
+                resource = [resource]
+            resource_sql = 'AND (%s)' % ' OR '.join("resource='%s'" % name
+                                                    for name in resource)
+        else:
+            resource_sql = ''
+        s = subprocess.check_output("""mysql -u %s -p%s nova -Ns -e "
+                                       SELECT * FROM quotas
+                                       WHERE project_id='%s'
+                                             %s;" """\
+                                         % (self.config.mysql.user,
+                                            self.config.mysql.password,
+                                            self.config.nova.username,
+                                            resource_sql),
+                                         shell=True)
+        return s
+
     def request_for_limit(self, url, method='GET', body=None):
         http_obj = self.rest_client.http_obj
         token = self.rest_client.token
@@ -143,7 +162,7 @@ class LimitsTest(TestBase):
                          self.cores)
 
     @attr(kind='medium')
-    def test_A00_145_update_limit_on_demand(self):
+    def test_A00_145_get_stored_limit(self):
         cores = 5
 
         # update
@@ -151,36 +170,38 @@ class LimitsTest(TestBase):
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
 
+        # verify
         resp, body = self.get_limits()
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
 
     @attr(kind='medium')
-    def test_A00_146_limits_with_unknown_tenant(self):
+    def test_A00_146_get_limit_from_unknown_tenant(self):
         resp, _body = self.get_limits(tenant_id='unknown')
         self.assertEqual(resp.status, 404)
 
     @attr(kind='medium')
-    def test_A00_147_limits(self):
-        resp, body = self.get_limits(tenant_id='admin')
+    def test_A00_147_get_limit(self):
+        resp, body = self.get_limits()
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], self.cores)
 
     @attr(kind='medium')
-    def test_A00_148_updates_limits(self):
+    def test_A00_148_update_limits(self):
         cores = 5
 
         # update
-        resp, body = self.put_limits(tenant_id='admin', cores=cores)
+        resp, body = self.put_limits(cores=cores)
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
 
+        # verify
         resp, body = self.get_limits()
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
 
     @attr(kind='medium')
-    def test_A00_149_updates_limits_with_unknown_tenant(self):
+    def test_A00_149_update_limits_with_unknown_tenant(self):
         cores = 5
 
         # update
@@ -188,34 +209,67 @@ class LimitsTest(TestBase):
         self.assertEqual(resp.status, 404)
 
     @attr(kind='medium')
-    def test_A00_151_updates_limits(self):
+    def test_A00_151_update_limits(self):
         cores = 5
 
         # update
-        resp, body = self.put_limits(tenant_id='admin', cores=cores)
+        resp, body = self.put_limits(cores=cores)
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
 
+        # verify
         resp, body = self.get_limits()
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
 
     @attr(kind='medium')
-    def test_A00_152_updates_some_limits(self):
+    def test_A00_152_update_some_limits(self):
         cores = 5
         volumes = 1
 
         # update
-        resp, body = self.put_limits(tenant_id='admin',
-                                     cores=cores, volumes=volumes)
+        resp, body = self.put_limits(cores=cores, volumes=volumes)
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
         self.assertEqual(body['quota_set']['volumes'], volumes)
 
+        # verify
         resp, body = self.get_limits()
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
         self.assertEqual(body['quota_set']['volumes'], volumes)
+
+    @attr(kind='medium')
+    def test_A00_153_create_limits(self):
+        cores = 5
+
+        # prepare
+        s = self.get_quota_data_from_mysql('cores')
+        self.assertEqual(len(s.split()), 0, "Must be no quota")
+
+        # update
+        resp, body = self.put_limits(cores=cores)
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(body['quota_set']['cores'], cores)
+
+        # verify
+        resp, body = self.get_limits()
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(body['quota_set']['cores'], cores)
+
+    @attr(kind='medium')
+    def test_A00_154_update_unknown_limits(self):
+        # prepare
+        s = self.get_quota_data_from_mysql()
+        self.assertEqual(len(s.split()), 0, "Must be no quota")
+
+        # update
+        resp, body = self.put_limits(unknown=1)
+        self.assertEqual(resp.status, 404)
+
+        # verify
+        s = self.get_quota_data_from_mysql()
+        self.assertEqual(len(s.split()), 0, "Must be no quota")
 
     @attr(kind='medium')
     def test_A00_155_default_limits(self):
@@ -273,7 +327,7 @@ class AppliedFlagValueTest(LimitsTest):
                          self.cores)
 
     @attr(kind='medium')
-    def test_A00_03_use_set_value_instead_of_flags(self):
+    def test_A00_03_use_stored_value_instead_of_flags(self):
         cores = 5
 
         # update
