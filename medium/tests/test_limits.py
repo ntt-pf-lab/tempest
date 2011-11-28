@@ -115,11 +115,11 @@ class TestBase(unittest.TestCase):
         if defaults:
             return tenant_url + '/os-quota-sets/defaults'
         else:
-            # XXX treat this strange url as valid until this bug is fixed.
-            # return tenant_url + '/os-quota-sets'
-            if tenant_id is None:
-                tenant_id = tenant_url.rsplit('/', 1)[1]
-            return tenant_url + '/os-quota-sets/%s' % tenant_id
+            return tenant_url + '/os-quota-sets'
+            # XXX treat this strange url as valid until the bug #427 is fixed.
+            # if tenant_id is None:
+            #     tenant_id = tenant_url.rsplit('/', 1)[1]
+            # return tenant_url + '/os-quota-sets/%s' % tenant_id
 
     def get_absolute_limits(self, tenant_id=None):
         return self.request_for_limit(
