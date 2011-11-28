@@ -283,28 +283,13 @@ class LimitsTest(TestBase):
         resp, body = self.get_limits(tenant_id='unknown', defaults=True)
         self.assertEqual(resp.status, 404)
 
-"""
-    @attr(kind='medium')
-    def test_A00_157_updates_limits(self):
-        cores = 5
 
-        # update
-        resp, body = self.put_limits(cores=cores)
-        self.assertEqual(resp.status, 200)
-        self.assertEqual(body['quota_set']['cores'], cores)
-
-        resp, body = self.get_limits()
-        self.assertEqual(resp.status, 200)
-        self.assertEqual(body['quota_set']['cores'], cores)
-"""
-
-
-class AppliedFlagValueTest(LimitsTest):
+class AppliedFlagValueTest(TestBase):
 
     cores = 33
 
     def setUp(self):
-        super(LimitsTest, self).setUp()
+        super(AppliedFlagValueTest, self).setUp()
         self.testing_processes = []
 
         # nova.
