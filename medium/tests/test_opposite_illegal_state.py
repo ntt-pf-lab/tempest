@@ -160,8 +160,17 @@ class LibvirtLaunchErrorTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6)
 
-        time.sleep(60 * 60)
         # Wait for the server to become ERROR.BUILD
         self.assertRaises(exceptions.BuildErrorException,
                           self.ss_client.wait_for_server_status,
                           server['id'], 'ERROR')
+
+
+class LibvirtLookupErrorTest(LibvirtLaunchErrorTest):
+    def setUp(self):
+        super(LibvirtLaunchErrorTest, self).setUp()
+        compute = NovaComputeProcess(self.config.nova.directory)
+        compute.env = os.environ.copy()
+        compute.env['PYTHONPATH'] = self.get_fake_libvirt_path('lookup-error')
+        compute.start()
+        self.testing_processes.append(compute)
