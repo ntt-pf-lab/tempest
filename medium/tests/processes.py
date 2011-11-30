@@ -37,10 +37,12 @@ class Process(object):
         self._process = None
         self.cwd = cwd
         self.command = command
+        self.env = None
 
     def start(self):
         self._process = subprocess.Popen(self.command,
-                                         cwd=self.cwd, shell=True)
+                                         cwd=self.cwd, shell=True,
+                                         env=self.env)
         assert self._process.returncode is None
 
     def stop(self):
