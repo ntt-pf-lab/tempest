@@ -160,6 +160,7 @@ class LibvirtLaunchErrorTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6)
 
+        time.sleep(60 * 60)
         # Wait for the server to become ERROR.BUILD
         self.assertRaises(exceptions.BuildErrorException,
                           self.ss_client.wait_for_server_status,
