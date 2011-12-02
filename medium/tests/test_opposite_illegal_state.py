@@ -19,13 +19,13 @@ from medium.tests.processes import (
 
 
 class FakeQuantumProcess(Process):
-    def __init__(self, tenant_id, status_code_dict):
+    def __init__(self, tenant_id, **status_code):
         cwd = os.path.join(os.path.dirname(__file__),
                            'quantum-service-fake')
         command = os.path.join(cwd, 'fake_server.py')
         for tenant_id in list(tenant_id):
             command += ' --tenant=%s' % tenant_id
-        for pair in status_code_dict.items():
+        for pair in status_code.items():
             command += ' --%s=%d' % pair
         super(FakeQuantumProcess, self)\
                 .__init__(cwd, command)
@@ -67,7 +67,7 @@ def tearDownModule(module):
     del module.environ_processes[:]
 
 
-class FunctionalTest(unittest.TestCase):
+class LibvirtFunctionalTest(unittest.TestCase):
 
     config = config
 
@@ -90,7 +90,7 @@ class FunctionalTest(unittest.TestCase):
                 self.config.nova.directory))
 
         # quantum.
-        self.testing_processes.append(FakeQuantumProcess('1', {}))
+        self.testing_processes.append(FakeQuantumProcess('1'))
 
         # reset db.
         subprocess.check_call('mysql -u%s -p%s -e "'
@@ -126,14 +126,6 @@ class FunctionalTest(unittest.TestCase):
                               '--num_networks=1 '
                               '--network_size=32 ',
                               cwd=self.config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
-                              '--label=private_1-2 '
-                              '--project_id=1 '
-                              '--fixed_range_v4=10.0.1.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=self.config.nova.directory, shell=True)
 
     def tearDown(self):
         # kill still existing virtual instances.
@@ -155,7 +147,7 @@ class FunctionalTest(unittest.TestCase):
                 name)
 
 
-class LibvirtLaunchErrorTest(FunctionalTest):
+class LibvirtLaunchErrorTest(LibvirtFunctionalTest):
     def setUp(self):
         super(LibvirtLaunchErrorTest, self).setUp()
         compute = NovaComputeProcess(self.config.nova.directory)
@@ -189,3 +181,128 @@ class LibvirtLookupErrorTest(LibvirtLaunchErrorTest):
         compute.env['PYTHONPATH'] = self.get_fake_libvirt_path('lookup-error')
         compute.start()
         self.testing_processes.append(compute)
+
+
+class QuantumFunctionalTest(unittest.TestCase):
+
+    config = config
+
+    def setUp(self):
+        self.os = openstack.Manager(config=self.config)
+        self.image_ref = self.config.env.image_ref
+        self.flavor_ref = self.config.env.flavor_ref
+        self.ss_client = self.os.servers_client
+        self.img_client = self.os.images_client
+        self.testing_processes = []
+
+        # nova.
+        self.testing_processes.append(NovaApiProcess(
+                self.config.nova.directory,
+                self.config.nova.host,
+                self.config.nova.port))
+        self.testing_processes.append(NovaNetworkProcess(
+                self.config.nova.directory))
+        self.testing_processes.append(NovaSchedulerProcess(
+                self.config.nova.directory))
+
+        # reset db.
+        subprocess.check_call('mysql -u%s -p%s -e "'
+                              'DROP DATABASE IF EXISTS nova;'
+                              'CREATE DATABASE nova;'
+                              '"' % (
+                                  self.config.mysql.user,
+                                  self.config.mysql.password),
+                              shell=True)
+        subprocess.call('bin/nova-manage db sync',
+                        cwd=self.config.nova.directory, shell=True)
+
+        for process in self.testing_processes:
+            process.start()
+        time.sleep(10)
+
+        # create users.
+        subprocess.check_call('bin/nova-manage user create '
+                              '--name=admin --access=secrete --secret=secrete',
+                              cwd=self.config.nova.directory, shell=True)
+
+        # create projects.
+        subprocess.check_call('bin/nova-manage project create '
+                              '--project=1 --user=admin',
+                              cwd=self.config.nova.directory, shell=True)
+
+    def tearDown(self):
+        # kill still existing virtual instances.
+        for line in subprocess.check_output('virsh list --all',
+                                            shell=True).split('\n')[2:-2]:
+            (id, name, state) = line.split()
+            if state == 'running':
+                subprocess.check_call('virsh destroy %s' % id, shell=True)
+            subprocess.check_call('virsh undefine %s' % name, shell=True)
+
+        for process in self.testing_processes:
+            process.stop()
+        del self.testing_processes[:]
+
+    def check_create_network(self, retcode):
+        self.assertEqual(subprocess.call('bin/nova-manage network create '
+                                             '--label=private_1-1 '
+                                             '--project_id=1 '
+                                             '--fixed_range_v4=10.0.0.0/24 '
+                                             '--bridge_interface=br-int '
+                                             '--num_networks=1 '
+                                             '--network_size=32 ',
+                                         cwd=self.config.nova.directory,
+                                         shell=True), retcode)
+
+    def check_delete_network(self, retcode):
+        self.assertEqual(subprocess.call('bin/nova-manage network delete '
+                                             '--network=10.0.0.0/24 ',
+                                         cwd=self.config.nova.directory,
+                                         shell=True), retcode)
+
+    def _test_create_network(self, status_code):
+        # quantum.
+        quantum = FakeQuantumProcess('1', create_network=status_code)
+        self.testing_processes.append(quantum)
+        quantum.start()
+
+        self.check_create_network(1)
+
+    def test_create_network_bad_request(self):
+        self._test_create_network(400)
+
+    def test_create_network_forbidden(self):
+        self._test_create_network(403)
+
+    def _test_delete_network(self, status_code):
+        # quantum.
+        quantum = FakeQuantumProcess('1', delete_network=status_code)
+        self.testing_processes.append(quantum)
+        quantum.start()
+
+        self.check_create_network(0)
+        self.check_delete_network(1)
+
+    def test_delete_network_bad_request(self):
+        self._test_delete_network(400)
+
+    def test_delete_network_forbidden(self):
+        self._test_delete_network(403)
+
+    def test_delete_network_network_not_found(self):
+        self._test_delete_network(420)
+
+    def test_delete_network_network_in_use(self):
+        self._test_delete_network(421)
+
+    def _test_show_network_details(self, status_code):
+        # quantum.
+        quantum = FakeQuantumProcess('1', show_network_details=status_code)
+        self.testing_processes.append(quantum)
+        quantum.start()
+
+        self.check_create_network(0)
+        self.check_delete_network(0)
+
+    def test_show_network_details_forbidden(self):
+        self._test_show_network_details(403)
