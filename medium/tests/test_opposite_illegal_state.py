@@ -14,7 +14,21 @@ from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
         KeystoneProcess,
         NovaApiProcess, NovaComputeProcess,
-        NovaNetworkProcess, NovaSchedulerProcess)
+        NovaNetworkProcess, NovaSchedulerProcess,
+        Process)
+
+
+class FakeQuantumProcess(Process):
+    def __init__(self, tenant_id, status_code_dict):
+        cwd = os.path.join(os.path.dirname(__file__),
+                           'quantum-service-fake')
+        command = os.path.join(cwd, 'fake_server.py')
+        for tenant_id in list(tenant_id):
+            command += ' --tenant=%s' % tenant_id
+        for pair in status_code_dict.items():
+            command += ' --%s=%d' % pair
+        super(FakeQuantumProcess, self)\
+                .__init__(cwd, command)
 
 
 config = storm.config.StormConfig('etc/medium-less-build_timeout.conf')
@@ -75,6 +89,9 @@ class FunctionalTest(unittest.TestCase):
         self.testing_processes.append(NovaSchedulerProcess(
                 self.config.nova.directory))
 
+        # quantum.
+        self.testing_processes.append(FakeQuantumProcess('1', {}))
+
         # reset db.
         subprocess.check_call('mysql -u%s -p%s -e "'
                               'DROP DATABASE IF EXISTS nova;'
@@ -100,7 +117,6 @@ class FunctionalTest(unittest.TestCase):
                               '--project=1 --user=admin',
                               cwd=self.config.nova.directory, shell=True)
 
-        """
         # allocate networks.
         subprocess.check_call('bin/nova-manage network create '
                               '--label=private_1-1 '
@@ -118,7 +134,6 @@ class FunctionalTest(unittest.TestCase):
                               '--num_networks=1 '
                               '--network_size=32 ',
                               cwd=self.config.nova.directory, shell=True)
-        """
 
     def tearDown(self):
         # kill still existing virtual instances.
