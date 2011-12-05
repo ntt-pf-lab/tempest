@@ -299,11 +299,9 @@ class QuantumFunctionalTest(unittest.TestCase):
     def test_delete_network_network_in_use(self):
         self._test_delete_network(421)
 
-    """
-    # No calling path to the API during creating server???
-    def _test_show_network_details(self, status_code):
+    def _execute_fake_and_wait_for_error(self, **param):
         # quantum.
-        quantum = FakeQuantumProcess('admin', show_network_details=status_code)
+        quantum = FakeQuantumProcess('admin', **param)
         self.testing_processes.append(quantum)
         quantum.start()
 
@@ -322,35 +320,19 @@ class QuantumFunctionalTest(unittest.TestCase):
         self.assertRaises(exceptions.BuildErrorException,
                           self.ss_client.wait_for_server_status,
                           server['id'], 'ERROR')
+
+    # No calling path to the API during creating server???
+    def _test_show_network_details(self, status_code):
+        self._execute_fake_and_wait_for_error(show_network_details=status_code)
 
     def test_show_network_details_forbidden(self):
         self._test_show_network_details(403)
 
     def test_show_network_details_network_not_found(self):
         self._test_show_network_details(420)
-    """
 
     def _test_create_port(self, status_code):
-        # quantum.
-        quantum = FakeQuantumProcess('admin', create_port=status_code)
-        self.testing_processes.append(quantum)
-        quantum.start()
-
-        self.check_create_network(0)
-
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6)
-
-        # Wait for the server to become ERROR.BUILD
-        self.assertRaises(exceptions.BuildErrorException,
-                          self.ss_client.wait_for_server_status,
-                          server['id'], 'ERROR')
+        self._execute_fake_and_wait_for_error(create_port=status_code)
 
     def test_create_port_bad_request(self):
         self._test_create_port(400)
@@ -360,3 +342,82 @@ class QuantumFunctionalTest(unittest.TestCase):
 
     def test_create_port_network_not_found(self):
         self._test_create_port(420)
+
+    def test_create_port_requested_state_invalid(self):
+        self._test_create_port(431)
+
+    def _test_plug_port_attachment(self, status_code):
+        self._execute_fake_and_wait_for_error(plug_port_attachment=status_code)
+
+    def test_plug_port_attachment_forbidden(self):
+        self._test_plug_port_attachment(403)
+
+    def test_plug_port_attachment_network_not_found(self):
+        self._test_plug_port_attachment(420)
+
+    def test_plug_port_attachment_port_not_found(self):
+        self._test_plug_port_attachment(430)
+
+    def test_plug_port_attachment_port_in_use(self):
+        self._test_plug_port_attachment(432)
+
+    def test_plug_port_attachment_already_attached(self):
+        self._test_plug_port_attachment(440)
+
+    def _test_unplug_port_attachment(self, status_code):
+        self._execute_fake_and_wait_for_error(
+                unplug_port_attachment=status_code)
+
+    def test_unplug_port_attachment_forbidden(self):
+        self._test_unplug_port_attachment(403)
+
+    def test_unplug_port_attachment_network_not_found(self):
+        self._test_unplug_port_attachment(420)
+
+    def test_unplug_port_attachment_port_not_found(self):
+        self._test_unplug_port_attachment(430)
+
+    def _test_delete_port(self, status_code):
+        self._execute_fake_and_wait_for_error(delete_port=status_code)
+
+    def test_delete_port_bad_request(self):
+        self._test_delete_port(400)
+
+    def test_delete_port_forbidden(self):
+        self._test_delete_port(403)
+
+    def test_delete_port_network_not_found(self):
+        self._test_delete_port(420)
+
+    def test_delete_port_port_not_found(self):
+        self._test_delete_port(430)
+
+    def test_delete_port_port_in_use(self):
+        self._test_delete_port(432)
+
+    def _test_list_networks(self, status_code):
+        self._execute_fake_and_wait_for_error(list_networks=status_code)
+
+    def test_list_networks_forbidden(self):
+        self._test_list_networks(403)
+
+    def _test_list_ports(self, status_code):
+        self._execute_fake_and_wait_for_error(list_ports=status_code)
+
+    def test_list_ports_forbidden(self):
+        self._test_list_ports(403)
+
+    def test_list_ports_network_not_found(self):
+        self._test_list_ports(420)
+
+    def _test_show_port_attachment(self, status_code):
+        self._execute_fake_and_wait_for_error(show_port_attachment=status_code)
+
+    def test_show_port_attachment_forbidden(self):
+        self._test_show_port_attachment(403)
+
+    def test_show_port_attachment_network_not_found(self):
+        self._test_show_port_attachment(420)
+
+    def test_show_port_attachment_port_not_found(self):
+        self._test_show_port_attachment(430)
