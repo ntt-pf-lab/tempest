@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import logging
 import argparse
 import json
 import uuid
@@ -38,7 +39,6 @@ def get_parser():
 
 parsed_args = None
 
-
 action_prefix = '/v1.0/tenants/<tenant_id>'
 suffix = '.json'
 
@@ -52,12 +52,15 @@ attachment_path = "/networks/<network_id>/ports/<port_id>/attachment"
 
 def expected_error_check(func):
     def _func(*args, **kwargs):
-        global parsed_args
         status_code = getattr(parsed_args, func.func_name, None)
         if status_code:
+            logging.info('Hit expected error: %s => %d',
+                         func.func_name, status_code)
             abort(status_code, "Expected error for testing")
         else:
-            return func(*args, **kwargs)
+            result = func(*args, **kwargs)
+            logging.debug('%s => %r', func.func_name, result)
+            return result
     _func.func_name = func.func_name
     return _func
 
@@ -192,6 +195,12 @@ def main():
     if parsed_args.tenant is not None:
         for tenant_id in parsed_args.tenant:
             repository[tenant_id] = {}
+
+    logger = logging.getLogger()
+    if parsed_args.debug:
+        logger.setLevel(logging.DEBUG)
+    else: 
+        logger.setLevel(logging.INFO)
 
     import bottle
     bottle.debug(parsed_args.debug)
