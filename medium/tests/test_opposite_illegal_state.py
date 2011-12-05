@@ -23,8 +23,9 @@ class FakeQuantumProcess(Process):
         cwd = os.path.join(os.path.dirname(__file__),
                            'quantum-service-fake')
         command = os.path.join(cwd, 'fake_server.py')
-        for tenant_id in list(tenant_id):
-            command += ' --tenant=%s' % tenant_id
+        command += ' --debug'
+        command += ' --tenant=%s' % tenant_id
+        command += ' --tenant=default'
         for pair in status_code.items():
             command += ' --%s=%d' % pair
         super(FakeQuantumProcess, self)\
@@ -90,7 +91,7 @@ class LibvirtFunctionalTest(unittest.TestCase):
                 self.config.nova.directory))
 
         # quantum.
-        self.testing_processes.append(FakeQuantumProcess('1'))
+        self.testing_processes.append(FakeQuantumProcess('admin'))
 
         # reset db.
         subprocess.check_call('mysql -u%s -p%s -e "'
@@ -188,11 +189,6 @@ class QuantumFunctionalTest(unittest.TestCase):
     config = config
 
     def setUp(self):
-        self.os = openstack.Manager(config=self.config)
-        self.image_ref = self.config.env.image_ref
-        self.flavor_ref = self.config.env.flavor_ref
-        self.ss_client = self.os.servers_client
-        self.img_client = self.os.images_client
         self.testing_processes = []
 
         # nova.
@@ -203,6 +199,8 @@ class QuantumFunctionalTest(unittest.TestCase):
         self.testing_processes.append(NovaNetworkProcess(
                 self.config.nova.directory))
         self.testing_processes.append(NovaSchedulerProcess(
+                self.config.nova.directory))
+        self.testing_processes.append(NovaComputeProcess(
                 self.config.nova.directory))
 
         # reset db.
@@ -230,6 +228,12 @@ class QuantumFunctionalTest(unittest.TestCase):
                               '--project=1 --user=admin',
                               cwd=self.config.nova.directory, shell=True)
 
+        self.os = openstack.Manager(config=self.config)
+        self.image_ref = self.config.env.image_ref
+        self.flavor_ref = self.config.env.flavor_ref
+        self.ss_client = self.os.servers_client
+        self.img_client = self.os.images_client
+
     def tearDown(self):
         # kill still existing virtual instances.
         for line in subprocess.check_output('virsh list --all',
@@ -246,7 +250,7 @@ class QuantumFunctionalTest(unittest.TestCase):
     def check_create_network(self, retcode):
         self.assertEqual(subprocess.call('bin/nova-manage network create '
                                              '--label=private_1-1 '
-                                             '--project_id=1 '
+                                             '--project_id=admin '
                                              '--fixed_range_v4=10.0.0.0/24 '
                                              '--bridge_interface=br-int '
                                              '--num_networks=1 '
@@ -262,7 +266,7 @@ class QuantumFunctionalTest(unittest.TestCase):
 
     def _test_create_network(self, status_code):
         # quantum.
-        quantum = FakeQuantumProcess('1', create_network=status_code)
+        quantum = FakeQuantumProcess('admin', create_network=status_code)
         self.testing_processes.append(quantum)
         quantum.start()
 
@@ -276,7 +280,7 @@ class QuantumFunctionalTest(unittest.TestCase):
 
     def _test_delete_network(self, status_code):
         # quantum.
-        quantum = FakeQuantumProcess('1', delete_network=status_code)
+        quantum = FakeQuantumProcess('admin', delete_network=status_code)
         self.testing_processes.append(quantum)
         quantum.start()
 
@@ -295,14 +299,64 @@ class QuantumFunctionalTest(unittest.TestCase):
     def test_delete_network_network_in_use(self):
         self._test_delete_network(421)
 
+    """
+    # No calling path to the API during creating server???
     def _test_show_network_details(self, status_code):
         # quantum.
-        quantum = FakeQuantumProcess('1', show_network_details=status_code)
+        quantum = FakeQuantumProcess('admin', show_network_details=status_code)
         self.testing_processes.append(quantum)
         quantum.start()
 
         self.check_create_network(0)
-        self.check_delete_network(0)
+
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6)
+
+        # Wait for the server to become ERROR.BUILD
+        self.assertRaises(exceptions.BuildErrorException,
+                          self.ss_client.wait_for_server_status,
+                          server['id'], 'ERROR')
 
     def test_show_network_details_forbidden(self):
         self._test_show_network_details(403)
+
+    def test_show_network_details_network_not_found(self):
+        self._test_show_network_details(420)
+    """
+
+    def _test_create_port(self, status_code):
+        # quantum.
+        quantum = FakeQuantumProcess('admin', create_port=status_code)
+        self.testing_processes.append(quantum)
+        quantum.start()
+
+        self.check_create_network(0)
+
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6)
+
+        # Wait for the server to become ERROR.BUILD
+        self.assertRaises(exceptions.BuildErrorException,
+                          self.ss_client.wait_for_server_status,
+                          server['id'], 'ERROR')
+
+    def test_create_port_bad_request(self):
+        self._test_create_port(400)
+
+    def test_create_port_forbidden(self):
+        self._test_create_port(403)
+
+    def test_create_port_network_not_found(self):
+        self._test_create_port(420)
