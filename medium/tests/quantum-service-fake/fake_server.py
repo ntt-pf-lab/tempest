@@ -101,7 +101,7 @@ def list_networks(tenant_id):
     tenant = get_tenant(tenant_id)
     return {'networks': [{'id': network['id']}
                          for network in tenant.values()
-                         if isinstance(network, dict)]}
+                         if isinstance(network, dict) and 'id' in network]}
 
 
 @post(action_prefix + networks_path + suffix)
@@ -141,7 +141,7 @@ def list_ports(tenant_id, network_id):
     (_tenant, network) = get_network(tenant_id, network_id)
     return {'ports': [{'id': port['id']}
                       for port in network.values()
-                      if isinstance(port, dict)]}
+                      if isinstance(port, dict) and 'id' in port]}
 
 
 @post(action_prefix + ports_path + suffix)
