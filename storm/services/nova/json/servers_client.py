@@ -37,7 +37,7 @@ class ServersClient(object):
 
     def create_server(self, name, image_ref, flavor_ref, meta=None,
                       personality=None, accessIPv4=None, accessIPv6=None,
-                      adminPass=None):
+                      key_name=None, adminPass=None):
         """
         Creates an instance of a server.
         name: The name of the server.
@@ -49,6 +49,7 @@ class ServersClient(object):
         the server.
         accessIPv4: The IPv4 access address for the server.
         accessIPv6: The IPv6 access address for the server.
+        key_name: The name of the keypair.
         """
 
         post_body = {
@@ -71,6 +72,9 @@ class ServersClient(object):
 
         if accessIPv6 != None:
             post_body['accessIPv6'] = accessIPv6
+
+        if key_name != None:
+            post_body['key_name'] = key_name
 
         print "post_body=", post_body
         post_body = json.dumps({'server': post_body})
