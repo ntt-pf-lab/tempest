@@ -1,3 +1,4 @@
+from storm import exceptions
 import httplib2
 import json
 import storm.config
@@ -85,7 +86,7 @@ class RestClient(object):
         return self.request('PUT', url, headers, body)
 
     def request(self, method, url, headers=None, body=None):
-        """ A simple HTTP request interface."""
+        """A simple HTTP request interface."""
 
         self.http_obj = httplib2.Http()
         if headers == None:
@@ -95,4 +96,8 @@ class RestClient(object):
         req_url = "%s/%s" % (self.base_url, url)
         resp, body = self.http_obj.request(req_url, method,
                                            headers=headers, body=body)
+        if resp.status == 400:
+            body = json.loads(body)
+            raise exceptions.BadRequest(body['badRequest']['message'])
+
         return resp, body
