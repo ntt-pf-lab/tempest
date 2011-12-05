@@ -88,7 +88,7 @@ def get_network(tenant_id, network_id):
 
 
 def get_port(tenant_id, network_id, port_id):
-    (tenant, network) = get_network(tenant_id, tenant_id)
+    (tenant, network) = get_network(tenant_id, network_id)
     if port_id not in network:
         abort(404, "Unknown port")
     return (tenant, network, network[port_id])
@@ -100,7 +100,8 @@ def get_port(tenant_id, network_id, port_id):
 def list_networks(tenant_id):
     tenant = get_tenant(tenant_id)
     return {'networks': [{'id': network['id']}
-                         for network in tenant.values()]}
+                         for network in tenant.values()
+                         if isinstance(network, dict)]}
 
 
 @post(action_prefix + networks_path + suffix)
@@ -110,6 +111,8 @@ def create_network(tenant_id):
     network = json.load(request.body)
     network['id'] = str(uuid.uuid4())
     tenant[network['id']] = network
+    logging.info("An network is created %s > %s",
+                 tenant_id, network['id'])
     return {'network': {'id': network['id']}}
 
 
@@ -126,6 +129,8 @@ def show_network_details(tenant_id, network_id):
 def delete_network(tenant_id, network_id):
     (tenant, _network) = get_network(tenant_id, network_id)
     del tenant[network_id]
+    logging.info("An network is deleted %s > %s",
+                 tenant_id, network_id)
     return HTTPResponse(status=204)
 
 
@@ -135,7 +140,8 @@ def delete_network(tenant_id, network_id):
 def list_ports(tenant_id, network_id):
     (_tenant, network) = get_network(tenant_id, network_id)
     return {'ports': [{'id': port['id']}
-                      for port in network.values()]}
+                      for port in network.values()
+                      if isinstance(port, dict)]}
 
 
 @post(action_prefix + ports_path + suffix)
@@ -145,6 +151,8 @@ def create_port(tenant_id, network_id):
     port = json.load(request.body)
     port['id'] = str(uuid.uuid4())
     network[port['id']] = port
+    logging.info("A port is created %s > %s > %s",
+                 tenant_id, network_id, port['id'])
     return {'port': {'id': port['id']}}
 
 
@@ -153,6 +161,8 @@ def create_port(tenant_id, network_id):
 def delete_port(tenant_id, network_id, port_id):
     (_tenant, network, _port) = get_port(tenant_id, network_id, port_id)
     del network[port_id]
+    logging.info("A port is deleted %s > %s > %s",
+                 tenant_id, network_id, port_id)
     return HTTPResponse(status=204)
 
 
@@ -174,6 +184,8 @@ def plug_port_attachment(tenant_id, network_id, port_id):
     if 'attached' in port:
         abort(440, 'Already attached')
     port['attached'] = str(uuid.uuid4())
+    logging.info("A port is plugged %s > %s > %s > %s",
+                 tenant_id, network_id, port['id'], port['attached'])
     return {'attachment': {'id': port['attached']}}
 
 
@@ -182,7 +194,12 @@ def plug_port_attachment(tenant_id, network_id, port_id):
 def unplug_port_attachment(tenant_id, network_id, port_id):
     (_tenant, _network, port) = get_port(tenant_id, network_id, port_id)
     if 'attached' in port:
+        logging.info("A port is unplugged %s > %s > %s > %s",
+                     tenant_id, network_id, port['id'], port['attached'])
         del port['attached']
+    else:
+        logging.warn("A port was not plugged %s > %s > %s",
+                     tenant_id, network_id, port['id'])
     return HTTPResponse(status=204)
 
 
@@ -192,18 +209,24 @@ def main():
     parser = get_parser()
     parsed_args = parser.parse_args()
 
-    if parsed_args.tenant is not None:
-        for tenant_id in parsed_args.tenant:
-            repository[tenant_id] = {}
-
     logger = logging.getLogger()
     if parsed_args.debug:
         logger.setLevel(logging.DEBUG)
-    else: 
+    else:
         logger.setLevel(logging.INFO)
 
+    if parsed_args.tenant is not None:
+        for tenant_id in parsed_args.tenant:
+            logging.debug("Register a tenant %s", tenant_id)
+            repository[tenant_id] = {}
+
     import bottle
+    # import werkzeug.debug
+    # app = bottle.app()
+    # app.catchall = False
+    # myapp = werkzeug.debug.DebuggedApplication(app)
     bottle.debug(parsed_args.debug)
+    # bottle.run(app=myapp, host=parsed_args.host, port=parsed_args.port)
     bottle.run(host=parsed_args.host, port=parsed_args.port)
 
 
