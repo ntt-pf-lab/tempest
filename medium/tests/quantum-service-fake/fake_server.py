@@ -172,7 +172,7 @@ def delete_port(tenant_id, network_id, port_id):
 def show_port_attachment(tenant_id, network_id, port_id):
     (_tenant, _network, port) = get_port(tenant_id, network_id, port_id)
     if 'attached' in port:
-        return {'attachment': {'id': port['attached']}}
+        return port['attached']
     else:
         return {'attachment': {}}
 
@@ -181,12 +181,13 @@ def show_port_attachment(tenant_id, network_id, port_id):
 @expected_error_check
 def plug_port_attachment(tenant_id, network_id, port_id):
     (_tenant, _network, port) = get_port(tenant_id, network_id, port_id)
+    attachment = json.load(request.body)
     if 'attached' in port:
         abort(440, 'Already attached')
-    port['attached'] = str(uuid.uuid4())
-    logging.info("A port is plugged %s > %s > %s > %s",
+    port['attached'] = attachment
+    logging.info("A port is plugged %s > %s > %s > %r",
                  tenant_id, network_id, port['id'], port['attached'])
-    return {'attachment': {'id': port['attached']}}
+    return HTTPResponse(status=204)
 
 
 @delete(action_prefix + attachment_path + suffix)
@@ -194,7 +195,7 @@ def plug_port_attachment(tenant_id, network_id, port_id):
 def unplug_port_attachment(tenant_id, network_id, port_id):
     (_tenant, _network, port) = get_port(tenant_id, network_id, port_id)
     if 'attached' in port:
-        logging.info("A port is unplugged %s > %s > %s > %s",
+        logging.info("A port is unplugged %s > %s > %s > %r",
                      tenant_id, network_id, port['id'], port['attached'])
         del port['attached']
     else:
