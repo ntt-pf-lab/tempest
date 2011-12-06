@@ -400,7 +400,24 @@ class FlavorsTest(FunctionalTest):
                "DROP TABLE IF EXISTS instance_types_bk;")
         self.exec_sql(sql)
 
-    @attr(type='medium')
+    @attr(kind='medium')
+    def test_list_flavors_when_specify_get_parameter(self):
+        """ List of all flavors match with specified GET parameter"""
+
+        resp, body = self.client.list_flavors({'minDisk':'aaa', 'minRam':'bbb'})
+        print "resp=", resp
+        print "body=", body
+
+    @attr(kind='medium')
+    def test_list_flavors_when_specify_invalid_get_parameter(self):
+        """ List of all flavors match with specified GET parameter"""
+
+        resp, body = self.client.list_flavors({'aaa':80, 'bbb':8192})
+        print "resp=", resp
+        print "body=", body
+
+
+    @attr(kind='medium')
     def test_list_detail_flavors_show_all_default_flavors(self):
         """ Detailed list of all flavors should contain the expected flavor """
 
@@ -550,4 +567,12 @@ class FlavorsTest(FunctionalTest):
 
         # get flavor_detail from db after mark specific data as deleted.
         resp, flavor = self.client.get_flavor_details(3)
+        self.assertEquals('404', resp['status'])
+
+    @attr(kind='medium')
+    def test_get_flavor_details_when_specify_invalid_id(self):
+        """ Return error because way to specify is inappropriate """
+
+        # get flavor_detail from db after mark specific data as deleted.
+        resp, flavor = self.client.get_flavor_details('test_opst')
         self.assertEquals('404', resp['status'])
