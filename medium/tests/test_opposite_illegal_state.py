@@ -272,9 +272,11 @@ class QuantumFunctionalTest(unittest.TestCase):
 
         self.check_create_network(1)
 
+    @attr(kind='medium')
     def test_create_network_bad_request(self):
         self._test_create_network(400)
 
+    @attr(kind='medium')
     def test_create_network_forbidden(self):
         self._test_create_network(403)
 
@@ -287,15 +289,19 @@ class QuantumFunctionalTest(unittest.TestCase):
         self.check_create_network(0)
         self.check_delete_network(1)
 
+    @attr(kind='medium')
     def test_delete_network_bad_request(self):
         self._test_delete_network(400)
 
+    @attr(kind='medium')
     def test_delete_network_forbidden(self):
         self._test_delete_network(403)
 
+    @attr(kind='medium')
     def test_delete_network_network_not_found(self):
         self._test_delete_network(420)
 
+    @attr(kind='medium')
     def test_delete_network_network_in_use(self):
         self._test_delete_network(421)
 
@@ -325,42 +331,53 @@ class QuantumFunctionalTest(unittest.TestCase):
     def _test_show_network_details(self, status_code):
         self._execute_fake_and_wait_for_error(show_network_details=status_code)
 
+    @attr(kind='medium')
     def test_show_network_details_forbidden(self):
         self._test_show_network_details(403)
 
+    @attr(kind='medium')
     def test_show_network_details_network_not_found(self):
         self._test_show_network_details(420)
 
     def _test_create_port(self, status_code):
         self._execute_fake_and_wait_for_error(create_port=status_code)
 
+    @attr(kind='medium')
     def test_create_port_bad_request(self):
         self._test_create_port(400)
 
+    @attr(kind='medium')
     def test_create_port_forbidden(self):
         self._test_create_port(403)
 
+    @attr(kind='medium')
     def test_create_port_network_not_found(self):
         self._test_create_port(420)
 
+    @attr(kind='medium')
     def test_create_port_requested_state_invalid(self):
         self._test_create_port(431)
 
     def _test_plug_port_attachment(self, status_code):
         self._execute_fake_and_wait_for_error(plug_port_attachment=status_code)
 
+    @attr(kind='medium')
     def test_plug_port_attachment_forbidden(self):
         self._test_plug_port_attachment(403)
 
+    @attr(kind='medium')
     def test_plug_port_attachment_network_not_found(self):
         self._test_plug_port_attachment(420)
 
+    @attr(kind='medium')
     def test_plug_port_attachment_port_not_found(self):
         self._test_plug_port_attachment(430)
 
+    @attr(kind='medium')
     def test_plug_port_attachment_port_in_use(self):
         self._test_plug_port_attachment(432)
 
+    @attr(kind='medium')
     def test_plug_port_attachment_already_attached(self):
         self._test_plug_port_attachment(440)
 
@@ -368,56 +385,70 @@ class QuantumFunctionalTest(unittest.TestCase):
         self._execute_fake_and_wait_for_error(
                 unplug_port_attachment=status_code)
 
+    @attr(kind='medium')
     def test_unplug_port_attachment_forbidden(self):
         self._test_unplug_port_attachment(403)
 
+    @attr(kind='medium')
     def test_unplug_port_attachment_network_not_found(self):
         self._test_unplug_port_attachment(420)
 
+    @attr(kind='medium')
     def test_unplug_port_attachment_port_not_found(self):
         self._test_unplug_port_attachment(430)
 
     def _test_delete_port(self, status_code):
         self._execute_fake_and_wait_for_error(delete_port=status_code)
 
+    @attr(kind='medium')
     def test_delete_port_bad_request(self):
         self._test_delete_port(400)
 
+    @attr(kind='medium')
     def test_delete_port_forbidden(self):
         self._test_delete_port(403)
 
+    @attr(kind='medium')
     def test_delete_port_network_not_found(self):
         self._test_delete_port(420)
 
+    @attr(kind='medium')
     def test_delete_port_port_not_found(self):
         self._test_delete_port(430)
 
+    @attr(kind='medium')
     def test_delete_port_port_in_use(self):
         self._test_delete_port(432)
 
     def _test_list_networks(self, status_code):
         self._execute_fake_and_wait_for_error(list_networks=status_code)
 
+    @attr(kind='medium')
     def test_list_networks_forbidden(self):
         self._test_list_networks(403)
 
     def _test_list_ports(self, status_code):
         self._execute_fake_and_wait_for_error(list_ports=status_code)
 
+    @attr(kind='medium')
     def test_list_ports_forbidden(self):
         self._test_list_ports(403)
 
+    @attr(kind='medium')
     def test_list_ports_network_not_found(self):
         self._test_list_ports(420)
 
     def _test_show_port_attachment(self, status_code):
         self._execute_fake_and_wait_for_error(show_port_attachment=status_code)
 
+    @attr(kind='medium')
     def test_show_port_attachment_forbidden(self):
         self._test_show_port_attachment(403)
 
+    @attr(kind='medium')
     def test_show_port_attachment_network_not_found(self):
         self._test_show_port_attachment(420)
 
+    @attr(kind='medium')
     def test_show_port_attachment_port_not_found(self):
         self._test_show_port_attachment(430)
