@@ -183,8 +183,831 @@ class ServersTest(FunctionalTest):
         self.ss_client = self.os.servers_client
         self.img_client = self.os.images_client
 
-    @attr(kind='smoke')
-    def test_through(self):
+
+    @attr(kind='medium')
+    def test_reboot_when_specify_not_exist_server_id(self):
+        print """
+
+        reboot server
+
+         """
+        test_id = 5
+        resp, server = self.ss_client.reboot(test_id, 'HARD')
+        print "A00_62 resp= ", resp
+        print "A00_62 server= ", server
+        self.assertEqual('404', resp['status'])
+
+        print """
+
+        deleting server.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(test_id)
+        self.ss_client.wait_for_server_not_exists(test_id)
+
+    @attr(kind='medium')
+    def test_reboot_when_server_is_during_boot_process(self):
+        print """
+
+        creating server.
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        resp, server = self.ss_client.get_server(server['id'])
+        test_id = server['id']
+        self.assertEquals('BUILD', server['status'])
+
+        print """
+
+        reboot server without waiting done creating
+
+         """
+        resp, server = self.ss_client.reboot(test_id, 'HARD')
+        self.assertEquals('202', resp['status'])
+        resp, server = self.ss_client.get_server(test_id)
+        self.assertEquals('REBOOT', server['status'])
+
+    @attr(kind='medium')
+    def test_reboot_when_server_is_running(self):
+        print """
+
+        creating server.
+
+        """
+        meta = {'hello': 'opst'}
+        accessIPv4 = '2.2.2.2'
+        accessIPv6 = '::babe:330.23.33.3'
+        name = rand_name('instance')
+        file_contents = 'This is a test_file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(server['id'])
+        test_id = server['id']
+        self.assertEqual('1.1.1.1', server['accessIPv4'])
+        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
+        self.assertEqual(name, server['name'])
+        self.assertEqual(str(self.image_ref), server['image']['id'])
+        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
+
+        print """
+
+        reboot server
+
+         """
+        resp, server = self.ss_client.reboot(server['id'], 'HARD')
+        resp, server = self.ss_client.get_server(server['id'])
+        self.assertEquals('REBOOT', server['status'])
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(server['id'])
+        self.assertEqual('200', resp['status'])
+
+    @attr(kind='medium')
+    def test_reboot_when_server_is_during_reboot_process(self):
+        print """
+
+        creating server.
+
+        """
+        meta = {'open': 'stack'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+        test_id = server['id']
+        print """
+
+        reboot server
+
+         """
+        resp, server = self.ss_client.reboot(server['id'], 'HARD')
+        self.assertEquals('202', resp['status'])
+        resp, server = self.ss_client.get_server(test_id)
+        self.assertEquals('REBOOT', server['status'])
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
+
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(test_id)
+        self.assertEqual('200', resp['status'])
+        print """
+
+        reboot server
+
+         """
+        resp, server = self.ss_client.reboot(server['id'], 'HARD')
+        self.assertEquals('202', resp['status'])
+        resp, server = self.ss_client.get_server(test_id)
+        self.assertEquals('REBOOT', server['status'])
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
+
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(test_id)
+        self.assertEquals('ACTIVE', server['status'])
+
+        print """
+
+        deleting server.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
+
+    @attr(kind='medium')
+    def test_reboot_when_server_is_during_stop_process(self):
+        print """
+
+        creating server.
+
+        """
+        meta = {'open': 'stack'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        test_id = server['id']
+        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
+
+        # Stop server
+        resp, server = self.ss_client.delete_server(test_id)
+        self.ss_client.wait_for_server_not_exists(test_id)
+        self.assertEquals('204', resp['status'])
+
+        # Reboot stopped server
+        resp, server = self.ss_client.reboot(test_id, 'HARD')
+        self.assertEquals('422', resp['status'])
+
+        print """
+
+        deleting server.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
+
+    @attr(kind='medium')
+    def test_reboot_when_server_is_down(self):
+        print """
+
+        creating server.
+
+        """
+        meta = {'open': 'stack'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        test_id = server['id']
+        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
+        resp, server = self.ss_client.list_servers_with_detail()
+        self.assertEquals('ACTIVE', server['servers'][0]['status'])
+
+        # Stop server
+        resp, server = self.ss_client.delete_server(test_id)
+        time.sleep(10)
+        resp, server = self.ss_client.list_servers_with_detail()
+        self.assertEquals([], server['servers'])
+
+        self.ss_client.wait_for_server_not_exists(test_id)
+        self.assertEquals('200', resp['status'])
+
+        # Wait for the server to become deleted
+        self.ss_client.wait_for_server_not_exists(test_id)
+
+        # Reboot stopped server
+        resp, server = self.ss_client.reboot(test_id, 'HARD')
+        self.assertEquals('422', resp['status'])
+
+        print """
+
+        deleting server.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
+
+    @attr(kind='medium')
+    def test_reboot_when_specify_hard_reboot_type(self):
+        print """
+
+        creating server.
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        test_id = server['id']
+        print """
+
+        reboot server
+
+         """
+        resp, server = self.ss_client.reboot(server['id'], 'HARD')
+        resp, server = self.ss_client.get_server(test_id)
+        self.assertEquals('REBOOT', server['status'])
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
+
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(test_id)
+        self.assertEqual('200', resp['status'])
+
+        print """
+
+        deleting server.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
+
+    @attr(kind='medium')
+    def test_reboot_when_specify_soft_reboot_type(self):
+        print """
+
+        creating server.
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        test_id = server['id']
+        print """
+
+        reboot server
+
+         """
+        resp, server = self.ss_client.reboot(server['id'], 'SOFT')
+        resp, server = self.ss_client.get_server(test_id)
+        self.assertEquals('REBOOT', server['status'])
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
+
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(test_id)
+        self.assertEqual('200', resp['status'])
+
+        print """
+
+        deleting server.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
+
+    @attr(kind='medium')
+    def test_reboot_specify_invalid_reboot_type(self):
+        print """
+
+        creating server.
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        test_id = server['id']
+        print """
+
+        reboot server
+
+         """
+        resp, server = self.ss_client.reboot(server['id'],
+                                             'test_openstack_aaabbbccc')
+        print "resp= ", resp
+        print "server= ", server
+        resp, server = self.ss_client.get_server(test_id)
+        print "resp= ", resp
+        print "server= ", server
+        self.assertEquals('ACTIVE', server['status'])
+
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
+
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(test_id)
+        print "resp= ", resp
+        print "server= ", server
+        self.assertEqual('200', resp['status'])
+
+        print """
+
+        deleting server.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
+
+    @attr(kind='medium')
+    def test_create_image(self):
+        print """
+
+        creating server.
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(server['id'])
+        self.assertEqual('1.1.1.1', server['accessIPv4'])
+        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
+        self.assertEqual(name, server['name'])
+        self.assertEqual(str(self.image_ref), server['image']['id'])
+        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
+
+        print """
+
+        creating snapshot.
+
+        """
+        # Make snapshot of the instance.
+        alt_name = rand_name('server')
+        resp, _ = self.ss_client.create_image(server['id'], alt_name)
+        alt_img_url = resp['location']
+        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
+        self.assertIsNotNone(match)
+        alt_img_id = match.groupdict()['image_id']
+        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
+        resp, body = self.ss_client.list_servers_with_detail()
+
+        print """
+
+        deleting server.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
+
+        print """
+
+        creating server from snapshot.
+
+        """
+        resp, server = self.ss_client.create_server(name,
+                                                    alt_img_id,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        print """
+
+        deleting server again.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
+
+        print """
+
+        deleting snapshot.
+
+        """
+        # Delete the snapshot
+        self.img_client.delete_image(alt_img_id)
+        self.img_client.wait_for_image_not_exists(alt_img_id)
+
+    @attr(kind='medium')
+    def test_create_image_specify_not_exist_server_id(self):
+        print """
+
+        creating server.
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(server['id'])
+        self.assertEqual('1.1.1.1', server['accessIPv4'])
+        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
+        self.assertEqual(name, server['name'])
+        self.assertEqual(str(self.image_ref), server['image']['id'])
+        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
+
+        print """
+
+        creating snapshot.
+
+        """
+        # Make snapshot of the instance.
+        alt_name = rand_name('server')
+        resp, _ = self.ss_client.create_image(99, 'opst_test')
+
+        print """
+
+        deleting server again.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
+
+        print """
+
+        deleting snapshot.
+
+        """
+        # Delete the snapshot
+        self.img_client.delete_image('opst_test')
+        self.img_client.wait_for_image_not_exists('opst_test')
+
+    @attr(kind='medium')
+    def test_create_image_when_server_is_during_boot_process(self):
+        print """
+
+        creating server.
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.2.3.4'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        resp, server = self.ss_client.get_server(server['id'])
+        test_id = server['id']
+        self.assertEquals('BUILD', server['status'])
+
+        print """
+
+        creating snapshot.
+
+        """
+        # Make snapshot without waiting done creating server
+        alt_name = rand_name('server')
+        resp, _ = self.ss_client.create_image(server['id'], alt_name)
+        alt_img_url = resp['location']
+        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
+        self.assertIsNotNone(match)
+        alt_img_id = match.groupdict()['image_id']
+        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
+        resp, body = self.ss_client.list_servers_with_detail()
+
+    @attr(kind='medium')
+    def test_create_image_when_server_is_during_reboot_process(self):
+        print """
+
+        creating server.
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        resp, server = self.ss_client.get_server(server['id'])
+        test_id = server['id']
+        self.assertEquals('BUILD', server['status'])
+
+        print """
+
+        reboot server
+
+         """
+        resp, server = self.ss_client.reboot(server['id'], 'HARD')
+        self.assertEquals('202', resp['status'])
+        resp, server = self.ss_client.get_server(test_id)
+        self.assertEquals('REBOOT', server['status'])
+
+        print """
+
+        creating snapshot without waiting done rebooting server.
+
+        """
+        alt_name = rand_name('server')
+        resp, _ = self.ss_client.create_image(server['id'], alt_name)
+        print "resp=", resp
+        resp1, images1 = self.img_client.list_images()
+        print "resp1=", resp1
+        print "images1=", images1
+        alt_img_url = resp['location']
+        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
+        self.assertIsNotNone(match)
+        alt_img_id = match.groupdict()['image_id']
+        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
+        resp, body = self.ss_client.list_servers_with_detail()
+
+
+    @attr(kind='medium')
+    def test_create_image_when_server_is_during_stop_process(self):
+        print """
+
+        creating server.
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(server['id'])
+        self.assertEqual('1.1.1.1', server['accessIPv4'])
+        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
+        self.assertEqual(name, server['name'])
+        self.assertEqual(str(self.image_ref), server['image']['id'])
+        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
+
+        print """
+
+        deleting server.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+#        self.ss_client.wait_for_server_not_exists(server['id'])
+
+        print """
+
+        creating snapshot.
+
+        """
+        # Make snapshot of the instance without waiting done creating server
+        alt_name = rand_name('server')
+        resp, _ = self.ss_client.create_image(server['id'], alt_name)
+        print "resp=", resp
+        resp1, images1 = self.img_client.list_images()
+        print "resp1=", resp1
+        print "images1=", images1
+        self.assertEquals('400', resp['status'])
+
+        print """
+
+        deleting server again.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
+
+        print """
+
+        deleting snapshot.
+
+        """
+        # Delete the snapshot
+        self.img_client.delete_image(alt_name)
+        self.img_client.wait_for_image_not_exists(alt_name)
+
+    @attr(kind='medium')
+    def test_create_image_when_server_is_down(self):
+        print """
+
+        creating server.
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(server['id'])
+        self.assertEqual('1.1.1.1', server['accessIPv4'])
+        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
+        self.assertEqual(name, server['name'])
+        self.assertEqual(str(self.image_ref), server['image']['id'])
+        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
+
+        print """
+
+        deleting server.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
+
+        print """
+
+        creating snapshot.
+
+        """
+        # Make snapshot of the instance without waiting done creating server
+        alt_name = rand_name('server')
+        resp, _ = self.ss_client.create_image(server['id'], alt_name)
+        print "resp=", resp
+        self.assertEquals('400', resp['status'])
+
+        print """
+
+        deleting server again.
+
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
+
+        print """
+
+        deleting snapshot.
+
+        """
+        # Delete the snapshot
+        self.img_client.delete_image(alt_name)
+        self.img_client.wait_for_image_not_exists(alt_name)
+
+    @attr(kind='medium')
+    def test_create_image_when_specify_duplicate_image_name(self):
         print """
 
         creating server.
@@ -232,28 +1055,11 @@ class ServersTest(FunctionalTest):
 
         print """
 
-        deleting server.
+        creating snapshot again.
 
         """
-        # Delete the server
-        self.ss_client.delete_server(server['id'])
-        self.ss_client.wait_for_server_not_exists(server['id'])
-
-        print """
-
-        creating server from snapshot.
-
-        """
-        resp, server = self.ss_client.create_server(name,
-                                                    alt_img_id,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+        # Make snapshot of the instance.
+        resp, _ = self.ss_client.create_image(server['id'], alt_name)
 
         print """
 
@@ -273,998 +1079,66 @@ class ServersTest(FunctionalTest):
         self.img_client.delete_image(alt_img_id)
         self.img_client.wait_for_image_not_exists(alt_img_id)
 
-#    @attr(kind='medium')
-#    def test_reboot_when_specify_not_exist_server_id(self):
-#        print """
-#
-#        reboot server
-#
-#         """
-#        test_id = 5
-#        resp, server = self.ss_client.reboot(test_id, 'HARD')
-#        print "A00_62 resp= ", resp
-#        print "A00_62 server= ", server
-#        self.assertEqual('404', resp['status'])
-#
-#        print """
-#
-#        deleting server.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(test_id)
-#        self.ss_client.wait_for_server_not_exists(test_id)
+    @attr(kind='medium')
+    def test_create_image_when_specify_length_over_256_name(self):
+        print """
 
-#    @attr(kind='medium')
-#    def test_reboot_when_server_is_during_boot_process(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        resp, server = self.ss_client.get_server(server['id'])
-#        test_id = server['id']
-#        self.assertEquals('BUILD', server['status'])
-#
-#        print """
-#
-#        reboot server without waiting done creating
-#
-#         """
-#        resp, server = self.ss_client.reboot(test_id, 'HARD')
-#        self.assertEquals('202', resp['status'])
-#        resp, server = self.ss_client.get_server(test_id)
-#        self.assertEquals('REBOOT', server['status'])
-#
-#        print """
-#
-#        deleting server.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(test_id)
-#        self.ss_client.wait_for_server_not_exists(test_id)
+        creating server.
 
-#    @attr(kind='medium')
-#    def test_reboot_when_server_is_running(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-##       yokose-san sample
-##        name = rand_name('server')
-##        image_ref = self.config.env.image_ref
-##        flavor_ref = self.config.env.flavor_ref
-##        meta = {'hello': 'world'}
-##        accessIPv4 = '1.1.1.1'
-##        accessIPv6 = '::babe:220.12.22.2'
-##        file_contents = 'This is a test file.'
-##        personality = [{'path': '/etc/test.txt',
-##                       'contents': base64.b64encode(file_contents)}]
-##        resp, server = self.ss_client.create_server(name,
-##                                                    image_ref,
-##                                                    flavor_ref,
-##                                                    meta=meta,
-##                                                    accessIPv4=accessIPv4,
-##                                                    accessIPv6=accessIPv6,
-##                                                    personality=personality)
-#        print "server['id']=", server['id']
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        # Verify the specified attributes are set correctly
-#        resp, server = self.ss_client.get_server(server['id'])
-#        test_id = server['id']
-#        self.assertEqual('1.1.1.1', server['accessIPv4'])
-#        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-#        self.assertEqual(name, server['name'])
-#        self.assertEqual(str(self.image_ref), server['image']['id'])
-#        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
 
-#        print """
-#
-#        reboot server
-#
-#         """
-#        resp, server = self.ss_client.reboot(server['id'], 'HARD')
-#        resp, server = self.ss_client.get_server(server['id'])
-#        self.assertEquals('REBOOT', server['status'])
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        # Verify the specified attributes are set correctly
-#        resp, server = self.ss_client.get_server(server['id'])
-#        self.assertEqual('200', resp['status'])
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
-#        print """
-#
-#        deleting server.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(server['id'])
+        self.assertEqual('1.1.1.1', server['accessIPv4'])
+        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
+        self.assertEqual(name, server['name'])
+        self.assertEqual(str(self.image_ref), server['image']['id'])
+        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
 
-#    @attr(kind='medium')
-#    def test_reboot_when_server_is_during_reboot_process(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'open': 'stack'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#        test_id = server['id']
-#        print """
-#
-#        reboot server
-#
-#         """
-#        resp, server = self.ss_client.reboot(server['id'], 'HARD')
-#        self.assertEquals('202', resp['status'])
-#        resp, server = self.ss_client.get_server(test_id)
-#        self.assertEquals('REBOOT', server['status'])
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
-#
-#        # Verify the specified attributes are set correctly
-#        resp, server = self.ss_client.get_server(test_id)
-#        self.assertEqual('200', resp['status'])
-#        print """
-#
-#        reboot server
-#
-#         """
-#        resp, server = self.ss_client.reboot(server['id'], 'HARD')
-#        self.assertEquals('202', resp['status'])
-#        resp, server = self.ss_client.get_server(test_id)
-#        self.assertEquals('REBOOT', server['status'])
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
-#
-#        # Verify the specified attributes are set correctly
-#        resp, server = self.ss_client.get_server(test_id)
-#        self.assertEquals('ACTIVE', server['status'])
-#
-#        print """
-#
-#        deleting server.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
+        print """
 
-#    @attr(kind='medium')
-#    def test_reboot_when_server_is_during_stop_process(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'open': 'stack'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        # Wait for the server to become active
-#        test_id = server['id']
-#        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
-#
-#        # Stop server
-#        resp, server = self.ss_client.delete_server(test_id)
-#        self.ss_client.wait_for_server_not_exists(test_id)
-#        self.assertEquals('204', resp['status'])
-#
-#        # Reboot stopped server
-#        resp, server = self.ss_client.reboot(test_id, 'HARD')
-#        self.assertEquals('422', resp['status'])
-#
-#        print """
-#
-#        deleting server.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
+        creating snapshot.
 
-#    @attr(kind='medium')
-#    def test_reboot_when_server_is_down(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'open': 'stack'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        # Wait for the server to become active
-#        test_id = server['id']
-#        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
-#        resp, server = self.ss_client.list_servers_with_detail()
-#        self.assertEquals('ACTIVE', server['servers'][0]['status'])
-#
-#        # Stop server
-#        resp, server = self.ss_client.delete_server(test_id)
-#        time.sleep(10)
-#        resp, server = self.ss_client.list_servers_with_detail()
-#        self.assertEquals([], server['servers'])
-#
-#        self.ss_client.wait_for_server_not_exists(test_id)
-#        self.assertEquals('200', resp['status'])
-#
-#        # Wait for the server to become deleted
-#        self.ss_client.wait_for_server_not_exists(test_id)
-#
-#        # Reboot stopped server
-#        resp, server = self.ss_client.reboot(test_id, 'HARD')
-#        self.assertEquals('422', resp['status'])
-#
-#        print """
-#
-#        deleting server.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
+        """
+        # Make snapshot of the instance.
+        alt_name = rand_name('a'*260)
+        resp, _ = self.ss_client.create_image(server['id'], alt_name)
+        alt_img_url = resp['location']
+        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
+        self.assertIsNotNone(match)
+        alt_img_id = match.groupdict()['image_id']
+        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
+        print """
 
-#    @attr(kind='medium')
-#    def test_reboot_when_specify_hard_reboot_type(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        test_id = server['id']
-#        print """
-#
-#        reboot server
-#
-#         """
-#        resp, server = self.ss_client.reboot(server['id'], 'HARD')
-#        resp, server = self.ss_client.get_server(test_id)
-#        self.assertEquals('REBOOT', server['status'])
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
-#
-#        # Verify the specified attributes are set correctly
-#        resp, server = self.ss_client.get_server(test_id)
-#        self.assertEqual('200', resp['status'])
-#
-#        print """
-#
-#        deleting server.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
+        deleting server again.
 
-#    @attr(kind='medium')
-#    def test_reboot_when_specify_soft_reboot_type(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        test_id = server['id']
-#        print """
-#
-#        reboot server
-#
-#         """
-#        resp, server = self.ss_client.reboot(server['id'], 'SOFT')
-#        resp, server = self.ss_client.get_server(test_id)
-#        self.assertEquals('REBOOT', server['status'])
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
-#
-#        # Verify the specified attributes are set correctly
-#        resp, server = self.ss_client.get_server(test_id)
-#        self.assertEqual('200', resp['status'])
-#
-#        print """
-#
-#        deleting server.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
+        """
+        # Delete the server
+        self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
 
-#    @attr(kind='medium')
-#    def test_reboot_specify_invalid_reboot_type(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        test_id = server['id']
-#        print """
-#
-#        reboot server
-#
-#         """
-#        resp, server = self.ss_client.reboot(server['id'],
-#                                             'test_openstack_aaabbbccc')
-#        print "resp= ", resp
-#        print "server= ", server
-#        resp, server = self.ss_client.get_server(test_id)
-#        print "resp= ", resp
-#        print "server= ", server
-#        self.assertEquals('ACTIVE', server['status'])
-#
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
-#
-#        # Verify the specified attributes are set correctly
-#        resp, server = self.ss_client.get_server(test_id)
-#        print "resp= ", resp
-#        print "server= ", server
-#        self.assertEqual('200', resp['status'])
-#
-#        print """
-#
-#        deleting server.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
+        print """
 
-#    @attr(kind='medium')
-#    def test_create_image(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        # Verify the specified attributes are set correctly
-#        resp, server = self.ss_client.get_server(server['id'])
-#        self.assertEqual('1.1.1.1', server['accessIPv4'])
-#        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-#        self.assertEqual(name, server['name'])
-#        self.assertEqual(str(self.image_ref), server['image']['id'])
-#        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-#
-#        print """
-#
-#        creating snapshot.
-#
-#        """
-#        # Make snapshot of the instance.
-#        alt_name = rand_name('server')
-#        resp, _ = self.ss_client.create_image(server['id'], alt_name)
-#        alt_img_url = resp['location']
-#        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
-#        self.assertIsNotNone(match)
-#        alt_img_id = match.groupdict()['image_id']
-#        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
-#        resp, body = self.ss_client.list_servers_with_detail()
-#
-#        print """
-#
-#        deleting server.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
-#
-#        print """
-#
-#        creating server from snapshot.
-#
-#        """
-#        resp, server = self.ss_client.create_server(name,
-#                                                    alt_img_id,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        print """
-#
-#        deleting server again.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
-#
-#        print """
-#
-#        deleting snapshot.
-#
-#        """
-#        # Delete the snapshot
-#        self.img_client.delete_image(alt_img_id)
-#        self.img_client.wait_for_image_not_exists(alt_img_id)
+        deleting snapshot.
 
-#    @attr(kind='medium')
-#    def test_create_image_specify_not_exist_server_id(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        # Verify the specified attributes are set correctly
-#        resp, server = self.ss_client.get_server(server['id'])
-#        self.assertEqual('1.1.1.1', server['accessIPv4'])
-#        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-#        self.assertEqual(name, server['name'])
-#        self.assertEqual(str(self.image_ref), server['image']['id'])
-#        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-#
-#        print """
-#
-#        creating snapshot.
-#
-#        """
-#        # Make snapshot of the instance.
-#        alt_name = rand_name('server')
-#        resp, _ = self.ss_client.create_image(99, 'opst_test')
-#
-#        print """
-#
-#        deleting server again.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
-#
-#        print """
-#
-#        deleting snapshot.
-#
-#        """
-#        # Delete the snapshot
-#        self.img_client.delete_image('opst_test')
-#        self.img_client.wait_for_image_not_exists('opst_test')
-
-#    @attr(kind='medium')
-#    def test_create_image_when_server_is_during_boot_process(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        resp, server = self.ss_client.get_server(server['id'])
-#        test_id = server['id']
-#        self.assertEquals('BUILD', server['status'])
-#
-#        print """
-#
-#        creating snapshot.
-#
-#        """
-#        # Make snapshot without waiting done creating server
-#        alt_name = rand_name('server')
-#        resp, _ = self.ss_client.create_image(server['id'], alt_name)
-#        alt_img_url = resp['location']
-#        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
-#        self.assertIsNotNone(match)
-#        alt_img_id = match.groupdict()['image_id']
-#        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
-#        resp, body = self.ss_client.list_servers_with_detail()
-
-#    @attr(kind='medium')
-#    def test_create_image_when_server_is_during_reboot_process(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        resp, server = self.ss_client.get_server(server['id'])
-#        test_id = server['id']
-#        self.assertEquals('BUILD', server['status'])
-#
-#        print """
-#
-#        reboot server
-#
-#         """
-#        resp, server = self.ss_client.reboot(server['id'], 'HARD')
-#        self.assertEquals('202', resp['status'])
-#        resp, server = self.ss_client.get_server(test_id)
-#        self.assertEquals('REBOOT', server['status'])
-#
-#        print """
-#
-#        creating snapshot without waiting done rebooting server.
-#
-#        """
-#        alt_name = rand_name('server')
-#        resp, _ = self.ss_client.create_image(server['id'], alt_name)
-#        print "resp=", resp
-#        resp1, images1 = self.img_client.list_images()
-#        print "resp1=", resp1
-#        print "images1=", images1
-#        alt_img_url = resp['location']
-#        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
-#        self.assertIsNotNone(match)
-#        alt_img_id = match.groupdict()['image_id']
-#        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
-#        resp, body = self.ss_client.list_servers_with_detail()
-
-
-#    @attr(kind='medium')
-#    def test_create_image_when_server_is_during_stop_process(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        # Verify the specified attributes are set correctly
-#        resp, server = self.ss_client.get_server(server['id'])
-#        self.assertEqual('1.1.1.1', server['accessIPv4'])
-#        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-#        self.assertEqual(name, server['name'])
-#        self.assertEqual(str(self.image_ref), server['image']['id'])
-#        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-#
-#        print """
-#
-#        deleting server.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-##        self.ss_client.wait_for_server_not_exists(server['id'])
-#
-#        print """
-#
-#        creating snapshot.
-#
-#        """
-#        # Make snapshot of the instance without waiting done creating server
-#        alt_name = rand_name('server')
-#        resp, _ = self.ss_client.create_image(server['id'], alt_name)
-#        print "resp=", resp
-#        resp1, images1 = self.img_client.list_images()
-#        print "resp1=", resp1
-#        print "images1=", images1
-#        self.assertEquals('400', resp['status'])
-#
-#        print """
-#
-#        deleting server again.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
-#
-#        print """
-#
-#        deleting snapshot.
-#
-#        """
-#        # Delete the snapshot
-#        self.img_client.delete_image(alt_name)
-#        self.img_client.wait_for_image_not_exists(alt_name)
-
-#    @attr(kind='medium')
-#    def test_create_image_when_server_is_down(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        # Verify the specified attributes are set correctly
-#        resp, server = self.ss_client.get_server(server['id'])
-#        self.assertEqual('1.1.1.1', server['accessIPv4'])
-#        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-#        self.assertEqual(name, server['name'])
-#        self.assertEqual(str(self.image_ref), server['image']['id'])
-#        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-#
-#        print """
-#
-#        deleting server.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
-#
-#        print """
-#
-#        creating snapshot.
-#
-#        """
-#        # Make snapshot of the instance without waiting done creating server
-#        alt_name = rand_name('server')
-#        resp, _ = self.ss_client.create_image(server['id'], alt_name)
-#        print "resp=", resp
-#        self.assertEquals('400', resp['status'])
-#
-#        print """
-#
-#        deleting server again.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
-#
-#        print """
-#
-#        deleting snapshot.
-#
-#        """
-#        # Delete the snapshot
-#        self.img_client.delete_image(alt_name)
-#        self.img_client.wait_for_image_not_exists(alt_name)
-
-#    @attr(kind='medium')
-#    def test_create_image_when_specify_duplicate_image_name(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        # Verify the specified attributes are set correctly
-#        resp, server = self.ss_client.get_server(server['id'])
-#        self.assertEqual('1.1.1.1', server['accessIPv4'])
-#        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-#        self.assertEqual(name, server['name'])
-#        self.assertEqual(str(self.image_ref), server['image']['id'])
-#        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-#
-#        print """
-#
-#        creating snapshot.
-#
-#        """
-#        # Make snapshot of the instance.
-#        alt_name = rand_name('server')
-#        resp, _ = self.ss_client.create_image(server['id'], alt_name)
-#        alt_img_url = resp['location']
-#        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
-#        self.assertIsNotNone(match)
-#        alt_img_id = match.groupdict()['image_id']
-#        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
-#
-#        print """
-#
-#        creating snapshot again.
-#
-#        """
-#        # Make snapshot of the instance.
-#        resp, _ = self.ss_client.create_image(server['id'], alt_name)
-#
-#        print """
-#
-#        deleting server again.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
-#
-#        print """
-#
-#        deleting snapshot.
-#
-#        """
-#        # Delete the snapshot
-#        self.img_client.delete_image(alt_img_id)
-#        self.img_client.wait_for_image_not_exists(alt_img_id)
-
-#    @attr(kind='medium')
-#    def test_create_image_when_specify_length_over_256_name(self):
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        # Verify the specified attributes are set correctly
-#        resp, server = self.ss_client.get_server(server['id'])
-#        self.assertEqual('1.1.1.1', server['accessIPv4'])
-#        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-#        self.assertEqual(name, server['name'])
-#        self.assertEqual(str(self.image_ref), server['image']['id'])
-#        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-#
-#        print """
-#
-#        creating snapshot.
-#
-#        """
-#        # Make snapshot of the instance.
-#        alt_name = rand_name('a'*260)
-#        resp, _ = self.ss_client.create_image(server['id'], alt_name)
-#        alt_img_url = resp['location']
-#        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
-#        self.assertIsNotNone(match)
-#        alt_img_id = match.groupdict()['image_id']
-#        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
-#        print """
-#
-#        deleting server again.
-#
-#        """
-#        # Delete the server
-#        self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
-#
-#        print """
-#
-#        deleting snapshot.
-#
-#        """
-#        # Delete the snapshot
-#        self.img_client.delete_image(alt_img_id)
-#        self.img_client.wait_for_image_not_exists(alt_img_id)
+        """
+        # Delete the snapshot
+        self.img_client.delete_image(alt_img_id)
+        self.img_client.wait_for_image_not_exists(alt_img_id)
