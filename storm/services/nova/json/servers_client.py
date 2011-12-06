@@ -27,8 +27,8 @@ class ServersClient(object):
 
         post_body = {}
         post_body.update(kwargs)
-        print "post_body=", post_body
         post_body = json.dumps({'server': post_body})
+        print "post_body=", post_body
         resp, body = self.client.post('servers', post_body, self.headers)
         if resp['status'] != '202':
             return resp, body
@@ -76,7 +76,6 @@ class ServersClient(object):
         if key_name != None:
             post_body['key_name'] = key_name
 
-        print "post_body=", post_body
         post_body = json.dumps({'server': post_body})
         resp, body = self.client.post('servers', post_body, self.headers)
 #        body = json.loads(body)
