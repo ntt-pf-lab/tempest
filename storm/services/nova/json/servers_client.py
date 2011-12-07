@@ -29,6 +29,7 @@ class ServersClient(object):
         post_body.update(kwargs)
         post_body = json.dumps({'server': post_body})
         print "post_body=", post_body
+        print "self.headers=", self.headers
         resp, body = self.client.post('servers', post_body, self.headers)
         if resp['status'] != '202':
             return resp, body
@@ -147,6 +148,8 @@ class ServersClient(object):
             url = "servers?" + "".join(param_list)
 
         resp, body = self.client.get(url)
+        if resp['status'] != '200' and resp['status'] != '203':
+            return resp, body
         body = json.loads(body)
         return resp, body
 
