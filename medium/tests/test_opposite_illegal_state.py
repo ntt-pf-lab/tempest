@@ -17,6 +17,7 @@ from medium.tests.processes import (
         NovaApiProcess, NovaComputeProcess,
         NovaNetworkProcess, NovaSchedulerProcess,
         Process)
+from medium.tests.utils import emphasised_print
 
 
 class FakeQuantumProcess(Process):
@@ -31,14 +32,6 @@ class FakeQuantumProcess(Process):
             command += ' --%s=%d' % pair
         super(FakeQuantumProcess, self)\
                 .__init__(cwd, command)
-
-
-def emphasised_print(ins):
-    print('*-' * 60)
-    print('')
-    print(ins.id())
-    print('')
-    print('*-' * 60)
 
 
 def silent_check_call(*args, **kwargs):
@@ -98,7 +91,7 @@ class LibvirtFunctionalTest(unittest.TestCase):
     config = config
 
     def setUp(self):
-        emphasised_print(self)
+        emphasised_print(self.id())
 
         self.os = openstack.Manager(config=self.config)
         self.image_ref = self.config.env.image_ref
@@ -216,7 +209,7 @@ class QuantumFunctionalTest(unittest.TestCase):
     config = config
 
     def setUp(self):
-        emphasised_print(self)
+        emphasised_print(self.id())
         self.testing_processes = []
 
         # nova.
