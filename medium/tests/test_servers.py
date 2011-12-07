@@ -18,6 +18,7 @@ import base64
 import re
 import subprocess
 import time
+import sys
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
@@ -534,11 +535,475 @@ class ServersTest(FunctionalTest):
         self.assertEqual([], body['servers'])
 
     @attr(kind='medium')
-    def test_list_servers_not_active_image(self):
+    def test_list_servers_specify_exists_image(self):
+        print """
+
+        test_list_servers_specify_exists_image
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        # Make snapshot of the instance.
+        alt_name = rand_name('server')
+        resp, _ = self.ss_client.create_image(server['id'], alt_name)
+        alt_img_url = resp['location']
+        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
+        self.assertIsNotNone(match)
+        alt_img_id = match.groupdict()['image_id']
+        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
+
+        #creating server from snapshot.
+        resp, server = self.ss_client.create_server(name,
+                                                    alt_img_id,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, body = self.ss_client.list_servers({'image': self.image_ref})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual(1, len(body['servers']))
+
+        resp, body = self.ss_client.list_servers({'image': alt_img_id})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual(1, len(body['servers']))
+
+    @attr(kind='medium')
+    def test_list_servers_specify_not_exists_image(self):
+        print """
+
+        test_list_servers_specify_not_exists_image
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, body = self.ss_client.list_servers({'image': 99})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual([], body['servers'])
+
+    @attr(kind='medium')
+    def test_list_servers_specify_string_to_image(self):
+        print """
+
+        test_list_servers_specify_string_to_image
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, body = self.ss_client.list_servers({'image': 'image'})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual([], body['servers'])
+
+    @attr(kind='medium')
+    def test_list_servers_specify_overlimits_to_image(self):
+        print """
+
+        test_list_servers_specify_overlimits_to_image
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, body = self.ss_client.list_servers({'image': sys.maxint + 1})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual([], body['servers'])
+
+    @attr(kind='medium')
+    def test_list_servers_specify_negative_to_image(self):
+        print """
+
+        test_list_servers_specify_negative_to_image
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, body = self.ss_client.list_servers({'image': -1})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual([], body['servers'])
+
+    @attr(kind='medium')
+    def test_list_servers_specify_exists_flavor(self):
+        print """
+
+        test_list_servers_specify_exists_flavor
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, body = self.ss_client.list_servers({'flavor': self.flavor_ref})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual(1, len(body['servers']))
+
+    @attr(kind='medium')
+    def test_list_servers_specify_not_exists_flavor(self):
+        print """
+
+        test_list_servers_specify_not_exists_flavor
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, body = self.ss_client.list_servers({'flavor': 99})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+#        msg = "The resource could not be found."
+#        self.assertEqual('404', resp['status'])
+#        self.assertTrue(msg in body)
+
+    @attr(kind='medium')
+    def test_list_servers_specify_string_to_flavor(self):
+        print """
+
+        test_list_servers_specify_string_to_flavor
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, body = self.ss_client.list_servers({'flavor': 'flavor'})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual([], body['servers'])
+
+    @attr(kind='medium')
+    def test_list_servers_specify_overlimits_to_flavor(self):
+        print """
+
+        test_list_servers_specify_overlimits_to_flavor
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, body = self.ss_client.list_servers({'flavor': sys.maxint + 1})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual([], body['servers'])
+
+    @attr(kind='medium')
+    def test_list_servers_specify_negative_to_flavor(self):
+        print """
+
+        test_list_servers_specify_negative_to_flavor
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, body = self.ss_client.list_servers({'flavor': -1})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual([], body['servers'])
+
+    @attr(kind='medium')
+    def test_list_servers_specify_exists_server_name(self):
+        print """
+
+        test_list_servers_specify_exists_server_name
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, body = self.ss_client.list_servers({'name': name})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual(1, len(body['servers']))
+        self.assertEqual(name, body['servers'][0]['name'])
+
+    @attr(kind='medium')
+    def test_list_servers_specify_not_exists_server_name(self):
+        print """
+
+        test_list_servers_specify_not_exists_server_name
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, body = self.ss_client.list_servers({'name': 'servername'})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual([], body['servers'])
+
+    @attr(kind='medium')
+    def test_list_servers_specify_empty_to_server_name(self):
+        print """
+
+        test_list_servers_specify_empty_to_server_name
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, body = self.ss_client.list_servers({'name': ''})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual([], body['servers'])
+
+    @attr(kind='medium')
+    def test_list_servers_specify_overlimits_to_server_name(self):
+        print """
+
+        test_list_servers_specify_overlimits_to_server_name
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, body = self.ss_client.list_servers({'name': 'a'*256})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual([], body['servers'])
+
+    @attr(kind='medium')
+    def test_create_servers_not_active_image(self):
         """Ensure return error code 400 when specify not active image"""
         print """
 
-        test_list_servers_not_active_image
+        test_create_servers_not_active_image
 
         """
         meta = {'hello': 'world'}
