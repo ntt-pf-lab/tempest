@@ -1,5 +1,6 @@
 import os
 import subprocess
+import tempfile
 import time
 
 import unittest2 as unittest
@@ -31,6 +32,30 @@ class FakeQuantumProcess(Process):
         super(FakeQuantumProcess, self)\
                 .__init__(cwd, command)
 
+
+def emphasised_print(ins):
+    print('*-' * 60)
+    print('')
+    print(ins.id())
+    print('')
+    print('*-' * 60)
+
+
+def silent_check_call(*args, **kwargs):
+    fake_stdout = tempfile.TemporaryFile()
+    fake_stderr = tempfile.TemporaryFile()
+    try:
+        for (name, file) in [('stdout', fake_stdout),
+                             ('stderr', fake_stderr)]:
+            if name not in kwargs:
+                kwargs[name] = file
+        subprocess.check_call(*args, **kwargs)
+    except subprocess.CalledProcessError:
+        fake_stdout.seek(0)
+        fake_stderr.seek(0)
+        emphasised_print("STDOUT result:\n\n" + fake_stdout.read())
+        emphasised_print("STDERR result:\n\n" + fake_stderr.read())
+        raise
 
 config = storm.config.StormConfig('etc/medium-less-build_timeout.conf')
 environ_processes = []
@@ -73,6 +98,8 @@ class LibvirtFunctionalTest(unittest.TestCase):
     config = config
 
     def setUp(self):
+        emphasised_print(self)
+
         self.os = openstack.Manager(config=self.config)
         self.image_ref = self.config.env.image_ref
         self.flavor_ref = self.config.env.flavor_ref
@@ -94,15 +121,15 @@ class LibvirtFunctionalTest(unittest.TestCase):
         self.testing_processes.append(FakeQuantumProcess('admin'))
 
         # reset db.
-        subprocess.check_call('mysql -u%s -p%s -e "'
-                              'DROP DATABASE IF EXISTS nova;'
-                              'CREATE DATABASE nova;'
-                              '"' % (
-                                  self.config.mysql.user,
-                                  self.config.mysql.password),
-                              shell=True)
-        subprocess.call('bin/nova-manage db sync',
-                        cwd=self.config.nova.directory, shell=True)
+        silent_check_call('mysql -u%s -p%s -e "'
+                          'DROP DATABASE IF EXISTS nova;'
+                          'CREATE DATABASE nova;'
+                          '"' % (
+                              self.config.mysql.user,
+                              self.config.mysql.password),
+                          shell=True)
+        silent_check_call('bin/nova-manage db sync',
+                          cwd=self.config.nova.directory, shell=True)
 
         for process in self.testing_processes:
             process.start()
@@ -115,13 +142,13 @@ class LibvirtFunctionalTest(unittest.TestCase):
 
         # create projects.
         subprocess.check_call('bin/nova-manage project create '
-                              '--project=1 --user=admin',
+                              '--project=admin --user=admin',
                               cwd=self.config.nova.directory, shell=True)
 
         # allocate networks.
         subprocess.check_call('bin/nova-manage network create '
                               '--label=private_1-1 '
-                              '--project_id=1 '
+                              '--project_id=admin '
                               '--fixed_range_v4=10.0.0.0/24 '
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
@@ -189,6 +216,7 @@ class QuantumFunctionalTest(unittest.TestCase):
     config = config
 
     def setUp(self):
+        emphasised_print(self)
         self.testing_processes = []
 
         # nova.
@@ -211,8 +239,8 @@ class QuantumFunctionalTest(unittest.TestCase):
                                   self.config.mysql.user,
                                   self.config.mysql.password),
                               shell=True)
-        subprocess.call('bin/nova-manage db sync',
-                        cwd=self.config.nova.directory, shell=True)
+        silent_check_call('bin/nova-manage db sync',
+                          cwd=self.config.nova.directory, shell=True)
 
         for process in self.testing_processes:
             process.start()
@@ -225,7 +253,7 @@ class QuantumFunctionalTest(unittest.TestCase):
 
         # create projects.
         subprocess.check_call('bin/nova-manage project create '
-                              '--project=1 --user=admin',
+                              '--project=admin --user=admin',
                               cwd=self.config.nova.directory, shell=True)
 
         self.os = openstack.Manager(config=self.config)
@@ -246,6 +274,7 @@ class QuantumFunctionalTest(unittest.TestCase):
         for process in self.testing_processes:
             process.stop()
         del self.testing_processes[:]
+        time.sleep(10)
 
     def check_create_network(self, retcode):
         self.assertEqual(subprocess.call('bin/nova-manage network create '
