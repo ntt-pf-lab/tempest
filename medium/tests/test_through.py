@@ -16,6 +16,9 @@ from medium.tests.processes import (
         QuantumProcess, QuantumPluginOvsAgentProcess,
         NovaApiProcess, NovaComputeProcess,
         NovaNetworkProcess, NovaSchedulerProcess)
+from medium.tests.utils import (
+        emphasised_print, silent_check_call,
+        cleanup_virtual_instances, cleanup_processes)
 
 """
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
@@ -87,15 +90,15 @@ class FunctionalTest(unittest.TestCase):
                 self.config.nova.directory))
 
         # reset db.
-        subprocess.check_call('mysql -u%s -p%s -e "'
-                              'DROP DATABASE IF EXISTS nova;'
-                              'CREATE DATABASE nova;'
-                              '"' % (
-                                  self.config.mysql.user,
-                                  self.config.mysql.password),
-                              shell=True)
-        subprocess.call('bin/nova-manage db sync',
-                        cwd=self.config.nova.directory, shell=True)
+        silent_check_call('mysql -u%s -p%s -e "'
+                          'DROP DATABASE IF EXISTS nova;'
+                          'CREATE DATABASE nova;'
+                          '"' % (
+                              self.config.mysql.user,
+                              self.config.mysql.password),
+                          shell=True)
+        silent_check_call('bin/nova-manage db sync',
+                          cwd=self.config.nova.directory, shell=True)
 
         for process in self.testing_processes:
             process.start()
@@ -143,18 +146,8 @@ class FunctionalTest(unittest.TestCase):
                               '--network_size=32 ',
                               cwd=self.config.nova.directory, shell=True)
 
-    def tearDown(self):
-        # kill still existing virtual instances.
-        for line in subprocess.check_output('virsh list --all',
-                                            shell=True).split('\n')[2:-2]:
-            (id, name, state) = line.split()
-            if state == 'running':
-                subprocess.check_call('virsh destroy %s' % id, shell=True)
-            subprocess.check_call('virsh undefine %s' % name, shell=True)
-
-        for process in self.testing_processes:
-            process.stop()
-        del self.testing_processes[:]
+        self.addCleanup(cleanup_virtual_instances)
+        self.addCleanup(cleanup_processes, self.testing_processes)
 
 
 class ServersTest(FunctionalTest):
@@ -167,11 +160,7 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='smoke')
     def test_through(self):
-        print """
-
-        creating server.
-
-        """
+        emphasised_print("creating server.")
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -198,11 +187,7 @@ class ServersTest(FunctionalTest):
         self.assertEqual(str(self.image_ref), server['image']['id'])
         self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
 
-        print """
-
-        creating snapshot.
-
-        """
+        emphasised_print("creating snapshot.")
         # Make snapshot of the instance.
         alt_name = rand_name('server')
         resp, _ = self.ss_client.create_image(server['id'], alt_name)
@@ -212,20 +197,12 @@ class ServersTest(FunctionalTest):
         alt_img_id = match.groupdict()['image_id']
         self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
 
-        print """
-
-        deleting server.
-
-        """
+        emphasised_print("deleting server.")
         # Delete the server
         self.ss_client.delete_server(server['id'])
         self.ss_client.wait_for_server_not_exists(server['id'])
 
-        print """
-
-        creating server from snapshot.
-
-        """
+        emphasised_print("creating server from snapshot.")
         resp, server = self.ss_client.create_server(name,
                                                     alt_img_id,
                                                     self.flavor_ref,
@@ -237,20 +214,12 @@ class ServersTest(FunctionalTest):
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
-        print """
-
-        deleting server again.
-
-        """
+        emphasised_print("deleting server again.")
         # Delete the server
         self.ss_client.delete_server(server['id'])
         self.ss_client.wait_for_server_not_exists(server['id'])
 
-        print """
-
-        deleting snapshot.
-
-        """
+        emphasised_print("deleting snapshot.")
         # Delete the snapshot
         self.img_client.delete_image(alt_img_id)
         self.img_client.wait_for_image_not_exists(alt_img_id)
