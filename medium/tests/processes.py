@@ -158,3 +158,18 @@ class QuantumPluginOvsAgentProcess(Process):
         kill_children_process(self._process.pid, force=True)
         os.system('/usr/bin/sudo /bin/kill %d' % self._process.pid)
         self._process = None
+
+
+# Fakes
+class FakeQuantumProcess(Process):
+    def __init__(self, tenant_id, **status_code):
+        cwd = os.path.join(os.path.dirname(__file__),
+                           'quantum-service-fake')
+        command = os.path.join(cwd, 'fake_server.py')
+        command += ' --debug'
+        command += ' --tenant=%s' % tenant_id
+        command += ' --tenant=default'
+        for pair in status_code.items():
+            command += ' --%s=%d' % pair
+        super(FakeQuantumProcess, self)\
+                .__init__(cwd, command)
