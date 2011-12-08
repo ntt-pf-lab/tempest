@@ -19,7 +19,7 @@ from medium.tests.processes import (
         FakeQuantumProcess)
 from medium.tests.utils import (
         emphasised_print, silent_check_call,
-        cleanup_virtual_instances)
+        cleanup_virtual_instances, cleanup_processes)
 
 
 config = storm.config.StormConfig('etc/medium-less-build_timeout.conf')
@@ -100,30 +100,18 @@ class LibvirtFunctionalTest(unittest.TestCase):
             process.start()
         time.sleep(10)
 
-        # create users.
-        subprocess.check_call('bin/nova-manage user create '
-                              '--name=admin --access=secrete --secret=secrete',
-                              cwd=self.config.nova.directory, shell=True)
-
-        # create projects.
-        subprocess.check_call('bin/nova-manage project create '
-                              '--project=admin --user=admin',
-                              cwd=self.config.nova.directory, shell=True)
-
         # allocate networks.
-        subprocess.check_call('bin/nova-manage network create '
-                              '--label=private_1-1 '
-                              '--project_id=admin '
-                              '--fixed_range_v4=10.0.0.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=self.config.nova.directory, shell=True)
+        silent_check_call('bin/nova-manage network create '
+                          '--label=private_1-1 '
+                          '--project_id=%s '
+                          '--fixed_range_v4=10.0.0.0/24 '
+                          '--bridge_interface=br-int '
+                          '--num_networks=1 '
+                          '--network_size=32 ' % self.config.nova.tenant_name,
+                          cwd=self.config.nova.directory, shell=True)
 
         self.addCleanup(cleanup_virtual_instances)
-        self.addCleanup(lambda ins: [process.stop()
-                                     for process in ins.testing_process],
-                        self)
+        self.addCleanup(cleanup_processes, self.testing_processes)
 
     def get_fake_libvirt_path(self, name):
         return os.path.join(
@@ -174,6 +162,7 @@ class QuantumFunctionalTest(unittest.TestCase):
 
     def setUp(self):
         emphasised_print(self.id())
+
         self.testing_processes = []
 
         # nova.
@@ -203,35 +192,14 @@ class QuantumFunctionalTest(unittest.TestCase):
             process.start()
         time.sleep(10)
 
-        # create users.
-        subprocess.check_call('bin/nova-manage user create '
-                              '--name=admin --access=secrete --secret=secrete',
-                              cwd=self.config.nova.directory, shell=True)
-
-        # create projects.
-        subprocess.check_call('bin/nova-manage project create '
-                              '--project=admin --user=admin',
-                              cwd=self.config.nova.directory, shell=True)
-
         self.os = openstack.Manager(config=self.config)
         self.image_ref = self.config.env.image_ref
         self.flavor_ref = self.config.env.flavor_ref
         self.ss_client = self.os.servers_client
         self.img_client = self.os.images_client
 
-    def tearDown(self):
-        # kill still existing virtual instances.
-        for line in subprocess.check_output('virsh list --all',
-                                            shell=True).split('\n')[2:-2]:
-            (id, name, state) = line.split()
-            if state == 'running':
-                subprocess.check_call('virsh destroy %s' % id, shell=True)
-            subprocess.check_call('virsh undefine %s' % name, shell=True)
-
-        for process in self.testing_processes:
-            process.stop()
-        del self.testing_processes[:]
-        time.sleep(10)
+        self.addCleanup(cleanup_virtual_instances)
+        self.addCleanup(cleanup_processes, self.testing_processes)
 
     def check_create_network(self, retcode):
         self.assertEqual(subprocess.call('bin/nova-manage network create '
