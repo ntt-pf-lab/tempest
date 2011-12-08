@@ -1,6 +1,7 @@
 import re
 import subprocess
 import tempfile
+import time
 
 
 def cleanup_virtual_instances():
@@ -11,6 +12,12 @@ def cleanup_virtual_instances():
         if state == 'running':
             subprocess.check_call('virsh destroy %s' % id, shell=True)
         subprocess.check_call('virsh undefine %s' % name, shell=True)
+
+
+def cleanup_processes(processes):
+    for process in processes:
+        process.stop()
+    lambda: time.sleep(10)
 
 
 def emphasised_print(s, decorator='*-'):
