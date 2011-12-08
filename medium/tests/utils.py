@@ -1,13 +1,24 @@
-import tempfile
+import re
 import subprocess
+import tempfile
 
 
-def emphasised_print(s):
-    print('*-' * 60)
+def cleanup_virtual_instances():
+    # kill still existing virtual instances.
+    for line in subprocess.check_output('virsh list --all',
+                                        shell=True).split('\n')[2:-2]:
+        (id, name, state) = re.split('\s+', line, maxsplit=2)
+        if state == 'running':
+            subprocess.check_call('virsh destroy %s' % id, shell=True)
+        subprocess.check_call('virsh undefine %s' % name, shell=True)
+
+
+def emphasised_print(s, decorator='*-'):
+    print(decorator * 100)
     print('')
     print(s)
     print('')
-    print('*-' * 60)
+    print(decorator * 100)
 
 
 def silent_check_call(*args, **kwargs):

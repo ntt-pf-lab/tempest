@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import time
 
@@ -16,7 +17,9 @@ from medium.tests.processes import (
         NovaApiProcess, NovaComputeProcess,
         NovaNetworkProcess, NovaSchedulerProcess,
         FakeQuantumProcess)
-from medium.tests.utils import emphasised_print, silent_check_call
+from medium.tests.utils import (
+        emphasised_print, silent_check_call,
+        cleanup_virtual_instances)
 
 
 config = storm.config.StormConfig('etc/medium-less-build_timeout.conf')
@@ -117,18 +120,10 @@ class LibvirtFunctionalTest(unittest.TestCase):
                               '--network_size=32 ',
                               cwd=self.config.nova.directory, shell=True)
 
-    def tearDown(self):
-        # kill still existing virtual instances.
-        for line in subprocess.check_output('virsh list --all',
-                                            shell=True).split('\n')[2:-2]:
-            (id, name, state) = line.split()
-            if state == 'running':
-                subprocess.check_call('virsh destroy %s' % id, shell=True)
-            subprocess.check_call('virsh undefine %s' % name, shell=True)
-
-        for process in self.testing_processes:
-            process.stop()
-        del self.testing_processes[:]
+        self.addCleanup(cleanup_virtual_instances)
+        self.addCleanup(lambda ins: [process.stop()
+                                     for process in ins.testing_process],
+                        self)
 
     def get_fake_libvirt_path(self, name):
         return os.path.join(
