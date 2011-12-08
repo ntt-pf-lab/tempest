@@ -15,22 +15,8 @@ from medium.tests.processes import (
         KeystoneProcess,
         NovaApiProcess, NovaComputeProcess,
         NovaNetworkProcess, NovaSchedulerProcess,
-        Process)
+        FakeQuantumProcess)
 from medium.tests.utils import emphasised_print, silent_check_call
-
-
-class FakeQuantumProcess(Process):
-    def __init__(self, tenant_id, **status_code):
-        cwd = os.path.join(os.path.dirname(__file__),
-                           'quantum-service-fake')
-        command = os.path.join(cwd, 'fake_server.py')
-        command += ' --debug'
-        command += ' --tenant=%s' % tenant_id
-        command += ' --tenant=default'
-        for pair in status_code.items():
-            command += ' --%s=%d' % pair
-        super(FakeQuantumProcess, self)\
-                .__init__(cwd, command)
 
 
 config = storm.config.StormConfig('etc/medium-less-build_timeout.conf')
