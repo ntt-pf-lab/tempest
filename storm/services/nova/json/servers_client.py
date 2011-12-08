@@ -117,6 +117,8 @@ class ServersClient(object):
             url = "servers?" + "".join(param_list)
 
         resp, body = self.client.get(url)
+        if resp.status == 401:
+            return resp, body
         body = json.loads(body)
         return resp, body
 
