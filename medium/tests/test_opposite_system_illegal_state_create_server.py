@@ -123,7 +123,7 @@ class LibvirtFunctionalTest(unittest.TestCase):
 
 class LibvirtLaunchErrorTest(LibvirtFunctionalTest):
     @attr(kind='medium')
-    def test_through(self):
+    def test_it(self):
         super(LibvirtLaunchErrorTest, self).setUp()
         patches = [('libvirt', 'fake_libvirt.libvirt_patch')]
         env = os.environ.copy()
@@ -151,7 +151,7 @@ class LibvirtLaunchErrorTest(LibvirtFunctionalTest):
 
 class LibvirtLookupErrorTest(LibvirtFunctionalTest):
     @attr(kind='medium')
-    def test_through(self):
+    def test_it(self):
         patches = [('libvirt', 'fake_libvirt.libvirt_patch')]
         env = os.environ.copy()
         env['PYTHONPATH'] = self.get_fake_path('lookup-error')
@@ -181,9 +181,9 @@ class LibvirtOpenVswitchDriverTest(LibvirtFunctionalTest):
 
 
 class LibvirtOpenVswitchDriverPlugErrorTest(LibvirtOpenVswitchDriverTest):
-    def setUp(self):
-        super(LibvirtOpenVswitchDriverPlugErrorTest, self).setUp()
-        patches = [('virt.libvirt.vif', 'fake_libvirt_vif.vif_patch')]
+    @attr(kind='medium')
+    def test_it(self):
+        patches = [('nova.virt.libvirt.vif', 'fake_libvirt_vif.vif_patch')]
         env = os.environ.copy()
         env['PYTHONPATH'] = self.get_fake_path('vif-plug-error')
         compute = NovaComputeProcess(self.config.nova.directory,
@@ -191,6 +191,20 @@ class LibvirtOpenVswitchDriverPlugErrorTest(LibvirtOpenVswitchDriverTest):
                                      env=env)
         compute.start()
         self.testing_processes.append(compute)
+
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6)
+
+        # Wait for the server to become ERROR.BUILD
+        self.assertRaises(exceptions.BuildErrorException,
+                          self.ss_client.wait_for_server_status,
+                          server['id'], 'ERROR')
 
 
 class QuantumFunctionalTest(unittest.TestCase):
