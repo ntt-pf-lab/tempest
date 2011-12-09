@@ -8,6 +8,7 @@ def cleanup_virtual_instances():
     # kill still existing virtual instances.
     for line in subprocess.check_output('virsh list --all',
                                         shell=True).split('\n')[2:-2]:
+        line = line.strip()
         (id, name, state) = re.split('\s+', line, maxsplit=2)
         if state == 'running':
             subprocess.check_call('virsh destroy %s' % id, shell=True)
