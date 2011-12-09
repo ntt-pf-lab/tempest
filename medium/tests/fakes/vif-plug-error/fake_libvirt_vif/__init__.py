@@ -1,12 +1,12 @@
-import subprocess
+from nova import exception
 
 
 def fake_plug(self, instance, network, mapping):
-    raise subprocess.ProcessExecutionError
+    raise exception.ProcessExecutionError
 
 
 def vif_patch(name, fn):
-    if name == 'vif.LibvirtOpenVswitchDriver.plug':
+    if name == 'nova.virt.libvirt.vif.LibvirtOpenVswitchDriver.plug':
         return fake_plug
     else:
         return fn
