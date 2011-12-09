@@ -123,9 +123,12 @@ class LibvirtFunctionalTest(unittest.TestCase):
 class LibvirtLaunchErrorTest(LibvirtFunctionalTest):
     def setUp(self):
         super(LibvirtLaunchErrorTest, self).setUp()
-        compute = NovaComputeProcess(self.config.nova.directory)
-        compute.env = os.environ.copy()
-        compute.env['PYTHONPATH'] = self.get_fake_libvirt_path('launch-error')
+        patches = [('libvirt', 'fake_libvirt.libvirt_patch')]
+        env = os.environ.copy()
+        env['PYTHONPATH'] = self.get_fake_libvirt_path('launch-error')
+        compute = NovaComputeProcess(self.config.nova.directory,
+                                     patches=patches,
+                                     env=env)
         compute.start()
         self.testing_processes.append(compute)
 
@@ -149,9 +152,12 @@ class LibvirtLaunchErrorTest(LibvirtFunctionalTest):
 class LibvirtLookupErrorTest(LibvirtLaunchErrorTest):
     def setUp(self):
         super(LibvirtLaunchErrorTest, self).setUp()
-        compute = NovaComputeProcess(self.config.nova.directory)
-        compute.env = os.environ.copy()
-        compute.env['PYTHONPATH'] = self.get_fake_libvirt_path('lookup-error')
+        patches = [('libvirt', 'fake_libvirt.libvirt_patch')]
+        env = os.environ.copy()
+        env['PYTHONPATH'] = self.get_fake_libvirt_path('lookup-error')
+        compute = NovaComputeProcess(self.config.nova.directory,
+                                     patches=patches,
+                                     env=env)
         compute.start()
         self.testing_processes.append(compute)
 

@@ -89,9 +89,16 @@ class KeystoneProcess(Process):
 
 class NovaProcess(Process):
     lock_path = '/tmp/nova_locks'
+    monkey_patch = True
 
-    def __init__(self, cwd, command, **kwargs):
+    def __init__(self, cwd, command, patches=[], **kwargs):
         command += ' --lock_path=%s' % self.lock_path
+        if self.monkey_patch:
+            # a patch entry be formed as (module, patch)
+            command += ' --monkey_patch=true'
+            for (module, patch) in patches:
+                command += ' --monkey_patch_modules=%(module)s:%(patch)s'\
+                           % locals()
         super(NovaProcess, self)\
                 .__init__(cwd, command, **kwargs)
 
