@@ -27,8 +27,8 @@ class ServersClient(object):
 
         post_body = {}
         post_body.update(kwargs)
-        print "post_body=", post_body
         post_body = json.dumps({'server': post_body})
+        print "post_body=", post_body
         resp, body = self.client.post('servers', post_body, self.headers)
         if resp['status'] != '202':
             return resp, body
@@ -76,7 +76,6 @@ class ServersClient(object):
         if key_name != None:
             post_body['key_name'] = key_name
 
-        print "post_body=", post_body
         post_body = json.dumps({'server': post_body})
         resp, body = self.client.post('servers', post_body, self.headers)
 #        body = json.loads(body)
@@ -148,6 +147,8 @@ class ServersClient(object):
             url = "servers?" + "".join(param_list)
 
         resp, body = self.client.get(url)
+        if resp['status'] != '200' and resp['status'] != '203':
+            return resp, body
         body = json.loads(body)
         return resp, body
 
@@ -169,6 +170,8 @@ class ServersClient(object):
     def wait_for_server_status(self, server_id, status):
         """Waits for a server to reach a given status"""
         resp, body = self.get_server(server_id)
+        if resp['status'] == '404':
+            return
         server_status = body['status']
         start = int(time.time())
 
