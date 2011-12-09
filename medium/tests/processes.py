@@ -189,3 +189,17 @@ class FakeQuantumProcess(Process):
             command += ' --%s=%d' % pair
         super(FakeQuantumProcess, self)\
                 .__init__(cwd, command)
+
+    def start(self):
+        super(FakeQuantumProcess, self).start()
+        time.sleep(1)
+
+    def set_test(self, flag):
+        import json
+        import httplib
+
+        headers = {'Content-Type': 'application/json'}
+        body = json.dumps({'test': flag})
+        conn = httplib.HTTPConnection('127.0.0.1', 9696)
+        conn.request('POST', '/_backdoor', body, headers)
+        conn.close()

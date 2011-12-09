@@ -50,10 +50,15 @@ port_path = "/networks/<network_id>/ports/<port_id>"
 attachment_path = "/networks/<network_id>/ports/<port_id>/attachment"
 
 
+in_testing = False
+
+
 def expected_error_check(func):
     def _func(*args, **kwargs):
+        global in_testing
+
         status_code = getattr(parsed_args, func.func_name, None)
-        if status_code:
+        if status_code and in_testing:
             logging.info('Hit expected error: %s => %d',
                          func.func_name, status_code)
             abort(status_code, "Expected error for testing")
@@ -202,6 +207,15 @@ def unplug_port_attachment(tenant_id, network_id, port_id):
         logging.warn("A port was not plugged %s > %s > %s",
                      tenant_id, network_id, port['id'])
     return HTTPResponse(status=204)
+
+
+@post('/_backdoor')
+def _backdoor():
+    global in_testing
+    body = json.load(request.body)
+    if 'test' in body:
+        logging.info('in_testing %s => %s', in_testing, body['test'])
+        in_testing = body['test']
 
 
 def main():

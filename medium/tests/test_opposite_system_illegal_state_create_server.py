@@ -229,6 +229,7 @@ class QuantumFunctionalTest(unittest.TestCase):
         quantum = FakeQuantumProcess('admin', create_network=status_code)
         self.testing_processes.append(quantum)
         quantum.start()
+        quantum.set_test(True)
 
         self.check_create_network(1)
 
@@ -245,6 +246,7 @@ class QuantumFunctionalTest(unittest.TestCase):
         quantum = FakeQuantumProcess('admin', delete_network=status_code)
         self.testing_processes.append(quantum)
         quantum.start()
+        quantum.set_test(True)
 
         self.check_create_network(0)
         self.check_delete_network(1)
@@ -270,6 +272,7 @@ class QuantumFunctionalTest(unittest.TestCase):
         quantum = FakeQuantumProcess('admin', **param)
         self.testing_processes.append(quantum)
         quantum.start()
+        quantum.set_test(True)
 
         self.check_create_network(0)
 
