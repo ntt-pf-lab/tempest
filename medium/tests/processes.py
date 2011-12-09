@@ -119,9 +119,13 @@ class NovaApiProcess(NovaProcess):
 class NovaComputeProcess(NovaProcess):
     def __init__(self, directory, **kwargs):
         super(NovaComputeProcess, self)\
-                .__init__(directory, "sg libvirtd bin/nova-compute", **kwargs)
+                .__init__(directory, "bin/nova-compute", **kwargs)
 
     def start(self):
+        if getattr(self, '_wrapped_command', None) is None:
+            self._original_command = self.command
+            self._wrapped_command = "sg libvirtd '%s'" % self.command
+        self.command = self._wrapped_command
         super(NovaComputeProcess, self).start()
         time.sleep(5)
 
