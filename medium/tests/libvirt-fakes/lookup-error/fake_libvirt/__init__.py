@@ -1,14 +1,5 @@
 import os
-
-
-VIR_CRED_AUTHNAME = object()
-VIR_CRED_NOECHOPROMPT = object()
-VIR_ERR_NO_DOMAIN = object()
-
-
-class libvirtError(Exception):
-    def get_error_code(self):
-        return VIR_ERR_NO_DOMAIN
+import libvirt
 
 
 def openAuth(uri, auth, n):
@@ -28,11 +19,8 @@ def openAuth(uri, auth, n):
         @staticmethod
         def getCapabilities():
             return file(os.path.join(
-                os.path.dirname(
-                    os.path.dirname(
-                        os.path.dirname(
-                            os.path.abspath(__file__)))),
-                'capabilities.xml')).read()
+                            os.path.dirname(os.path.abspath(__file__)),
+                            'capabilities.xml')).read()
 
         @staticmethod
         def getType():
@@ -48,6 +36,13 @@ def openAuth(uri, auth, n):
 
         @staticmethod
         def lookupByName(instance_name):
-            raise libvirtError
+            raise libvirt.libvirtError(libvirt.VIR_ERR_ERROR)
 
     return fake
+
+
+def libvirt_patch(name, fn):
+    if name == 'libvirt.openAuth':
+        return openAuth
+    else:
+        return fn

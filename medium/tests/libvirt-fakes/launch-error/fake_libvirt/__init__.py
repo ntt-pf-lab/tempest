@@ -1,19 +1,13 @@
 import os
 
-
-VIR_CRED_AUTHNAME = object()
-VIR_CRED_NOECHOPROMPT = object()
-
-
-class libvirtError(Exception):
-    pass
+import libvirt
 
 
 def openAuth(uri, auth, n):
     class fake(object):
         @staticmethod
         def defineXML(xml):
-            raise libvirtError
+            raise libvirt.libvirtError(libvirt.VIR_ERR_ERROR)
 
         @staticmethod
         def listDomainsID():
@@ -22,11 +16,8 @@ def openAuth(uri, auth, n):
         @staticmethod
         def getCapabilities():
             return file(os.path.join(
-                os.path.dirname(
-                    os.path.dirname(
-                        os.path.dirname(
-                            os.path.abspath(__file__)))),
-                'capabilities.xml')).read()
+                            os.path.dirname(os.path.abspath(__file__)),
+                            'capabilities.xml')).read()
 
         @staticmethod
         def getType():
@@ -41,3 +32,10 @@ def openAuth(uri, auth, n):
             pass
 
     return fake
+
+
+def libvirt_patch(name, fn):
+    if name == 'libvirt.openAuth':
+        return openAuth
+    else:
+        return fn
