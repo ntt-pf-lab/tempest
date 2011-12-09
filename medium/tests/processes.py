@@ -96,9 +96,10 @@ class NovaProcess(Process):
         if self.monkey_patch:
             # a patch entry be formed as (module, patch)
             command += ' --monkey_patch=true'
-            for (module, patch) in patches:
-                command += ' --monkey_patch_modules=%(module)s:%(patch)s'\
-                           % locals()
+            command += ' --monkey_patch_modules=%s' % ','.join([
+                module + ':' + patch
+                for module, patch in patches
+            ])
         super(NovaProcess, self)\
                 .__init__(cwd, command, **kwargs)
 
