@@ -74,7 +74,7 @@ class ImagesClient(object):
         resp, body = self.client.get("images/%s" % str(image_id))
         body = json.loads(body)
         if resp['status'] == '404':
-            raise exceptions.ItemNotFoundException(body['itemNotFound'])
+            return resp, body
         return resp, body['image']
 
     def delete_image(self, image_id):
@@ -112,12 +112,10 @@ class ImagesClient(object):
         start = int(time.time())
 
         while True:
-            try:
-                resp, image = self.get_image(image_id)
-            except exceptions.ItemNotFoundException:
+            resp, image = self.get_image(image_id)
+            if resp['status'] == '404':
                 return
-
-            if image['status'] == 'ERROR':
+            elif image['status'] == 'ERROR':
                 raise exceptions.TimeoutException
 
             if int(time.time()) - start >= self.build_timeout:

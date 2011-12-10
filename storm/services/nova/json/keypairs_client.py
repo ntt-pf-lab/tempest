@@ -1,8 +1,6 @@
-from storm import exceptions
 from storm.common import rest_client
 import json
 import storm.config
-import time
 
 
 class KeypairsClient(object):
@@ -20,27 +18,31 @@ class KeypairsClient(object):
         self.headers = {'Content-Type': 'application/json',
                         'Accept': 'application/json'}
 
-    def create_keypair(self, keyname):
+    def create_keypair(self, keyname, publickey=None):
         """
         Creates a keypair.
         keyname: The name of the keypair.
+        publickey: The public key to import to the keypair.
         """
 
         post_body = {
             'name': keyname,
         }
 
+        if publickey != None:
+            post_body['public_key'] = publickey
+
         post_body = json.dumps({'keypair': post_body})
         resp, body = self.client.post('os-keypairs', post_body, self.headers)
         body = json.loads(body)
-        return resp, body['keypair']
+        return resp, body
 
     def list_keypairs(self):
         """Lists all keypairs"""
 
         resp, body = self.client.get('os-keypairs')
         body = json.loads(body)
-        return resp, body['keypairs']
+        return resp, body
 
     def delete_keypair(self, keyname):
         """Deletes the given keypair"""
