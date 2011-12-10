@@ -33,11 +33,11 @@ def kill_children_process(pid, force=False):
 
 
 class Process(object):
-    def __init__(self, cwd, command):
+    def __init__(self, cwd, command, env=None):
         self._process = None
         self.cwd = cwd
         self.command = command
-        self.env = None
+        self.env = env
 
     def start(self):
         self._process = subprocess.Popen(self.command,
@@ -52,17 +52,19 @@ class Process(object):
 
 
 class GlanceRegistryProcess(Process):
-    def __init__(self, directory, config):
+    def __init__(self, directory, config, **kwargs):
         super(GlanceRegistryProcess, self)\
                 .__init__(directory,
-                          "bin/glance-registry --config-file=%s" % config)
+                          "bin/glance-registry --config-file=%s" % config,
+                          **kwargs)
 
 
 class GlanceApiProcess(Process):
-    def __init__(self, directory, config, host, port):
+    def __init__(self, directory, config, host, port, **kwargs):
         super(GlanceApiProcess, self)\
                 .__init__(directory,
-                          "bin/glance-api --config-file=%s" % config)
+                          "bin/glance-api --config-file=%s" % config,
+                          **kwargs)
         self.host = host
         self.port = port
 
@@ -72,10 +74,11 @@ class GlanceApiProcess(Process):
 
 
 class KeystoneProcess(Process):
-    def __init__(self, directory, config, host, port):
+    def __init__(self, directory, config, host, port, **kwargs):
         super(KeystoneProcess, self)\
                 .__init__(directory,
-                          "bin/keystone --config-file %s -d" % config)
+                          "bin/keystone --config-file %s -d" % config,
+                          **kwargs)
         self.host = host
         self.port = port
 
@@ -87,10 +90,10 @@ class KeystoneProcess(Process):
 class NovaProcess(Process):
     lock_path = '/tmp/nova_locks'
 
-    def __init__(self, cwd, command):
+    def __init__(self, cwd, command, **kwargs):
         command += ' --lock_path=%s' % self.lock_path
         super(NovaProcess, self)\
-                .__init__(cwd, command)
+                .__init__(cwd, command, **kwargs)
 
     def start(self):
         subprocess.check_call('mkdir -p %s' % self.lock_path, shell=True)
@@ -102,9 +105,9 @@ class NovaProcess(Process):
 
 
 class NovaApiProcess(NovaProcess):
-    def __init__(self, directory, host, port):
+    def __init__(self, directory, host, port, **kwargs):
         super(NovaApiProcess, self)\
-                .__init__(directory, "bin/nova-api")
+                .__init__(directory, "bin/nova-api", **kwargs)
         self.host = host
         self.port = port
 
@@ -114,11 +117,15 @@ class NovaApiProcess(NovaProcess):
 
 
 class NovaComputeProcess(NovaProcess):
-    def __init__(self, directory):
+    def __init__(self, directory, **kwargs):
         super(NovaComputeProcess, self)\
-                .__init__(directory, "sg libvirtd bin/nova-compute")
+                .__init__(directory, "bin/nova-compute", **kwargs)
 
     def start(self):
+        if getattr(self, '_wrapped_command', None) is None:
+            self._original_command = self.command
+            self._wrapped_command = "sg libvirtd '%s'" % self.command
+        self.command = self._wrapped_command
         super(NovaComputeProcess, self).start()
         time.sleep(5)
 
@@ -128,31 +135,32 @@ class NovaComputeProcess(NovaProcess):
 
 
 class NovaNetworkProcess(NovaProcess):
-    def __init__(self, directory):
+    def __init__(self, directory, **kwargs):
         super(NovaNetworkProcess, self)\
-                .__init__(directory, "bin/nova-network")
+                .__init__(directory, "bin/nova-network", **kwargs)
 
 
 class NovaSchedulerProcess(NovaProcess):
-    def __init__(self, directory):
+    def __init__(self, directory, **kwargs):
         super(NovaSchedulerProcess, self)\
-                .__init__(directory, "bin/nova-scheduler")
+                .__init__(directory, "bin/nova-scheduler", **kwargs)
 
 
 class QuantumProcess(Process):
-    def __init__(self, directory, config):
+    def __init__(self, directory, config, **kwargs):
         super(QuantumProcess, self)\
-                .__init__(directory, "bin/quantum " + config)
+                .__init__(directory, "bin/quantum " + config, **kwargs)
 
 
 class QuantumPluginOvsAgentProcess(Process):
-    def __init__(self, directory, config):
+    def __init__(self, directory, config, **kwargs):
         super(QuantumPluginOvsAgentProcess, self)\
                 .__init__(directory, "sudo python "
                                      "quantum/plugins/"
                                          "openvswitch/agent/"
                                          "ovs_quantum_agent.py "
-                                     "-v " + config)
+                                     "-v " + config,
+                          **kwargs)
 
     def stop(self):
         kill_children_process(self._process.pid, force=True)

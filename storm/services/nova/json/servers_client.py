@@ -171,12 +171,16 @@ class ServersClient(object):
     def wait_for_server_status(self, server_id, status):
         """Waits for a server to reach a given status"""
         resp, body = self.get_server(server_id)
+        if resp['status'] == '404':
+            return
         server_status = body['status']
         start = int(time.time())
 
         while server_status != status:
             time.sleep(self.build_interval)
             resp, body = self.get_server(server_id)
+            if resp['status'] == '404':
+                return
             server_status = body['status']
 
             if server_status == 'ERROR':
@@ -306,18 +310,41 @@ class ServersClient(object):
                                       str(server_id), post_body, self.headers)
         return resp, body
 
-    def create_image(self, server_id, image_name):
-        """Creates an image of the given server"""
+#    def create_image(self, server_id, image_name):
+#        """Creates an image of the given server"""
+#        post_body = {
+#            'createImage': {
+#                'name': image_name,
+#            }
+#        }
+#
+#        post_body = json.dumps(post_body)
+#        resp, body = self.client.post('servers/%s/action' %
+#                                      str(server_id), post_body, self.headers)
+#        # Normal response has no content.
+#        if int(resp['content-length']) > 0:
+#            body = json.loads(body)
+#        return resp, body
+
+#    create_image from images_client
+
+    def create_image(self, server_id, name, meta=None):
+        """Creates an image of the original server"""
+
         post_body = {
             'createImage': {
-                'name': image_name,
+                'name': name,
             }
         }
+
+        if meta != None:
+            post_body['createImage']['metadata'] = meta
 
         post_body = json.dumps(post_body)
         resp, body = self.client.post('servers/%s/action' %
                                       str(server_id), post_body, self.headers)
         # Normal response has no content.
+        # XXX duplicate of servers_client.create_image
         if int(resp['content-length']) > 0:
             body = json.loads(body)
         return resp, body
