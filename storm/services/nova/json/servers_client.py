@@ -36,7 +36,7 @@ class ServersClient(object):
 
     def create_server(self, name, image_ref, flavor_ref, meta=None,
                       personality=None, accessIPv4=None, accessIPv6=None,
-                      key_name=None, adminPass=None):
+                      key_name=None, networks=None, adminPass=None):
         """
         Creates an instance of a server.
         name: The name of the server.
@@ -49,6 +49,7 @@ class ServersClient(object):
         accessIPv4: The IPv4 access address for the server.
         accessIPv6: The IPv6 access address for the server.
         key_name: The name of the keypair.
+        networks: The networks to be allocated to the server.
         """
 
         post_body = {
@@ -74,6 +75,9 @@ class ServersClient(object):
 
         if key_name != None:
             post_body['key_name'] = key_name
+
+        if networks != None:
+            post_body['networks'] = networks
 
         post_body = json.dumps({'server': post_body})
         resp, body = self.client.post('servers', post_body, self.headers)
@@ -383,4 +387,10 @@ class ServersClient(object):
     def delete_server_metadata_item(self, server_id, key):
         resp, body = self.client.delete("servers/%s/metadata/%s" %
                                     (str(server_id), key))
+        return resp, body
+
+    def list_server_virtual_interfaces(self, server_id):
+        resp, body = self.client.get("servers/%s/os-virtual-interfaces" %
+                                     str(server_id))
+        body = json.loads(body)
         return resp, body
