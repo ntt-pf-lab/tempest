@@ -2592,7 +2592,7 @@ class ServersTest(FunctionalTest):
 
         """
 
-        zone = rand_name('zone')
+        zone = rand_name('zone:')
 
         meta = {'hello': 'world'}
         name = rand_name('server')
@@ -2607,9 +2607,7 @@ class ServersTest(FunctionalTest):
                                                      personality=personality)
         print "resp=", resp
         print "body=", body
-#        msg = "T.B.D"
-#        self.assertEqual('400', resp['status'])
-#        self.assertTrue(msg in body)
+        self.assertEqual('404', resp['status'])
 
     @attr(kind='medium')
     def test_create_servers_specify_exists_zone(self):
