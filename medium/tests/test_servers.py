@@ -2678,10 +2678,10 @@ class ServersTest(FunctionalTest):
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
-    def test_create_server_quota_memory(self):
+    def test_create_server_quota_cpu(self):
         print """
 
-        test_create_server_quota_memory
+        test_create_server_quota_cpu
 
         """
 
@@ -2729,6 +2729,68 @@ class ServersTest(FunctionalTest):
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        print "resp=", resp
+        print "server=", server
+        self.assertEqual('413', resp['status'])
+
+    @attr(kind='medium')
+    def test_create_server_quota_memory(self):
+        print """
+
+        test_create_server_quota_memory
+
+        """
+
+        sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
+               "VALUES(0, 'admin', 'memory_mb', 1024)")
+        self.exec_sql(sql)
+
+        print """
+
+        creating server.
+
+        """
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.s2_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        print "resp=", resp
+        print "server=", server
+        self.assertEqual('202', resp['status'])
+
+        # Wait for the server to become active
+        self.s2_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, server = self.s2_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        print "resp=", resp
+        print "server=", server
+        self.assertEqual('202', resp['status'])
+
+        # Wait for the server to become active
+        self.s2_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, server = self.s2_client.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
