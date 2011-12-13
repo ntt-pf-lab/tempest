@@ -194,3 +194,131 @@ class QuantumFunctionalTest(unittest.TestCase):
     @attr(kind='medium')
     def test_delete_port_port_in_use(self):
         self._test_delete_port(432)
+
+
+class LibvirtFunctionalTest(unittest.TestCase):
+
+    config = config
+    def tearDown(self):
+        self._dumpdb()
+
+    def _dumpdb(self):
+        subprocess.check_call('mysql -u%s -p%s -e "'
+                              'connect nova;'
+            'select id, event_type,publisher_id, status from eventlog;'
+            'select id,vm_state,power_state,task_state,deleted from instances;'
+                              '"' % (
+                                  self.config.mysql.user,
+                                  self.config.mysql.password),
+                              shell=True)
+    def setUp(self):
+        emphasised_print(self.id())
+
+        self.os = openstack.Manager(config=self.config)
+        self.image_ref = self.config.env.image_ref
+        self.flavor_ref = self.config.env.flavor_ref
+        self.ss_client = self.os.servers_client
+        self.img_client = self.os.images_client
+        self.testing_processes = []
+
+        # nova.
+        self.testing_processes.append(NovaApiProcess(
+                self.config.nova.directory,
+                self.config.nova.host,
+                self.config.nova.port))
+        self.testing_processes.append(NovaNetworkProcess(
+                self.config.nova.directory))
+        self.testing_processes.append(NovaSchedulerProcess(
+                self.config.nova.directory))
+
+        # quantum.
+        self.testing_processes.append(
+                FakeQuantumProcess(self.config.nova.tenant_name))
+
+        # reset db.
+        silent_check_call('mysql -u%s -p%s -e "'
+                          'DROP DATABASE IF EXISTS nova;'
+                          'CREATE DATABASE nova;'
+                          '"' % (
+                              self.config.mysql.user,
+                              self.config.mysql.password),
+                          shell=True)
+        silent_check_call('bin/nova-manage db sync',
+                          cwd=self.config.nova.directory, shell=True)
+
+        for process in self.testing_processes:
+            process.start()
+        time.sleep(10)
+
+        # allocate networks.
+        silent_check_call('bin/nova-manage network create '
+                          '--label=private_1-1 '
+                          '--project_id=%s '
+                          '--fixed_range_v4=10.0.0.0/24 '
+                          '--bridge_interface=br-int '
+                          '--num_networks=1 '
+                          '--network_size=32 ' % self.config.nova.tenant_name,
+                          cwd=self.config.nova.directory, shell=True)
+
+        self.addCleanup(cleanup_virtual_instances)
+        self.addCleanup(cleanup_processes, self.testing_processes)
+
+    def get_fake_path(self, name):
+        return os.path.join(
+                os.path.dirname(__file__),
+                'fakes',
+                name)
+
+
+class LibvirtLookupErrorTest(LibvirtFunctionalTest):
+
+    def _delete_server_with_fake_libvirt(self, fake_path_name):
+
+        compute = NovaComputeProcess(
+                self.config.nova.directory)
+        compute.start()
+        self.testing_processes.append(compute)
+        time.sleep(10)
+
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6)
+
+        # Wait for the server to become ACTIVE
+        self.ss_client.wait_for_server_status(
+                          server['id'], 'ACTIVE')
+
+        compute.stop()
+        self.testing_processes.pop()
+        # start fake nova-compute for libvirt error
+        patches = [('libvirt', fake_path_name)]
+        env = os.environ.copy()
+        env['PYTHONPATH'] = self.get_fake_path('lookup-error')
+        compute = NovaComputeProcess(self.config.nova.directory,
+                                     patches=patches,
+                                     env=env)
+        compute.start()
+        self.testing_processes.append(compute)
+        time.sleep(10)
+
+        self.ss_client.delete_server(server['id'])
+
+        # Wait for the server to become ERROR.BUILD
+        self.assertRaises(exceptions.BuildErrorException,
+                          self.ss_client.wait_for_server_status,
+                          server['id'], 'ERROR')
+
+    @attr(kind='medium')
+    def test_d02_223(self):
+        self._delete_server_with_fake_libvirt('fake_libvirt.libvirt_patch')
+
+    @attr(kind='medium')
+    def test_d02_224(self):
+        self._delete_server_with_fake_libvirt(
+                                'fake_libvirt.libvirt_patch_no_domain')
+
