@@ -140,7 +140,7 @@ class FunctionalTest(unittest.TestCase):
         # allocate networks.
         subprocess.check_call('bin/nova-manage network create '
                               '--label=private_1-1 '
-                              '--project_id=1 '
+                              '--project_id=admin '
                               '--fixed_range_v4=10.0.0.0/24 '
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
@@ -148,16 +148,24 @@ class FunctionalTest(unittest.TestCase):
                               cwd=self.config.nova.directory, shell=True)
         subprocess.check_call('bin/nova-manage network create '
                               '--label=private_1-2 '
-                              '--project_id=1 '
+                              '--project_id=admin '
                               '--fixed_range_v4=10.0.1.0/24 '
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
                               '--network_size=32 ',
                               cwd=self.config.nova.directory, shell=True)
         subprocess.check_call('bin/nova-manage network create '
-                              '--label=private_2-1 '
-                              '--project_id=2 '
+                              '--label=private_1-3 '
+                              '--project_id=admin '
                               '--fixed_range_v4=10.0.2.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=self.config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_2-1 '
+                              '--project_id=demo '
+                              '--fixed_range_v4=10.0.3.0/24 '
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
                               '--network_size=32 ',
@@ -2462,7 +2470,7 @@ class ServersTest(FunctionalTest):
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         resp, body = self.ss_client.get_server(server['id'])
-        self.assertEqual(uuid, body['uuid'])
+        self.assertEqual('200', resp['status'])
 
     @attr(kind='medium')
     def test_create_servers_specify_three_networks(self):
@@ -2471,7 +2479,7 @@ class ServersTest(FunctionalTest):
         test_create_servers_specify_three_networks
         """
 
-        sql = 'select uuid from networks limit 3;'
+        sql = 'select uuid from networks where project_id = \'admin\' limit 3;'
         uuids = self.get_data_from_mysql(sql)
         uuid = []
         for id in uuids.split('\n'):
@@ -2484,9 +2492,9 @@ class ServersTest(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        networks = [{'fixed_ip': '10.0.0.1', 'uuid':uuid[0]},
-                    {'fixed_ip': '10.0.0.2', 'uuid':uuid[1]},
-                    {'fixed_ip': '10.0.0.3', 'uuid':uuid[2]}]
+        networks = [{'fixed_ip': '10.0.0.2', 'uuid': uuid[0]},
+                    {'fixed_ip': '10.0.1.2', 'uuid': uuid[1]},
+                    {'fixed_ip': '10.0.2.2', 'uuid': uuid[2]}]
         resp, server = self.ss_client.create_server_kw(
                                                    name=name,
                                                    imageRef=self.image_ref,
@@ -2503,7 +2511,7 @@ class ServersTest(FunctionalTest):
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         resp, body = self.ss_client.get_server(server['id'])
-        self.assertEqual(uuid, body['uuid'])
+        self.assertEqual('200', resp['status'])
 
     @attr(kind='medium')
     def test_create_servers_specify_already_used_uuid(self):
