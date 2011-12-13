@@ -199,6 +199,7 @@ class QuantumFunctionalTest(unittest.TestCase):
 class LibvirtFunctionalTest(unittest.TestCase):
 
     config = config
+
     def tearDown(self):
         self._dumpdb()
 
@@ -211,6 +212,7 @@ class LibvirtFunctionalTest(unittest.TestCase):
                                   self.config.mysql.user,
                                   self.config.mysql.password),
                               shell=True)
+
     def setUp(self):
         emphasised_print(self.id())
 
