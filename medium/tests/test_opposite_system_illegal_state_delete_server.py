@@ -10,6 +10,8 @@ from storm import openstack
 import storm.config
 from storm import exceptions
 from storm.common.utils.data_utils import rand_name
+from nova import utils
+from nova import flags
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -272,9 +274,10 @@ class LibvirtFunctionalTest(unittest.TestCase):
                 name)
 
 
-class LibvirtLookupErrorTest(LibvirtFunctionalTest):
+class LibvirtErrorTest(LibvirtFunctionalTest):
 
-    def _delete_server_with_fake_libvirt(self, fake_path_name):
+    def _delete_server_with_fake_libvirt(self, monkey_module,
+                                         fakepath, fake_patch_name):
 
         compute = NovaComputeProcess(
                 self.config.nova.directory)
@@ -298,9 +301,9 @@ class LibvirtLookupErrorTest(LibvirtFunctionalTest):
         compute.stop()
         self.testing_processes.pop()
         # start fake nova-compute for libvirt error
-        patches = [('libvirt', fake_path_name)]
+        patches = [(monkey_module, fake_patch_name)]
         env = os.environ.copy()
-        env['PYTHONPATH'] = self.get_fake_path('lookup-error')
+        env['PYTHONPATH'] = self.get_fake_path(fakepath)
         compute = NovaComputeProcess(self.config.nova.directory,
                                      patches=patches,
                                      env=env)
@@ -317,10 +320,50 @@ class LibvirtLookupErrorTest(LibvirtFunctionalTest):
 
     @attr(kind='medium')
     def test_d02_223(self):
-        self._delete_server_with_fake_libvirt('fake_libvirt.libvirt_patch')
+        self._delete_server_with_fake_libvirt('libvirt', 'lookup-error',
+                                              'fake_libvirt.libvirt_patch')
 
     @attr(kind='medium')
     def test_d02_224(self):
-        self._delete_server_with_fake_libvirt(
+        self._delete_server_with_fake_libvirt('libvirt', 'lookup-error',
                                 'fake_libvirt.libvirt_patch_no_domain')
 
+    @attr(kind='medium')
+    def test_d02_226(self):
+        self._delete_server_with_fake_libvirt('libvirt', 'virdomain-error',
+                                'fake_libvirt.libvirt_patch')
+
+    @attr(kind='medium')
+    def test_d02_227(self):
+        self._delete_server_with_fake_libvirt('libvirt', 'virdomain-error',
+                                'fake_libvirt.libvirt_patch_invalid_operation')
+
+    @attr(kind='medium')
+    def test_d02_229(self):
+        self._delete_server_with_fake_libvirt('libvirt', 'virdomain-error',
+                                'fake_libvirt.libvirt_patch_undefine')
+
+    @attr(kind='medium')
+    def test_d02_230(self):
+        self._delete_server_with_fake_libvirt('libvirt', 'virdomain-error',
+                    'fake_libvirt.libvirt_undefine_patch_invalid_operation')
+
+    @attr(kind='medium')
+    def test_d02_232(self):
+        self._delete_server_with_fake_libvirt('nova.virt.libvirt.vif',
+                        'vif-unplug-error', 'fake_libvirt_vif.vif_patch')
+
+    @attr(kind='medium')
+    def test_d02_234(self):
+        self._delete_server_with_fake_libvirt('nova.virt.libvirt.vif',
+                        'vif-unplug-error', 'fake_libvirt_vif.vif_patch')
+
+    @attr(kind='medium')
+    def test_d02_236(self):
+        self._delete_server_with_fake_libvirt('nova.virt.libvirt.firewall',
+                        'firewall-error', 'fake_iptables.unfilter_patch')
+
+    @attr(kind='medium')
+    def test_d02_237(self):
+        self._delete_server_with_fake_libvirt('shutil',
+                        'general-error', 'fake.rmtree_patch')
