@@ -34,6 +34,10 @@ class fake(object):
         pass
 
     @staticmethod
+    def nwfilterLookupByName(instance_filter_name):
+        pass
+
+    @staticmethod
     def lookupByName(instance_name):
         raise libvirt.libvirtError(libvirt.VIR_ERR_ERROR)
 
@@ -62,5 +66,19 @@ def openAuth_no_domain(uri, auth, n):
 def libvirt_patch_no_domain(name, fn):
     if name == 'libvirt.openAuth':
         return openAuth_no_domain
+    else:
+        return fn
+
+def fake_get_info_OK(self, instance_name):
+    return {'state': 1,
+                'max_mem': '2048',
+                'mem': '1024',
+                'num_cpu': '2',
+                'cpu_time': '1'}
+
+
+def libvirt_con_get_info_patch(name, fn):
+    if name == 'nova.virt.libvirt.connection.LibvirtConnection.get_info':
+        return fake_get_info_OK
     else:
         return fn
