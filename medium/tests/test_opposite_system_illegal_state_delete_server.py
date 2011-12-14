@@ -318,49 +318,6 @@ class LibvirtErrorTest(LibvirtFunctionalTest):
                           self.ss_client.wait_for_server_status,
                           server['id'], 'ERROR')
 
-    def _delete_server_with_vswitch_driver(self, fakepath, fake_patch_name):
-
-        compute = NovaComputeProcess(
-                self.config.nova.directory)
-        compute.start()
-        self.testing_processes.append(compute)
-        time.sleep(10)
-
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6)
-
-        # Wait for the server to become ACTIVE
-        self.ss_client.wait_for_server_status(
-                          server['id'], 'ACTIVE')
-
-        compute.stop()
-        self.testing_processes.pop()
-        # start fake nova-compute for libvirt error
-        patches = [('nova.virt.libvirt.vif', fake_patch_name)]
-        env = os.environ.copy()
-        env['PYTHONPATH'] = self.get_fake_path(fakepath)
-        compute = NovaComputeProcess(self.config.nova.directory,
-                                     patches=patches,
-                                     env=env)
-        compute.start()
-        self.testing_processes.append(compute)
-#        utils.execute('ovs-vsctl', 'del-port',
-#                      flags.FLAGS.libvirt_ovs_bridge, 'dev', run_as_root=True)
-        time.sleep(10)
-
-        self.ss_client.delete_server(server['id'])
-
-        # Wait for the server to become ERROR.BUILD
-        self.assertRaises(exceptions.BuildErrorException,
-                          self.ss_client.wait_for_server_status,
-                          server['id'], 'ERROR')
-
     @attr(kind='medium')
     def test_d02_223(self):
         self._delete_server_with_fake_libvirt('libvirt', 'lookup-error',
