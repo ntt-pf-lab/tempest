@@ -346,7 +346,7 @@ class LibvirtErrorTest(LibvirtFunctionalTest):
     @attr(kind='medium')
     def test_d02_230(self):
         self._delete_server_with_fake_libvirt('libvirt', 'virdomain-error',
-                                'fake_libvirt.libvirt_patch_invalid_operation')
+                    'fake_libvirt.libvirt_undefine_patch_invalid_operation')
 
     @attr(kind='medium')
     def test_d02_232(self):
