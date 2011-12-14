@@ -39,7 +39,7 @@ def fake_undefine_invalid_operation(conn):
     raise libvirt.libvirtError(libvirt.VIR_ERR_OPERATION_INVALID)
 
 
-def libvirt_patch_invalid_operation(name, fn):
+def libvirt_undefine_patch_invalid_operation(name, fn):
     if name == 'libvirt.virDomain.undefine':
         return fake_undefine_invalid_operation
     else:
