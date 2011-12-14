@@ -44,3 +44,14 @@ def libvirt_undefine_patch_invalid_operation(name, fn):
         return fake_undefine_invalid_operation
     else:
         return fn
+
+
+def fake_createWithFlags(self, flags):
+    raise libvirt.libvirtError(libvirt.VIR_ERR_ERROR)
+
+
+def libvirt_create_patch(name, fn):
+    if name == 'libvirt.virDomain.createWithFlags':
+        return fake_createWithFlags
+    else:
+        return fn

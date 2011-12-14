@@ -69,6 +69,7 @@ def libvirt_patch_no_domain(name, fn):
     else:
         return fn
 
+
 def fake_get_info_OK(self, instance_name):
     return {'state': 1,
                 'max_mem': '2048',
