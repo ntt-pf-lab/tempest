@@ -309,11 +309,7 @@ class LibvirtErrorTest(LibvirtFunctionalTest):
         time.sleep(10)
 
         self.ss_client.delete_server(server['id'])
-
-        # Wait for the server to become ERROR.BUILD
-        self.assertRaises(exceptions.BuildErrorException,
-                          self.ss_client.wait_for_server_status,
-                          server['id'], 'ERROR')
+        self.ss_client.wait_for_server_not_exists(server['id'])
 
     @attr(kind='medium')
     def test_d02_223(self):
