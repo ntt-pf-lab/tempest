@@ -2,6 +2,7 @@ import base64
 import re
 import subprocess
 import time
+import json
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
@@ -21,10 +22,10 @@ from medium.tests.processes import (
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
 
+# for admin tenant
 default_config = storm.config.StormConfig('etc/medium.conf')
-# test for the another tenant start
+# for demo tenant
 test_config = storm.config.StormConfig('etc/medium_test.conf')
-# test for the another tenant end
 config = default_config
 environ_processes = []
 
@@ -75,10 +76,10 @@ class FunctionalTest(unittest.TestCase):
     config2 = test_config
 
     def setUp(self):
+        # for admin tenant
         self.os = openstack.Manager(config=self.config)
-        # test for the another tenant start
+        # for demo tenant
         self.os2 = openstack.Manager(config=self.config2)
-        # test for the another tenant end
         self.testing_processes = []
 
         # nova.
@@ -185,11 +186,95 @@ class ServersTest(FunctionalTest):
         super(ServersTest, self).setUp()
         self.image_ref = self.config.env.image_ref
         self.flavor_ref = self.config.env.flavor_ref
+        # for admin tenant
         self.ss_client = self.os.servers_client
-        # test for the another tenant start
+        # for demo tenant
         self.s2_client = self.os2.servers_client
-        # test for the another tenant end
         self.img_client = self.os.images_client
+
+    def create_dummy_instance(self, vm_state, task_state, deleted=0):
+
+        meta = {'hello': 'opst'}
+        accessIPv4 = '2.2.2.2'
+        accessIPv6 = '::babe:330.23.33.3'
+        name = rand_name('dummy')
+        file_contents = 'This is a test_file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        sql = ("UPDATE instances SET "
+               "deleted = %s, "
+               "vm_state = '%s', "
+               "task_state = '%s' "
+               "WHERE id = %s;"
+               ) % (deleted, vm_state, task_state, server['id'])
+        self.exec_sql(sql)
+
+        return server['id']
+
+    @attr(kind='medium')
+    def _test_reboot_403_base(self, vm_state, task_state, deleted=0):
+        server_id = self.create_dummy_instance(vm_state, task_state, deleted)
+        resp, _ = self.ss_client.reboot(server_id, 'HARD')
+        self.assertEquals('403', resp['status'])
+
+    @attr(kind='medium')
+    def test_reboot_when_vm_eq_building_and_task_eq_scheduling(self):
+        self._test_reboot_403_base("building", "scheduling")
+
+    @attr(kind='medium')
+    def test_reboot_when_vm_eq_building_and_task_eq_networking(self):
+        self._test_reboot_403_base("building", "networking")
+
+    @attr(kind='medium')
+    def test_reboot_when_vm_eq_building_and_task_eq_bdm(self):
+        self._test_reboot_403_base("building", "block_device_mapping")
+
+    @attr(kind='medium')
+    def test_reboot_when_vm_eq_building_and_task_eq_spawning(self):
+        self._test_reboot_403_base("building", "spawning")
+
+    @attr(kind='medium')
+    def test_reboot_when_vm_eq_active_and_task_eq_image_snapshot(self):
+        self._test_reboot_403_base("active", "image_snaphost")
+
+    @attr(kind='medium')
+    def test_reboot_when_vm_eq_active_and_task_eq_image_backup(self):
+        self._test_reboot_403_base("active", "image_backup")
+
+    @attr(kind='medium')
+    def test_reboot_when_vm_eq_active_and_task_eq_updating_password(self):
+        self._test_reboot_403_base("active", "updating_password")
+
+    @attr(kind='medium')
+    def test_reboot_when_vm_eq_active_and_task_eq_rebuilding(self):
+        self._test_reboot_403_base("active", "rebuilding")
+
+    @attr(kind='medium')
+    def test_reboot_when_vm_eq_building_and_task_eq_deleting(self):
+        self._test_reboot_403_base("building", "deleting")
+
+    @attr(kind='medium')
+    def test_reboot_when_vm_eq_active_and_task_eq_deleting(self):
+        self._test_reboot_403_base("active", "deleting")
+
+    @attr(kind='medium')
+    def test_reboot_when_vm_eq_error_and_task_eq_building(self):
+        self._test_reboot_403_base("error", "building")
+
+    @attr(kind='medium')
+    def test_reboot_when_vm_eq_error_and_task_eq_error(self):
+        self._test_reboot_403_base("error", "error")
 
     @attr(kind='medium')
     def test_reboot_when_specify_not_exist_server_id(self):
@@ -200,8 +285,8 @@ class ServersTest(FunctionalTest):
          """
         test_id = 5
         resp, server = self.ss_client.reboot(test_id, 'HARD')
-        print "A00_62 resp= ", resp
-        print "A00_62 server= ", server
+        print "resp= ", resp
+        print "server= ", server
         self.assertEqual('404', resp['status'])
 
     @attr(kind='medium')
@@ -335,7 +420,7 @@ class ServersTest(FunctionalTest):
          """
         invalid_test_id = 'opst_test'
         resp, server = self.ss_client.reboot(invalid_test_id, 'HARD')
-        self.assertEquals('202', resp['status'])
+        self.assertEquals('400', resp['status'])
 
     @attr(kind='medium')
     def test_reboot_when_specify_negative_number_as_id(self):
@@ -348,7 +433,7 @@ class ServersTest(FunctionalTest):
 
         reboot_id = -1
         resp, server = self.ss_client.reboot(reboot_id, 'HARD')
-        self.assertEquals('202', resp['status'])
+        self.assertEquals('400', resp['status'])
 
     @attr(kind='medium')
     def test_reboot_when_id_is_over_max_int(self):
@@ -362,46 +447,7 @@ class ServersTest(FunctionalTest):
         reboot_id = 2147483648
         resp, server = self.ss_client.reboot(reboot_id, 'HARD')
         print "resp=", resp
-        self.assertEquals('202', resp['status'])
-
-    @attr(kind='medium')
-    def test_reboot_when_server_is_during_boot_process(self):
-        print """
-
-        creating server.
-
-        """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        resp, server = self.ss_client.get_server(server['id'])
-        test_id = server['id']
-        self.assertEquals('BUILD', server['status'])
-
-        print """
-
-        reboot server without waiting done creating
-
-         """
-        resp, server = self.ss_client.reboot(test_id, 'HARD')
-        self.assertEquals('202', resp['status'])
-        resp, server = self.ss_client.get_server(test_id)
-
-        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
-        resp, server = self.ss_client.get_server(test_id)
-        self.assertEquals('200', resp['status'])
+        self.assertEquals('400', resp['status'])
 
     @attr(kind='medium')
     def test_reboot_when_server_is_running(self):
@@ -609,7 +655,7 @@ class ServersTest(FunctionalTest):
 
         # Reboot stopped server
         resp, server = self.ss_client.reboot(test_id, 'HARD')
-        self.assertEquals('422', resp['status'])
+        self.assertEquals('403', resp['status'])
 
     @attr(kind='medium')
     def test_create_image(self):
@@ -869,7 +915,7 @@ class ServersTest(FunctionalTest):
         # Make snapshot without waiting done creating server
         alt_name = rand_name('server')
         resp, _ = self.ss_client.create_image(test_id, alt_name)
-        self.assertEquals('409', resp['status'])
+        self.assertEquals('403', resp['status'])
 
     @attr(kind='medium')
     def test_create_image_when_server_is_during_reboot_process(self):
@@ -912,7 +958,7 @@ class ServersTest(FunctionalTest):
         """
         alt_name = rand_name('opst')
         resp, body = self.ss_client.create_image(test_id, alt_name)
-        self.assertEquals('409', resp['status'])
+        self.assertEquals('403', resp['status'])
 
     @attr(kind='medium')
     def test_create_image_when_server_is_during_stop_process(self):
@@ -1021,7 +1067,7 @@ class ServersTest(FunctionalTest):
         alt_name = rand_name('server')
         resp, _ = self.ss_client.create_image(test_server_id, alt_name)
         print "resp=", resp
-        self.assertEquals('404', resp['status'])
+        self.assertEquals('403', resp['status'])
 
         print """
 
@@ -1077,10 +1123,7 @@ class ServersTest(FunctionalTest):
         # Make snapshot of the instance.
         alt_name = rand_name('server')
         resp1, body1 = self.ss_client.create_image(test_server_id, alt_name)
-        alt_img_url = resp1['location']
-        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
-        self.assertIsNotNone(match)
-        alt_img_id = match.groupdict()['image_id']
+        self.assertEquals('202', resp['status'])
 
         print """
 
@@ -1092,31 +1135,7 @@ class ServersTest(FunctionalTest):
         alt_test_name = rand_name('server_2')
         resp2, body2 = self.ss_client.create_image(test_server_id,
                                                    alt_test_name)
-        alt_test_img_url = resp2['location']
-        match = re.search('/images/(?P<image_id>.+)', alt_test_img_url)
-        self.assertIsNotNone(match)
-        alt_test_img_id = match.groupdict()['image_id']
-        self.img_client.wait_for_image_status(alt_test_img_id, 'ACTIVE')
-        resp, images = self.img_client.get_image(alt_test_img_id)
-        self.assertEquals('ACTIVE', images['status'])
-
-        print """
-
-        creating server from snapshot.
-
-        """
-        resp, server = self.ss_client.create_server(name,
-                                                    alt_test_img_id,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-        # Wait for the server to become active
-        ss_server_id = server['id']
-        self.ss_client.wait_for_server_status(ss_server_id, 'ACTIVE')
-        resp, server = self.ss_client.get_server(ss_server_id)
-        self.assertEquals('ACTIVE', server['status'])
+        self.assertEquals('409', resp2['status'])
 
         print """
 
@@ -1124,8 +1143,10 @@ class ServersTest(FunctionalTest):
 
         """
         # Delete the snapshot
-        self.img_client.delete_image(alt_test_img_id)
-        self.img_client.wait_for_image_not_exists(alt_test_img_id)
+        alt_img_url = resp1['location']
+        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
+        self.assertIsNotNone(match)
+        alt_img_id = match.groupdict()['image_id']
         self.img_client.delete_image(alt_img_id)
         self.img_client.wait_for_image_not_exists(alt_img_id)
 
@@ -1214,13 +1235,15 @@ class ServersTest(FunctionalTest):
         # Make snapshot of the instance.
         alt_name = rand_name('server')
         resp1, body1 = self.ss_client.create_image(test_server_id, alt_name)
+        self.assertEquals("202", resp1)
+
         alt_img_url = resp1['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
         alt_img_id = match.groupdict()['image_id']
         self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
         resp, images = self.img_client.get_image(alt_img_id)
-        self.assertEquals('ACTIVE', images['status'])
+#        self.assertEquals('ACTIVE', images['status'])
 
         time.sleep(10)
 
@@ -1233,13 +1256,15 @@ class ServersTest(FunctionalTest):
         alt_test_name = rand_name('server')
         resp2, body2 = self.ss_client.create_image(test_server_id,
                                                    alt_test_name)
+        self.assertEquals("202", resp2)
+
         alt_test_img_url = resp2['location']
         match = re.search('/images/(?P<image_id>.+)', alt_test_img_url)
         self.assertIsNotNone(match)
         alt_test_img_id = match.groupdict()['image_id']
         self.img_client.wait_for_image_status(alt_test_img_id, 'ACTIVE')
         resp, images = self.img_client.get_image(alt_test_img_id)
-        self.assertEquals('ACTIVE', images['status'])
+#        self.assertEquals('ACTIVE', images['status'])
 
         time.sleep(20)
 
@@ -1556,3 +1581,58 @@ class ServersTest(FunctionalTest):
         self.ss_client.wait_for_server_status(ss_server_id, 'ACTIVE')
         resp, server = self.ss_client.get_server(ss_server_id)
         self.assertEquals('ACTIVE', server['status'])
+
+    @attr(kind='medium')
+    def _test_create_image_403_base(self, vm_state, task_state, deleted=0):
+        server_id = self.create_dummy_instance(vm_state, task_state, deleted)
+        name = rand_name('server')
+        resp, _ = self.ss_client.create_image(server_id, name)
+        self.assertEquals('403', resp['status'])
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_building_and_task_eq_scheduling(self):
+        self._test_create_image_403_base("building", "scheduling")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_building_and_task_eq_networking(self):
+        self._test_create_image_403_base("building", "networking")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_building_and_task_eq_bdm(self):
+        self._test_create_image_403_base("building", "block_device_mapping")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_building_and_task_eq_spawning(self):
+        self._test_create_image_403_base("building", "spawning")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_active_and_task_eq_image_backup(self):
+        self._test_create_image_403_base("active", "image_backup")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_active_and_task_eq_updating_password(self):
+        self._test_create_image_403_base("active", "updating_password")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_active_and_task_eq_rebuilding(self):
+        self._test_create_image_403_base("active", "rebuilding")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_active_and_task_eq_rebooting(self):
+        self._test_create_image_403_base("active", "rebooting")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_building_and_task_eq_deleting(self):
+        self._test_create_image_403_base("building", "deleting")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_active_and_task_eq_deleting(self):
+        self._test_create_image_403_base("active", "deleting")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_error_and_task_eq_building(self):
+        self._test_create_image_403_base("error", "building")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_error_and_task_eq_error(self):
+        self._test_create_image_403_base("error", "error")
