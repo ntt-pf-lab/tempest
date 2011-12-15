@@ -72,7 +72,8 @@ class fake_vir_error(fake):
         except Exception, e:
             lst = traceback.extract_stack()
             for mi in lst:
-                if mi[2] in ('destroy', 'reboot', 'snapshot'):
+                if mi[2] in ('destroy', 'reboot', 'snapshot',
+                             'reboot_instance'):
                     flag_in_target = True
         if flag_in_target:
             raise libvirt.libvirtError(libvirt.VIR_ERR_ERROR)
@@ -202,7 +203,8 @@ class fake_no_domain(fake):
         except Exception, e:
             lst = traceback.extract_stack()
             for mi in lst:
-                if mi[2] in ('destroy', 'reboot', 'snapshot'):
+                if mi[2] in ('destroy', 'reboot', 'snapshot',
+                             'reboot_instance'):
                     flag_in_target = True
         if flag_in_target:
             raise libvirt.libvirtError(libvirt.VIR_ERR_NO_DOMAIN)
