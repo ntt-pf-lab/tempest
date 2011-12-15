@@ -1,5 +1,15 @@
 import os
 import libvirt
+import traceback
+
+try:
+    import libvirtmod
+except ImportError, lib_e:
+    try:
+        import cygvirtmod as libvirtmod
+    except ImportError, cyg_e:
+        if str(cyg_e).count("No module named"):
+            raise lib_e
 
 
 class fake(object):
@@ -53,10 +63,163 @@ def libvirt_patch(name, fn):
         return fn
 
 
+class fake_vir_error(fake):
+    @staticmethod
+    def lookupByName(instance_name):
+        flag_in_target = False
+        try:
+            raise Exception
+        except Exception, e:
+            lst = traceback.extract_stack()
+            for mi in lst:
+                if mi[2] in ('destroy', 'reboot', 'snapshot'):
+                    flag_in_target = True
+        if flag_in_target:
+            raise libvirt.libvirtError(libvirt.VIR_ERR_ERROR)
+
+        class fake_domain(object):
+            @staticmethod
+            def createWithFlags(flag):
+                pass
+
+            @staticmethod
+            def info():
+                return {'state': 1,
+                        'max_mem': '2048',
+                        'mem': '1024',
+                        'num_cpu': '2',
+                        'cpu_time': '1'}
+        return fake_domain
+
+
+def openAuth_vir_error(uri, auth, n):
+    return fake_vir_error
+
+
+def libvirt_patch_vir_error(name, fn):
+    if name == 'libvirt.openAuth':
+        return openAuth_vir_error
+    else:
+        return fn
+
+
+class fake_vir_error_rd(fake):
+    @staticmethod
+    def lookupByName(instance_name):
+        flag_in_target = False
+        try:
+            raise Exception
+        except Exception, e:
+            lst = traceback.extract_stack()
+            for mi in lst:
+                if mi[2] in ('destroy'):
+                    flag_in_target = True
+        if flag_in_target:
+            raise libvirt.libvirtError(libvirt.VIR_ERR_ERROR)
+
+        class fake_domain(object):
+            @staticmethod
+            def createWithFlags(flag):
+                pass
+
+            @staticmethod
+            def info():
+                return {'state': 1,
+                        'max_mem': '2048',
+                        'mem': '1024',
+                        'num_cpu': '2',
+                        'cpu_time': '1'}
+
+            @staticmethod
+            def XMLDesc(flag):
+                return ''
+
+        return fake_domain
+
+
+def openAuth_vir_error_rd(uri, auth, n):
+    return fake_vir_error_rd
+
+
+def libvirt_patch_vir_error_rd(name, fn):
+    if name == 'libvirt.openAuth':
+        return openAuth_vir_error_rd
+    else:
+        return fn
+
+
+class fake_vir_error_rd_conf(fake):
+    @staticmethod
+    def lookupByName(instance_name):
+        flag_in_target = False
+        try:
+            raise Exception
+        except Exception, e:
+            lst = traceback.extract_stack()
+            for mi in lst:
+                if mi[2] in ('_wait_for_reboot'):
+                    flag_in_target = True
+        if flag_in_target:
+            raise libvirt.libvirtError(libvirt.VIR_ERR_ERROR)
+
+        class fake_domain(object):
+            @staticmethod
+            def createWithFlags(flag):
+                pass
+
+            @staticmethod
+            def info():
+                return {'state': 1,
+                        'max_mem': '2048',
+                        'mem': '1024',
+                        'num_cpu': '2',
+                        'cpu_time': '1'}
+
+            @staticmethod
+            def XMLDesc(flag):
+                return ''
+
+        return fake_domain
+
+
+def openAuth_vir_error_rd_conf(uri, auth, n):
+    return fake_vir_error_rd_conf
+
+
+def libvirt_patch_vir_error_rd_conf(name, fn):
+    if name == 'libvirt.openAuth':
+        return openAuth_vir_error_rd_conf
+    else:
+        return fn
+
+
 class fake_no_domain(fake):
     @staticmethod
     def lookupByName(instance_name):
-        raise libvirt.libvirtError(libvirt.VIR_ERR_NO_DOMAIN)
+        flag_in_target = False
+        try:
+            raise Exception
+        except Exception, e:
+            lst = traceback.extract_stack()
+            for mi in lst:
+                if mi[2] in ('destroy', 'reboot', 'snapshot'):
+                    flag_in_target = True
+        if flag_in_target:
+            raise libvirt.libvirtError(libvirt.VIR_ERR_NO_DOMAIN)
+
+        class fake_domain(object):
+            @staticmethod
+            def createWithFlags(flag):
+                pass
+
+            @staticmethod
+            def info():
+                return {'state': 1,
+                        'max_mem': '2048',
+                        'mem': '1024',
+                        'num_cpu': '2',
+                        'cpu_time': '1'}
+        return fake_domain
 
 
 def openAuth_no_domain(uri, auth, n):
@@ -66,6 +229,113 @@ def openAuth_no_domain(uri, auth, n):
 def libvirt_patch_no_domain(name, fn):
     if name == 'libvirt.openAuth':
         return openAuth_no_domain
+    else:
+        return fn
+
+
+class fake_no_domain_rd(fake):
+    @staticmethod
+    def lookupByName(instance_name):
+        flag_in_target = False
+        try:
+            raise Exception
+        except Exception, e:
+            lst = traceback.extract_stack()
+            for mi in lst:
+                if mi[2] in ('destroy'):
+                    flag_in_target = True
+        if flag_in_target:
+            raise libvirt.libvirtError(libvirt.VIR_ERR_NO_DOMAIN)
+
+        class fake_domain(object):
+            @staticmethod
+            def createWithFlags(flag):
+                pass
+
+            @staticmethod
+            def info():
+                return {'state': 1,
+                        'max_mem': '2048',
+                        'mem': '1024',
+                        'num_cpu': '2',
+                        'cpu_time': '1'}
+
+            @staticmethod
+            def XMLDesc(flag):
+                return ''
+
+        return fake_domain
+
+
+def openAuth_no_domain_rd(uri, auth, n):
+    return fake_no_domain_rd
+
+
+def libvirt_patch_no_domain_rd(name, fn):
+    if name == 'libvirt.openAuth':
+        return openAuth_no_domain_rd
+    else:
+        return fn
+
+
+class fake_no_domain_rd_conf(fake):
+    @staticmethod
+    def lookupByName(instance_name):
+        flag_in_target = False
+        try:
+            raise Exception
+        except Exception, e:
+            lst = traceback.extract_stack()
+            for mi in lst:
+                if mi[2] in ('_wait_for_reboot'):
+                    flag_in_target = True
+        if flag_in_target:
+            raise libvirt.libvirtError(libvirt.VIR_ERR_NO_DOMAIN)
+
+        class fake_domain(object):
+            @staticmethod
+            def createWithFlags(flag):
+                pass
+
+            @staticmethod
+            def info():
+                return {'state': 1,
+                        'max_mem': '2048',
+                        'mem': '1024',
+                        'num_cpu': '2',
+                        'cpu_time': '1'}
+
+            @staticmethod
+            def XMLDesc(flag):
+                return ''
+
+        return fake_domain
+
+
+def openAuth_no_domain_rd_conf(uri, auth, n):
+    return fake_no_domain_rd_conf
+
+
+def libvirt_patch_no_domain_rd_conf(name, fn):
+    if name == 'libvirt.openAuth':
+        return openAuth_no_domain_rd_conf
+    else:
+        return fn
+
+
+class fake_no_domain_nopass(fake):
+    @staticmethod
+    def lookupByName(instance_name):
+        raise libvirt.libvirtError(libvirt.VIR_ERR_NO_DOMAIN)
+
+
+def openAuth_no_domain_nopass(uri, auth, n):
+    return fake_no_domain_nopass
+
+
+def libvirt_patch_no_domain_nopass(name, fn):
+    if name == 'libvirt.openAuth':
+        return openAuth_no_domain_nopass
     else:
         return fn
 
