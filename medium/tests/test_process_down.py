@@ -28,7 +28,7 @@ from storm import openstack
 from storm.common.utils.data_utils import rand_name
 from storm import exceptions
 from nova import utils
-
+from nova import test
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -180,6 +180,9 @@ class FunctionalTest(unittest.TestCase):
         del self.testing_processes[:]
         time.sleep(10)
         self._dumpdb()
+
+        subprocess.call('sudo service rabbitmq-server restart',
+                        cwd=self.config.nova.directory, shell=True)
 
     def exec_sql(self, sql):
         exec_sql = 'mysql -u %s -p%s nova -e "' + sql + '"'
@@ -694,6 +697,7 @@ class ProcessDownTestCase(FunctionalTest):
 
         self.assertEqual('408', resp['status'])
 
+    @test.skip_test('waiting is too long')
     @attr(kind='medium')
     def test_rabbitmq_down_for_create(self):
         """test for rabbitmq process is down"""
@@ -722,6 +726,7 @@ class ProcessDownTestCase(FunctionalTest):
 
         self.assertEqual(True, int(resp['status']) >= 500)
 
+    @test.skip_test('waiting is too long')
     @attr(kind='medium')
     def test_rabbitmq_down_for_reboot(self):
         """test for rabbitmq process is down"""
@@ -760,6 +765,7 @@ class ProcessDownTestCase(FunctionalTest):
 
         self.assertEqual(True, int(resp['status']) >= 500)
 
+    @test.skip_test('waiting is too long')
     @attr(kind='medium')
     def test_rabbitmq_down_for_delete(self):
         """test for rabbitmq process is down"""
