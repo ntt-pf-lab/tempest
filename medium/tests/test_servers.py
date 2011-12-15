@@ -222,6 +222,16 @@ class ServersTest(FunctionalTest):
         self.img_client = self.os.images_client
         self.kp_client = self.os.keypairs_client
 
+    def update_status(self, server_id, vm_state, task_state, deleted=0):
+        sql = ("UPDATE instances SET "
+               "deleted = %s, "
+               "vm_state = '%s', "
+               "task_state = '%s' "
+               "WHERE id = %s;"
+               ) % (deleted, vm_state, task_state, server_id)
+        self.exec_sql(sql)
+
+
     @attr(kind='medium')
     def test_list_servers_when_no_server_created(self):
         print """
@@ -2694,7 +2704,7 @@ class ServersTest(FunctionalTest):
         """
 
         sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
-               "VALUES(0, 'admin', 'vcpus', 2)")
+               "VALUES(0, 'admin', 'cores', 2)")
         self.exec_sql(sql)
 
         print """
@@ -2756,7 +2766,7 @@ class ServersTest(FunctionalTest):
         """
 
         sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
-               "VALUES(0, 'admin', 'memory_mb', 1024)")
+               "VALUES(0, 'admin', 'ram', 1)")
         self.exec_sql(sql)
 
         print """
@@ -2818,7 +2828,7 @@ class ServersTest(FunctionalTest):
         """
 
         sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
-               "VALUES(0, 'admin', 'local_gb', 1)")
+               "VALUES(0, 'admin', 'gigabyte', 1)")
         self.exec_sql(sql)
 
         print """
@@ -3643,3 +3653,116 @@ class ServersTest(FunctionalTest):
         self.ss_client.wait_for_server_not_exists(server['id'])
         resp, _ = self.ss_client.get_server(server['id'])
         self.assertEqual('404', resp['status'])
+
+    @attr(kind='medium')
+    def _test_delete_server_base(self, vm_state, task_state):
+        # create server
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        # status update
+        self.update_status(server['id'], vm_state, task_state)
+
+        # test for delete server
+        resp, _ = self.ss_client.delete_server(server['id'])
+        print "resp=", resp
+        self.assertEqual('204', resp['status'])
+
+        self.ss_client.wait_for_server_not_exists(server['id'])
+
+        sql = ("SELECT deleted, vm_state, task_state "
+               "FROM instances WHERE id = %s;"
+               ) % (server['id'])
+        rs = self.get_data_from_mysql(sql)
+        (deleted, vm_state, task_state) = rs[:-1].split('\t')
+        self.assertEqual('1', deleted)
+        self.assertEqual('deleted', vm_state)
+        self.assertEqual('NULL', task_state)
+
+    @attr(kind='medium')
+    def _test_delete_server_403_base(self, vm_state, task_state):
+        # create server
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        # status update
+        self.update_status(server['id'], vm_state, task_state)
+
+        # test for delete server
+        resp, _ = self.ss_client.delete_server(server['id'])
+        print "resp=", resp
+        self.assertEqual('403', resp['status'])
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_building_task_networking(self):
+        self._test_delete_server_base('building', 'networking')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_building_task_bdm(self):
+        self._test_delete_server_base('building', 'block_device_mapping')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_building_task_spawning(self):
+        self._test_delete_server_base('building', 'spawning')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_active_task_image_backup(self):
+        self._test_delete_server_base('active', 'image_backup')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_active_task_rebuilding(self):
+        self._test_delete_server_base('active', 'rebuilding')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_error_task_building(self):
+        self._test_delete_server_base('error', 'building')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_active_task_rebooting(self):
+        self._test_delete_server_403_base('active', 'rebooting')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_reboot_task_rebooting(self):
+        self._test_delete_server_403_base('reboot', 'rebooting')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_building_task_deleting(self):
+        self._test_delete_server_403_base('building', 'deleting')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_active_task_deleting(self):
+        self._test_delete_server_403_base('active', 'deleting')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_error_task_error(self):
+        self._test_delete_server_403_base('error', 'error')
