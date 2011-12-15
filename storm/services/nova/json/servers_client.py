@@ -20,9 +20,24 @@ class ServersClient(object):
         self.headers = {'Content-Type': 'application/json',
                         'Accept': 'application/json'}
 
+    def create_server_kw(self, *args, **kwargs):
+        """
+        Creates an instance of a server.
+        """
+
+        post_body = {}
+        post_body.update(kwargs)
+        print "post_body=", post_body
+        post_body = json.dumps({'server': post_body})
+        resp, body = self.client.post('servers', post_body, self.headers)
+        if resp['status'] != '202':
+            return resp, body
+        body = json.loads(body)
+        return resp, body['server']
+
     def create_server(self, name, image_ref, flavor_ref, meta=None,
                       personality=None, accessIPv4=None, accessIPv6=None,
-                      networks=None, adminPass=None):
+                      networks=None, key_name=None, adminPass=None):
         """
         Creates an instance of a server.
         name: The name of the server.
@@ -35,6 +50,7 @@ class ServersClient(object):
         accessIPv4: The IPv4 access address for the server.
         accessIPv6: The IPv6 access address for the server.
         networks: The networks to be allocated to the server.
+        key_name: The name of the keypair.
         """
 
         post_body = {
@@ -61,8 +77,15 @@ class ServersClient(object):
         if networks != None:
             post_body['networks'] = networks
 
+        if key_name != None:
+            post_body['key_name'] = key_name
+
         post_body = json.dumps({'server': post_body})
         resp, body = self.client.post('servers', post_body, self.headers)
+#        body = json.loads(body)
+#        return resp, body['server']
+        if resp['status'] != '202':
+            return resp, body
         body = json.loads(body)
         return resp, body['server']
 
@@ -94,15 +117,22 @@ class ServersClient(object):
         post_body = json.dumps({'server': post_body})
         resp, body = self.client.put("servers/%s" % str(server_id),
                                      post_body, self.headers)
+#        body = json.loads(body)
+#        return resp, body['server']
+        if resp['status'] != '200':
+            return resp, body
         body = json.loads(body)
         return resp, body['server']
 
     def get_server(self, server_id):
         """Returns the details of an existing server"""
         resp, body = self.client.get("servers/%s" % str(server_id))
+#        body = json.loads(body)
+        if resp['status'] != '200' and resp['status'] != '203':
+            return resp, body
         body = json.loads(body)
-        if resp['status'] == '404':
-            raise exceptions.ItemNotFoundException(body['itemNotFound'])
+#        if resp['status'] == '404':
+#            raise exceptions.ItemNotFoundException(body['itemNotFound'])
         return resp, body['server']
 
     def delete_server(self, server_id):
@@ -161,17 +191,20 @@ class ServersClient(object):
         start = int(time.time())
 
         while True:
-            try:
-                resp, body = self.get_server(server_id)
-            except exceptions.ItemNotFoundException:
+#            try:
+#                resp, body = self.get_server(server_id)
+#            except exceptions.ItemNotFoundException:
+#                return
+            resp, body = self.get_server(server_id)
+            if resp['status'] == '404':
                 return
 
             server_status = body['status']
 
-            if server_status == 'ERROR':
+            if(server_status == 'ERROR'):
                 raise exceptions.TimeoutException
 
-            if int(time.time()) - start >= self.build_timeout:
+            if (int(time.time()) - start >= self.build_timeout):
                 raise exceptions.BuildErrorException
 
             time.sleep(self.build_interval)
