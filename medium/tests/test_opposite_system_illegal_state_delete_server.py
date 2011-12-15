@@ -321,7 +321,7 @@ class LibvirtErrorTest(LibvirtFunctionalTest):
     @attr(kind='medium')
     def test_d02_223(self):
         self._delete_server_with_fake_libvirt('libvirt', 'lookup-error',
-                                              'fake_libvirt.libvirt_patch')
+                                    'fake_libvirt.libvirt_patch_vir_error')
 
     @attr(kind='medium')
     def test_d02_224(self):

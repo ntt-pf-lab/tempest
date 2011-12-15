@@ -356,7 +356,7 @@ class LibvirtRebootErrorTest(LibvirtFunctionalTest):
     @attr(kind='medium')
     def test_d02_303(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
-                                    'fake_libvirt.libvirt_patch', 'ACTIVE')
+                           'fake_libvirt.libvirt_patch_vir_error', 'ACTIVE')
 
     @attr(kind='medium')
     def test_d02_304(self):
@@ -366,12 +366,12 @@ class LibvirtRebootErrorTest(LibvirtFunctionalTest):
     @attr(kind='medium')
     def test_d02_318(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
-                                'fake_libvirt.libvirt_patch', 'ACTIVE', True)
+                    'fake_libvirt.libvirt_patch_vir_error_rd', 'ERROR', True)
 
     @attr(kind='medium')
     def test_d02_319(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
-                    'fake_libvirt.libvirt_patch_no_domain', 'ACTIVE', True)
+                    'fake_libvirt.libvirt_patch_no_domain_rd', 'ERROR', True)
 
     @attr(kind='medium')
     def test_d02_321(self):
@@ -442,3 +442,13 @@ class LibvirtRebootErrorTest(LibvirtFunctionalTest):
     def test_d02_343(self):
         self._reboot_server_with_fake_libvirt('nova.virt.libvirt.firewall',
                         'firewall-error', 'fake_iptables.filter_patch')
+
+    @attr(kind='medium')
+    def test_d02_344(self):
+        self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
+                     'fake_libvirt.libvirt_patch_vir_error_rd_conf', 'ERROR')
+
+    @attr(kind='medium')
+    def test_d02_345(self):
+        self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
+                    'fake_libvirt.libvirt_patch_no_domain_rd_conf', 'ACTIVE')
