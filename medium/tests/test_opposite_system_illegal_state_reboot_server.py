@@ -446,9 +446,9 @@ class LibvirtRebootErrorTest(LibvirtFunctionalTest):
     @attr(kind='medium')
     def test_d02_344(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
-                     'fake_libvirt.libvirt_patch_vir_error_rd_conf', 'ERROR')
+                     'fake_libvirt.libvirt_patch_vir_error_rd_conf')
 
     @attr(kind='medium')
     def test_d02_345(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
-                    'fake_libvirt.libvirt_patch_no_domain_rd_conf', 'ACTIVE')
+                    'fake_libvirt.libvirt_patch_no_domain_rd_conf')
