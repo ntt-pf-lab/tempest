@@ -353,7 +353,7 @@ class LibvirtErrorTest(LibvirtFunctionalTest):
     @attr(kind='medium')
     def test_d02_236(self):
         self._delete_server_with_fake_libvirt('firewall-error', [
-            ('nova.virt.libvirt.firewall', 'fake_iptables.unfilter_patch'))]
+            ('nova.virt.libvirt.firewall', 'fake_iptables.unfilter_patch')])
 
     @attr(kind='medium')
     def test_d02_237(self):
