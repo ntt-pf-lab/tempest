@@ -1724,7 +1724,7 @@ class ImagesTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_delete_image_when_image_does_not_exist(self):
-        """ Error occurs that the specified image does not exist """
+        """ Returns 404 response """
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
@@ -1742,7 +1742,7 @@ class ImagesTest(FunctionalTest):
         resp, body = self.img_client.delete_image(image_id)
         print 'resp=' + str(resp)
         print 'body=' + str(body)
-        self.assertEqual('500', resp['status'])
+        self.assertEqual('404', resp['status'])
 
     @attr(kind='medium')
     def test_delete_image_when_image_id_is_empty_string(self):
