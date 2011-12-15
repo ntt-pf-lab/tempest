@@ -124,7 +124,6 @@ class LibvirtFunctionalTest(unittest.TestCase):
 class LibvirtLaunchErrorTest(LibvirtFunctionalTest):
     @attr(kind='medium')
     def test_it(self):
-        super(LibvirtLaunchErrorTest, self).setUp()
         patches = [('libvirt', 'fake_libvirt.libvirt_patch')]
         env = os.environ.copy()
         env['PYTHONPATH'] = self.get_fake_path('launch-error')
