@@ -1390,9 +1390,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'status': 'DEAD'})
         print "resp=", resp
         print "body=", body
-        msg = "Invalid input received: Invalid server status: DEAD"
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_list_servers_specify_num_to_status(self):
@@ -1422,9 +1420,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'status': 1})
         print "resp=", resp
         print "body=", body
-        msg = "Invalid input received: Invalid server status: 1"
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_list_servers_specify_limits(self):
@@ -1570,9 +1566,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'limit': 'limit'})
         print "resp=", resp
         print "body=", body
-        msg = "limit param must be an integer"
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_list_servers_specify_negative_to_limits(self):
@@ -1620,9 +1614,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'limit': -1})
         print "resp=", resp
         print "body=", body
-        msg = "limit param must be positive"
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_list_servers_specify_overlimits_to_limits(self):
@@ -1844,11 +1836,11 @@ class ServersTest(FunctionalTest):
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
 
+        self.assertEquals('202', resp['status'])
+
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
         test_id = server['id']
-        resp, server = self.ss_client.get_server(test_id)
-        self.assertEquals('ACTIVE', server['status'])
 
         print """
 
@@ -1858,6 +1850,8 @@ class ServersTest(FunctionalTest):
         # Make snapshot of the instance.
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(test_id, alt_name)
+        self.assertEquals('202', resp['status'])
+
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1884,7 +1878,6 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_create_server_any_name(self):
-        """Ensure create with the specified name"""
         print """
 
         test_create_server_any_name
@@ -1919,7 +1912,6 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_create_server_name_is_num(self):
-        """Ensure return error response Code 400 when name's type is numeric"""
         print """
 
         test_create_server_name_is_num
@@ -1942,13 +1934,10 @@ class ServersTest(FunctionalTest):
 
         print "resp=", resp
         print "body=", body
-        msg = "Server name is not a string or unicode"
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_create_server_name_is_empty(self):
-        """Ensure return error response Code 400 when name is empty"""
         print """
 
         test_create_server_name_is_empty
@@ -1971,9 +1960,7 @@ class ServersTest(FunctionalTest):
 
         print "resp=", resp
         print "body=", body
-        msg = "Server name is an empty string"
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_create_server_names_length_over_256(self):
@@ -2003,7 +1990,6 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_create_server_with_the_same_name(self):
-        """Ensure create server when there is a server with the same name"""
         print """
 
         test_create_server_with_the_same_name
@@ -2048,7 +2034,6 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_create_server_specify_exists_image(self):
-        """Ensure create server when specify exists image"""
         print """
 
         test_create_server_specify_exists_image
@@ -2069,11 +2054,12 @@ class ServersTest(FunctionalTest):
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
 
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+        self.assertEqual('202', resp['status'])
         print "resp=", resp
         print "server=", server
-        self.assertEqual('202', resp['status'])
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         resp, server = self.ss_client.get_server(server['id'])
         self.assertEqual('200', resp['status'])
@@ -2081,7 +2067,6 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_create_servers_specify_not_exists_image(self):
-        """Ensure return error code 400 when specify not exists image"""
         print """
 
         test_create_servers_specify_not_exists_image
@@ -2105,10 +2090,7 @@ class ServersTest(FunctionalTest):
 
         print "resp=", resp
         print "body=", body
-        msg = ("Cannot find requested image %(image_ref)s: "
-               "Image %(image_ref)s could not be found.") % locals()
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_create_servers_not_specify_image(self):
@@ -2134,9 +2116,7 @@ class ServersTest(FunctionalTest):
 
         print "resp=", resp
         print "body=", body
-        msg = "Missing imageRef attribute"
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_create_servers_specify_invalid_fixed_ip_address(self):
@@ -2165,9 +2145,7 @@ class ServersTest(FunctionalTest):
 
         print "resp=", resp
         print "body=", body
-        msg = "Invalid fixed IP address (1.2.3.4.5.6.7.8.9)"
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_create_servers_specify_invalid_uuid(self):
@@ -2193,14 +2171,10 @@ class ServersTest(FunctionalTest):
 
         print "resp=", resp
         print "body=", body
-        msg = ("Bad networks format: network uuid is not in "
-               "proper format (a-b-c-d-e-f-g-h-i-j)")
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_create_server_specify_exists_flavor(self):
-        """Ensure create server when specify exists flavor"""
         print """
 
         test_create_server_specify_exists_flavor
@@ -2233,7 +2207,6 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_create_servers_specify_not_exists_flavor(self):
-        """Ensure return error code 400 when specify not exists flavor"""
         print """
 
         test_create_servers_specify_not_exists_flavor
@@ -2257,13 +2230,10 @@ class ServersTest(FunctionalTest):
 
         print "resp=", resp
         print "body=", body
-        msg = "Invalid flavorRef provided."
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_create_servers_not_specify_flavor(self):
-        """Ensure return error code 400 when not specify flavor"""
         print """
 
         test_create_servers_not_specify_flavor
@@ -2285,9 +2255,7 @@ class ServersTest(FunctionalTest):
 
         print "resp=", resp
         print "body=", body
-        msg = "Missing flavorRef attribute"
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_create_servers_specify_not_exists_networks(self):
@@ -2317,10 +2285,7 @@ class ServersTest(FunctionalTest):
 
         print "resp=", resp
         print "body=", body
-        msg = ("NetworkNotFoundForUUID: Network could not be found "
-               "for uuid 12345678-90ab-cdef-fedc-ba0987654321")
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_create_servers_specify_keypair(self):
@@ -2350,7 +2315,6 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "server=", server
         self.assertEqual('202', resp['status'])
-        self.assertEqual(keyname, server['key_name'])
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -2384,9 +2348,7 @@ class ServersTest(FunctionalTest):
                                                      personality=personality)
         print "resp=", resp
         print "body=", body
-        msg = "Invalid key_name provided."
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_create_server_specify_other_tenant_image(self):
@@ -2435,10 +2397,7 @@ class ServersTest(FunctionalTest):
                                                     personality=personality)
         print "resp=", resp
         print "body=", server
-        msg = ("Cannot find requested image %(alt_img_id)s: "
-               "Image %(alt_img_id)s could not be found.") % locals()
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in server)
 
         sql = ("delete from images where id = " + alt_img_id + ";"
                "delete from image_properties where image_id = " + \
@@ -2462,7 +2421,7 @@ class ServersTest(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        networks = [{'fixed_ip': '10.0.0.1',
+        networks = [{'fixed_ip': '10.0.0.9',
                      'uuid':uuid}]
         resp, server = self.ss_client.create_server_kw(
                                                 name=name,
@@ -2530,26 +2489,9 @@ class ServersTest(FunctionalTest):
         test_create_servers_specify_already_used_uuid
 
         """
-
-        meta = {'hello': 'world'}
-        name = rand_name('server')
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server_kw(
-                                                name=name,
-                                                imageRef=self.image_ref,
-                                                flavorRef=self.flavor_ref,
-                                                metadata=meta,
-                                                personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        # Verify the specified attributes are set correctly
-        resp, server = self.ss_client.get_server(server['id'])
-        uuid = server['uuid']
-        print "uuid=", uuid
+        sql = 'select uuid from networks limit 1;'
+        uuid = self.get_data_from_mysql(sql)
+        uuid = uuid[:-1]
 
         meta = {'hello': 'world'}
         name = rand_name('server')
@@ -2566,9 +2508,31 @@ class ServersTest(FunctionalTest):
                                                 networks=networks,
                                                 personality=personality)
 
+        self.assertEqual('202', resp['status'])
         print "resp=", resp
         print "server=", server
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        meta = {'hello': 'world'}
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        networks = [{'fixed_ip': '10.0.0.1',
+                     'uuid':uuid}]
+        resp, server = self.ss_client.create_server_kw(
+                                                name=name,
+                                                imageRef=self.image_ref,
+                                                flavorRef=self.flavor_ref,
+                                                metadata=meta,
+                                                networks=networks,
+                                                personality=personality)
+
         self.assertEqual('400', resp['status'])
+        print "resp=", resp
+        print "server=", server
 
     @attr(kind='medium')
     def test_create_servers_specify_not_exists_ip_in_networks(self):
@@ -2598,9 +2562,7 @@ class ServersTest(FunctionalTest):
 
         print "resp=", resp
         print "body=", body
-        msg = "T.B.D"
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_create_servers_specify_not_exists_zone(self):
@@ -2704,7 +2666,7 @@ class ServersTest(FunctionalTest):
         """
 
         sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
-               "VALUES(0, 'admin', 'cores', 2)")
+               "VALUES(0, '1', 'cores', 2)")
         self.exec_sql(sql)
 
         print """
@@ -2766,7 +2728,7 @@ class ServersTest(FunctionalTest):
         """
 
         sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
-               "VALUES(0, 'admin', 'ram', 1)")
+               "VALUES(0, '1', 'ram', 1)")
         self.exec_sql(sql)
 
         print """
@@ -2855,7 +2817,6 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_get_server_details_by_id(self):
-        """Ensure details of a specific server by ID."""
         print """
 
         test_get_server_details_by_id
@@ -2888,7 +2849,6 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_get_server_details_by_uuid(self):
-        """Ensure details of a specific server by UUID."""
         print """
 
         test_get_server_details_by_uuid
@@ -2925,7 +2885,6 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_get_server_details_by_not_exists_id(self):
-        """Ensure return error response Code 404"""
         print """
 
         test_get_server_details_by_not_exists_id
@@ -2954,9 +2913,7 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", body
 
-        msg = "The resource could not be found."
         self.assertEqual('404', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_get_server_details_specify_other_tenant_server(self):
@@ -2989,9 +2946,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.s2_client.get_server(server['id'])
         print "resp=", resp
         print "body=", body
-        msg = "The resource could not be found."
         self.assertEqual('404', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_get_server_details_specify_string_to_id(self):
@@ -3004,9 +2959,7 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", body
 
-        msg = "The resource could not be found."
         self.assertEqual('404', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_get_server_details_specify_negative_to_id(self):
@@ -3019,9 +2972,7 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", body
 
-        msg = "The resource could not be found."
         self.assertEqual('404', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_get_server_details_specify_overlimits_to_id(self):
@@ -3034,13 +2985,10 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", body
 
-        msg = "The resource could not be found."
         self.assertEqual('404', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_update_server(self):
-        """updates the editable attributes of a server"""
         print """
 
         test_update_server
@@ -3071,16 +3019,15 @@ class ServersTest(FunctionalTest):
         self.assertNotEqual(name, alt_name)
 
         resp, body = self.ss_client.update_server(server['id'], name=alt_name)
+        self.assertEqual('200', resp['status'])
         print "resp=", resp
         print "body=", body
 
-        self.assertEqual('200', resp['status'])
         resp, body = self.ss_client.get_server(server['id'])
         self.assertEqual(alt_name, body['name'])
 
     @attr(kind='medium')
     def test_update_server_not_exists_id(self):
-        """Ensure return error response Code 404"""
         print """
 
         test_update_server_not_exists_id
@@ -3111,13 +3058,10 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", body
 
-        msg = "The resource could not be found."
         self.assertEqual('404', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_update_server_same_name(self):
-        """updates the editable attributes of a server"""
         print """
 
         test_update_server_same_name
@@ -3167,7 +3111,6 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_update_server_empty_name(self):
-        """Ensure return error response Code 400"""
         print """
 
         test_update_server_empty_name
@@ -3199,9 +3142,7 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", body
 
-        msg = "Server name is an empty string"
         self.assertEqual('400', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_update_server_specify_other_tenant_server(self):
@@ -3236,9 +3177,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.s2_client.update_server(server['id'], name=alt_name)
         print "resp=", resp
         print "body=", body
-        msg = "The resource could not be found."
         self.assertEqual('404', resp['status'])
-        self.assertTrue(msg in body)
 
     @attr(kind='medium')
     def test_update_server_specify_overlimits_to_name(self):
@@ -3273,9 +3212,7 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", body
 
-#        self.assertEqual('200', resp['status'])
-#        resp, body = self.ss_client.get_server(server['id'])
-#        self.assertEqual(alt_name, body['name'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_update_server_when_create_image(self):
@@ -3313,6 +3250,7 @@ class ServersTest(FunctionalTest):
         # update server
         alt_name = rand_name('server')
         resp, body = self.ss_client.update_server(server['id'], name=alt_name)
+        self.assertEqual('200', resp['status'])
         print "resp=", resp
         print "body=", body
         resp, body = self.ss_client.get_server(server['id'])
@@ -3354,16 +3292,15 @@ class ServersTest(FunctionalTest):
         uuid = body['uuid']
         alt_name = rand_name('server')
         resp, body = self.ss_client.update_server(uuid, name=alt_name)
+        self.assertEqual('200', resp['status'])
         print "resp=", resp
         print "body=", body
 
-        self.assertEqual('200', resp['status'])
         resp, body = self.ss_client.get_server(server['id'])
         self.assertEqual(alt_name, body['name'])
 
     @attr(kind='medium')
     def test_delete_server(self):
-        """delete server instance from the system"""
         print """
 
         test_delete_server
@@ -3396,7 +3333,6 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_delete_server_not_exists_id(self):
-        """Ensure return error response Code 404"""
         print """
 
         test_delete_server_not_exists_id
@@ -3405,12 +3341,9 @@ class ServersTest(FunctionalTest):
         resp = self.ss_client.delete_server(99)
         print "resp=", resp
         self.assertEqual('404', resp[0]['status'])
-        msg = 'The resource could not be found.'
-        self.assertTrue(msg in resp[1])
 
     @attr(kind='medium')
     def test_delete_server_when_server_is_building(self):
-        """delete server when server is building"""
         print """
 
         test_delete_server_when_server_is_building
@@ -3440,7 +3373,6 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_delete_server_when_server_is_deleting(self):
-        """delete server when server is deleting"""
         print """
 
         test_delete_server_when_server_is_deleting
@@ -3477,7 +3409,6 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_delete_server_when_server_is_deleted(self):
-        """return error response Code 404 when server is deleted"""
         print """
 
         test_delete_server_when_server_is_deleted
