@@ -179,7 +179,7 @@ def show_port_attachment(tenant_id, network_id, port_id):
     if 'attached' in port:
         return port['attached']
     else:
-        return {'attachment': {}}
+        return {'attachment': {'id': ''}}
 
 
 @put(action_prefix + attachment_path + suffix)
