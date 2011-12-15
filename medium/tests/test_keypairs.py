@@ -15,15 +15,12 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 import base64
-import re
 import subprocess
 import time
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 
-from kong import tests
-from storm import exceptions
 from storm import openstack
 import storm.config
 from storm.common.utils.data_utils import rand_name
@@ -213,7 +210,6 @@ class KeypairsTest(FunctionalTest):
 
         # create a keypair for test
         keyname = rand_name('key')
-        print 'keyname=' + str(keyname)
         self.kp_client.create_keypair(keyname)
 
         # execute and assert
@@ -249,7 +245,6 @@ class KeypairsTest(FunctionalTest):
         keynames = []
         for _ in range(0, 3):
             keyname = rand_name('key')
-            print 'keyname=' + str(keyname)
             self.kp_client.create_keypair(keyname)
 
         # execute and assert
@@ -273,7 +268,6 @@ class KeypairsTest(FunctionalTest):
         """Returns 200 response with an information of the created keypair"""
         # execute and assert
         keyname = rand_name('key')
-        print 'keyname=' + str(keyname)
         resp, body = self.kp_client.create_keypair(keyname)
         self.assertEqual('200', resp['status'])
         keypair = body['keypair']
@@ -296,7 +290,6 @@ class KeypairsTest(FunctionalTest):
         """Returns 409 response"""
         # create a keypair for test
         keyname = rand_name('key')
-        print 'keyname=' + str(keyname)
         self.kp_client.create_keypair(keyname)
 
         # execute and assert
@@ -332,7 +325,6 @@ class KeypairsTest(FunctionalTest):
         """Returns 200 response with information of the created keypair"""
         # execute and assert
         keyname = rand_name('key')
-        print 'keyname=' + str(keyname)
         publickey = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCefjXKz8NBgmqEXF5' \
                     'gCbiiHcYmHuZ/ZjO497sXvcOsguxLQa+27HjQmg0osIedBgf1AbyBG0' \
                     'gMX7C3muXUHTgiF2QNjhZ6a2ZszmB062rXpL+iC4MEUOFZuzDwzjMGI' \
@@ -362,7 +354,6 @@ class KeypairsTest(FunctionalTest):
         """Returns 400 response"""
         # execute and assert
         keyname = rand_name('key')
-        print 'keyname=' + str(keyname)
         publickey = ''
         resp, body = self.kp_client.create_keypair(keyname, publickey)
         self.assertEqual('400', resp['status'])
@@ -372,7 +363,6 @@ class KeypairsTest(FunctionalTest):
         """Returns 400 response"""
         # execute and assert
         keyname = rand_name('key')
-        print 'keyname=' + str(keyname)
         publickey = 'abc'
         resp, body = self.kp_client.create_keypair(keyname, publickey)
         self.assertEqual('400', resp['status'])
@@ -382,10 +372,8 @@ class KeypairsTest(FunctionalTest):
         """Returns 400 response"""
         # execute and assert
         keyname = rand_name('key')
-        print 'keyname=' + str(keyname)
         # over 16384 bits
         publickey = 'ssh-rsa ' + 'A' * 2048 + ' openstack@ubuntu'
-        print 'publickey=' + str(publickey)
         resp, body = self.kp_client.create_keypair(keyname, publickey)
         self.assertEqual('400', resp['status'])
 
@@ -394,7 +382,6 @@ class KeypairsTest(FunctionalTest):
         """Returns 202 response"""
         # create a keypair for test
         keyname = rand_name('key')
-        print 'keyname=' + str(keyname)
         self.kp_client.create_keypair(keyname)
 
         # execute and assert
@@ -411,10 +398,9 @@ class KeypairsTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_delete_keypair_when_keypair_is_used_by_server(self):
-        """Returns 500 response"""
+        """Returns 409 response"""
         # create a keypair for test
         keyname = rand_name('key')
-        print 'keyname=' + str(keyname)
         self.kp_client.create_keypair(keyname)
 
         # create a server for test
@@ -439,7 +425,7 @@ class KeypairsTest(FunctionalTest):
 
         # execute and assert
         resp, body = self.kp_client.delete_keypair(keyname)
-        self.assertEqual('500', resp['status'])
+        self.assertEqual('409', resp['status'])
 
         # cleanup a server
         self.ss_client.delete_server(server['id'])
@@ -448,7 +434,6 @@ class KeypairsTest(FunctionalTest):
         # reset db
         subprocess.check_call('mysql -u%s -p%s -D nova -e "'
                               'DELETE FROM key_pairs;'
-                              'DELETE FROM instances;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password),
@@ -459,7 +444,6 @@ class KeypairsTest(FunctionalTest):
         """Returns 404 response"""
         # execute and assert
         keyname = rand_name('key')
-        print 'keyname=' + str(keyname)
         resp, body = self.kp_client.delete_keypair('')
         self.assertEqual('404', resp['status'])
 
