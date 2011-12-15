@@ -55,3 +55,36 @@ def libvirt_create_patch(name, fn):
         return fake_createWithFlags
     else:
         return fn
+
+
+def fake_snapshotCreateXML(self, xmlDesc, flags):
+    raise libvirt.libvirtError(libvirt.VIR_ERR_ERROR)
+
+
+def libvirt_snap_createxml_patch(name, fn):
+    if name == 'libvirt.virDomain.snapshotCreateXML':
+        return fake_snapshotCreateXML
+    else:
+        return fn
+
+
+def fake_XMLDesc(self, flags):
+    raise libvirt.libvirtError(libvirt.VIR_ERR_ERROR)
+
+
+def libvirt_snap_xmldesc_patch(name, fn):
+    if name == 'libvirt.virDomain.XMLDesc':
+        return fake_XMLDesc
+    else:
+        return fn
+
+
+def fake_delete(self, flags):
+    raise libvirt.libvirtError(libvirt.VIR_ERR_ERROR)
+
+
+def libvirt_snap_delete_patch(name, fn):
+    if name == 'libvirt.virDomainSnapshot.delete':
+        return fake_delete
+    else:
+        return fn
