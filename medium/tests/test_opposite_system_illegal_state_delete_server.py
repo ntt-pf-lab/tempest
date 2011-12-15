@@ -138,10 +138,7 @@ class QuantumFunctionalTest(unittest.TestCase):
         quantum.set_test(True)
 
         self.ss_client.delete_server(server['id'])
-        # Wait for the server to become ERROR.DELETED
-        self.assertRaises(exceptions.BuildErrorException,
-                          self.ss_client.wait_for_server_status,
-                          server['id'], 'ERROR')
+        self.ss_client.wait_for_server_not_exists(server['id'])
 
     def _test_show_port_attachment(self, status_code):
         self._execute_fake_and_wait_for_error(show_port_attachment=status_code)
