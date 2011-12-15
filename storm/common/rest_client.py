@@ -94,9 +94,6 @@ class RestClient(object):
         headers['X-Auth-Token'] = self.token
 
         req_url = "%s/%s" % (self.base_url, url)
-        print "req_url=", req_url
-        print "req_headers=", headers
-        print "req_body=", body
         resp, body = self.http_obj.request(req_url, method,
                                            headers=headers, body=body)
 #        if resp.status == 400:

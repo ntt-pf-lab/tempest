@@ -490,8 +490,7 @@ class ServersTest(FunctionalTest):
 
          """
         resp, server = self.ss_client.reboot(test_id, 'HARD')
-        resp, server = self.ss_client.get_server(test_id)
-        self.assertEquals('REBOOT', server['status'])
+        self.assertEquals('202', resp['status'])
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
@@ -533,6 +532,7 @@ class ServersTest(FunctionalTest):
 
          """
         resp, server = self.ss_client.reboot(test_id, 'HARD')
+        self.assertEquals('202', resp['status'])
 
         print """
 
@@ -540,73 +540,7 @@ class ServersTest(FunctionalTest):
 
          """
         resp, server = self.ss_client.reboot(test_id, 'HARD')
-        self.assertEquals('202', resp['status'])
-        resp, server = self.ss_client.get_server(test_id)
-        self.assertEquals('REBOOT', server['status'])
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
-
-        # Verify the specified attributes are set correctly
-        resp, server = self.ss_client.get_server(test_id)
-        self.assertEquals('ACTIVE', server['status'])
-
-#    @attr(kind='medium')
-#    def test_reboot_when_server_is_during_stop_process(self):
-#
-#        print """
-#
-#        creating server.
-#
-#        """
-#        meta = {'open': 'stack'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        # Wait for the server to become active
-#        test_id = server['id']
-#        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
-#
-#        print """
-#
-#        deleting server
-#
-#         """
-#        # Stop server
-#        resp, server = self.ss_client.delete_server(test_id)
-#
-#        print """
-#
-#        reboot server without waiting done stopping
-#
-#         """
-#
-#        # Reboot stopped server
-#        resp, server = self.ss_client.reboot(test_id, 'HARD')
-#        self.assertEquals('202', resp['status'])
-#        resp, server = self.ss_client.get_server(test_id)
-#        self.assertEquals('REBOOT', server['status'])
-#
-#        sql = ("SELECT deleted FROM instances WHERE id=" + test_id + ";")
-#        sql_resp = self.get_data_from_mysql(sql)
-#        sql_resp = sql_resp.split('\n')
-#        while sql_resp != '1':
-#            sql_resp = self.get_data_from_mysql(sql)
-#            sql_resp = sql_resp.split('\n')
-#
-#        resp, body = self.ss_client.get_server(test_id)
-#        self.assertEquals('404', resp['status'])
+        self.assertEquals('403', resp['status'])
 
     @attr(kind='medium')
     def test_reboot_when_server_is_down(self):
@@ -655,7 +589,7 @@ class ServersTest(FunctionalTest):
 
         # Reboot stopped server
         resp, server = self.ss_client.reboot(test_id, 'HARD')
-        self.assertEquals('403', resp['status'])
+        self.assertEquals('404', resp['status'])
 
     @attr(kind='medium')
     def test_create_image(self):
@@ -700,6 +634,7 @@ class ServersTest(FunctionalTest):
         test_id = server['id']
         resp, _ = self.ss_client.create_image(test_id, alt_name)
         resp, body = self.ss_client.create_image(test_id, alt_name)
+        print "respresp=", resp
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -774,7 +709,7 @@ class ServersTest(FunctionalTest):
         alt_img_id = match.groupdict()['image_id']
         self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
         resp, image = self.img_client.get_image(alt_img_id)
-        self.assertEquals('ACTIVE', image['status'])
+        self.assertEquals('200', resp['status'])
 
         print """
 
@@ -878,7 +813,7 @@ class ServersTest(FunctionalTest):
         # Make snapshot of the instance.
         alt_name = rand_name('ss_test')
         resp, body = self.s2_client.create_image(test_server_id, alt_name)
-        self.assertEquals('403', resp['status'])
+        self.assertEquals('404', resp['status'])
 
     @attr(kind='medium')
     def test_create_image_when_server_is_during_boot_process(self):
@@ -902,10 +837,7 @@ class ServersTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-
-        resp, server = self.ss_client.get_server(server['id'])
         test_id = server['id']
-        self.assertEquals('BUILD', server['status'])
 
         print """
 
@@ -1010,8 +942,7 @@ class ServersTest(FunctionalTest):
         # Make snapshot of the instance without waiting done creating server
         alt_name = rand_name('opst_test')
         resp, _ = self.ss_client.create_image(test_server_id, alt_name)
-        self.assertEquals('404', resp['status'])
-        self.ss_client.wait_for_server_not_exists(test_server_id)
+        self.assertEquals('403', resp['status'])
 
     @attr(kind='medium')
     def test_create_image_when_server_is_down(self):
@@ -1067,7 +998,7 @@ class ServersTest(FunctionalTest):
         alt_name = rand_name('server')
         resp, _ = self.ss_client.create_image(test_server_id, alt_name)
         print "resp=", resp
-        self.assertEquals('403', resp['status'])
+        self.assertEquals('404', resp['status'])
 
         print """
 
@@ -1123,7 +1054,7 @@ class ServersTest(FunctionalTest):
         # Make snapshot of the instance.
         alt_name = rand_name('server')
         resp1, body1 = self.ss_client.create_image(test_server_id, alt_name)
-        self.assertEquals('202', resp['status'])
+        self.assertEquals('202', resp1['status'])
 
         print """
 
@@ -1149,47 +1080,6 @@ class ServersTest(FunctionalTest):
         alt_img_id = match.groupdict()['image_id']
         self.img_client.delete_image(alt_img_id)
         self.img_client.wait_for_image_not_exists(alt_img_id)
-
-    @attr(kind='medium')
-    def test_create_img_when_server_has_not_enough_capacity_to_save_img(self):
-
-        print """
-
-        creating server.
-
-        """
-        meta = {'aaa': 'bbb'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-        test_id = server['id']
-
-        # Verify the specified attributes are set correctly
-        resp, server = self.ss_client.get_server(test_id)
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-
-        print """
-
-        creating snapshot.
-
-        """
 
     @attr(kind='medium')
     def test_create_image_when_specify_duplicate_image_name(self):
@@ -1235,7 +1125,7 @@ class ServersTest(FunctionalTest):
         # Make snapshot of the instance.
         alt_name = rand_name('server')
         resp1, body1 = self.ss_client.create_image(test_server_id, alt_name)
-        self.assertEquals("202", resp1)
+        self.assertEquals("202", resp1['status'])
 
         alt_img_url = resp1['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
@@ -1256,7 +1146,7 @@ class ServersTest(FunctionalTest):
         alt_test_name = rand_name('server')
         resp2, body2 = self.ss_client.create_image(test_server_id,
                                                    alt_test_name)
-        self.assertEquals("202", resp2)
+        self.assertEquals("202", resp2['status'])
 
         alt_test_img_url = resp2['location']
         match = re.search('/images/(?P<image_id>.+)', alt_test_img_url)
@@ -1340,23 +1230,7 @@ class ServersTest(FunctionalTest):
         # Make snapshot of the instance.
         alt_name = rand_name('a' * 260)
         resp, _ = self.ss_client.create_image(test_id, alt_name)
-        alt_img_url = resp['location']
-        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
-        self.assertIsNotNone(match)
-        alt_img_id = match.groupdict()['image_id']
-        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
-        resp, images = self.img_client.list_images()
-        print "resp=", resp
-        print "images=", images
-
-        print """
-
-        deleting snapshot.
-
-        """
-        # Delete the snapshot
-        self.img_client.delete_image(alt_img_id)
-        self.img_client.wait_for_image_not_exists(alt_img_id)
+        self.assertEquals('400', resp['status'])
 
     @attr(kind='medium')
     def test_create_image_when_metadata_exists(self):
