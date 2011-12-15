@@ -183,8 +183,8 @@ class ServersClient(object):
         while server_status != status:
             time.sleep(self.build_interval)
             resp, body = self.get_server(server_id)
-            if resp['status'] == '404':
-                return
+#            if resp['status'] == '404':
+#                return
             server_status = body['status']
 
             if server_status == 'ERROR':
