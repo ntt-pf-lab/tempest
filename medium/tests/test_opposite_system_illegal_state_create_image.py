@@ -171,9 +171,9 @@ class QuantumFunctionalTest(unittest.TestCase):
 
         self.ss_client.create_image(server['id'], 'test_image_name')
         # Wait for the server to become ERROR.DELETED
-        self.assertRaises(exceptions.BuildErrorException,
-                          self.ss_client.wait_for_server_status,
-                          server['id'], 'ERROR')
+#        self.assertRaises(exceptions.BuildErrorException,
+        self.ss_client.wait_for_server_status(
+                          server['id'], 'ACTIVE')
 
     def _execute_fake_and_wait_for_error(self, **param):
         # quantum.
@@ -198,9 +198,9 @@ class QuantumFunctionalTest(unittest.TestCase):
 
         self.ss_client.create_image(server['id'], 'test_image_name')
         # Wait for the server to become ERROR.DELETED
-        self.assertRaises(exceptions.BuildErrorException,
-                          self.ss_client.wait_for_server_status,
-                          server['id'], 'ERROR')
+#        self.assertRaises(exceptions.BuildErrorException,
+        self.ss_client.wait_for_server_status(
+                          server['id'], 'ACTIVE')
 
     def _test_show_port_attachment(self, status_code):
         self._execute_fake_and_wait_for_error(show_port_attachment=status_code)
@@ -365,57 +365,61 @@ class LibvirtSnapshotErrorTest(LibvirtFunctionalTest):
     @attr(kind='medium')
     def test_d02_420(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'lookup-error',
-                                'fake_libvirt.libvirt_patch', 'ERROR', True)
+                                'fake_libvirt.libvirt_patch', 'ACTIVE', True)
 
     @attr(kind='medium')
     def test_d02_421(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'lookup-error',
-                    'fake_libvirt.libvirt_patch_no_domain', 'ERROR', True)
+                    'fake_libvirt.libvirt_patch_no_domain', 'ACTIVE', True)
 
     @attr(kind='medium')
     def test_d02_423(self):
         self._snapshot_image_with_fake_libvirt('nova.image.glance',
-                'virconn-error', 'fake_libvirt.libvirt_glance_show_patch')
+                'virconn-error', 'fake_libvirt.libvirt_glance_show_patch',
+                'ACTIVE')
 
     @attr(kind='medium')
     def test_d02_425(self):
         self._snapshot_image_with_fake_libvirt('nova.image.glance',
-                'virconn-error', 'fake_libvirt.libvirt_image_not_found_patch')
+                'virconn-error', 'fake_libvirt.libvirt_image_not_found_patch',
+                 'ACTIVE')
 
     @attr(kind='medium')
     def test_d02_426(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'virdomain-error',
-                                'fake_libvirt.libvirt_snap_createxml_patch')
+                        'fake_libvirt.libvirt_snap_createxml_patch', 'ACTIVE')
 
     @attr(kind='medium')
     def test_d02_428(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'virdomain-error',
-                                'fake_libvirt.libvirt_snap_xmldesc_patch')
+                         'fake_libvirt.libvirt_snap_xmldesc_patch', 'ACTIVE')
 
     @attr(kind='medium')
     def test_d02_430(self):
         self._snapshot_image_with_fake_libvirt('tempfile',
-                        'general-error', 'fake.mkdtemp_patch')
+                        'general-error', 'fake.mkdtemp_patch', 'ACTIVE')
 
     @attr(kind='medium')
     def test_d02_432(self):
         self._snapshot_image_with_fake_libvirt('nova.utils',
-                        'general-error', 'fake.execute_patch')
+                        'general-error', 'fake.execute_patch', 'ACTIVE')
 
     @attr(kind='medium')
     def test_d02_433(self):
         self._snapshot_image_with_fake_libvirt('nova.image.glance',
-                'virconn-error', 'fake_libvirt.libvirt_glance_update_patch')
+                'virconn-error', 'fake_libvirt.libvirt_glance_update_patch',
+                'ACTIVE')
 
     @attr(kind='medium')
     def test_d02_435(self):
         self._snapshot_image_with_fake_libvirt('nova.image.glance',
-                'virconn-error', 'fake_libvirt.libvirt_update_not_found_patch')
+                'virconn-error', 'fake_libvirt.libvirt_update_not_found_patch',
+                'ACTIVE')
 
     @attr(kind='medium')
     def test_d02_437(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'virdomain-error',
-                    'fake_libvirt.libvirt_snap_delete_patch')
+                    'fake_libvirt.libvirt_snap_delete_patch', 'ACTIVE')
 
 
 class GlanceErrorTest(unittest.TestCase):
