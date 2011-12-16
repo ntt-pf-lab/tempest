@@ -108,7 +108,7 @@ class QuantumFunctionalTest(unittest.TestCase):
     def check_create_network(self, retcode):
         self.assertEqual(subprocess.call('bin/nova-manage network create '
                                              '--label=private_1-1 '
-                                             '--project_id=admin '
+                                             '--project_id=1 '
                                              '--fixed_range_v4=10.0.0.0/24 '
                                              '--bridge_interface=br-int '
                                              '--num_networks=1 '
@@ -118,7 +118,7 @@ class QuantumFunctionalTest(unittest.TestCase):
 
     def _execute_fake_and_wait_for_error(self, **param):
         # quantum.
-        quantum = FakeQuantumProcess('admin', **param)
+        quantum = FakeQuantumProcess('1', **param)
         self.testing_processes.append(quantum)
         quantum.start()
 
@@ -234,7 +234,7 @@ class LibvirtFunctionalTest(unittest.TestCase):
 
         # quantum.
         self.testing_processes.append(
-                FakeQuantumProcess(self.config.nova.tenant_name))
+                FakeQuantumProcess('1'))
 
         # reset db.
         silent_check_call('mysql -u%s -p%s -e "'
@@ -254,11 +254,11 @@ class LibvirtFunctionalTest(unittest.TestCase):
         # allocate networks.
         silent_check_call('bin/nova-manage network create '
                           '--label=private_1-1 '
-                          '--project_id=%s '
+                          '--project_id=1 '
                           '--fixed_range_v4=10.0.0.0/24 '
                           '--bridge_interface=br-int '
                           '--num_networks=1 '
-                          '--network_size=32 ' % self.config.nova.tenant_name,
+                          '--network_size=32 ',
                           cwd=self.config.nova.directory, shell=True)
 
         self.addCleanup(cleanup_virtual_instances)
