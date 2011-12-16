@@ -184,7 +184,7 @@ class FunctionalTest(unittest.TestCase):
             process.stop()
         del self.testing_processes[:]
 
-        self.output_eventlog()
+#        self.output_eventlog()
 
     def exec_sql(self, sql, db='nova'):
         exec_sql = 'mysql -u %s -p%s ' + db + ' -e "' + sql + '"'
