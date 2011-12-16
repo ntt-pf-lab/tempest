@@ -28,6 +28,7 @@ def setUpModule(module):
 
     for process in environ_processes:
         process.start()
+    time.sleep(10)
 
 tearDownModule = tearDownModule
 
