@@ -107,11 +107,11 @@ class FunctionalTest(unittest.TestCase):
         # allocate networks.
         silent_check_call('bin/nova-manage network create '
                           '--label=private_1-1 '
-                          '--project_id=%s '
+                          '--project_id=1 '
                           '--fixed_range_v4=10.0.0.0/24 '
                           '--bridge_interface=br-int '
                           '--num_networks=1 '
-                          '--network_size=32 ' % self.config.nova.tenant_name,
+                          '--network_size=32 ',
                           cwd=self.config.nova.directory, shell=True)
 
         self.addCleanup(cleanup_virtual_instances)
