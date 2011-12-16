@@ -38,6 +38,7 @@ class TestBase(unittest.TestCase):
 
     def setUp(self):
         self.testing_processes = []
+        import pdb; pdb.set_trace()
         self.os = openstack.Manager(config=self.config)
         # take a rest client from storm internal.
         self.rest_client = self.os.servers_client.client

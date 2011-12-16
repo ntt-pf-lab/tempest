@@ -540,6 +540,8 @@ class ServersTest(FunctionalTest):
 
          """
         resp2, server2 = self.ss_client.reboot(test_id, 'HARD')
+        print "resp2=", resp2
+        print "server2=", server2
         self.assertEquals('403', resp2['status'])
 
     @attr(kind='medium')
