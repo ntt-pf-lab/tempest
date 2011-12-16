@@ -1,3 +1,18 @@
+# Copyright 2011 NTT
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
 import base64
 import re
 import subprocess
@@ -6,7 +21,7 @@ import json
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
-
+from nova import test
 from storm import openstack
 import storm.config
 from storm.common.utils.data_utils import rand_name
@@ -181,9 +196,9 @@ class FunctionalTest(unittest.TestCase):
         return result
 
 
-class ServersTest(FunctionalTest):
+class ServersActionTest(FunctionalTest):
     def setUp(self):
-        super(ServersTest, self).setUp()
+        super(ServersActionTest, self).setUp()
         self.image_ref = self.config.env.image_ref
         self.flavor_ref = self.config.env.flavor_ref
         # for admin tenant
@@ -499,6 +514,7 @@ class ServersTest(FunctionalTest):
         resp, server = self.ss_client.get_server(test_id)
         self.assertEqual('200', resp['status'])
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_reboot_when_server_is_during_reboot_process(self):
 
@@ -663,6 +679,7 @@ class ServersTest(FunctionalTest):
         resp, server = self.ss_client.get_server(test_id)
         self.assertEquals('ACTIVE', server['status'])
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_create_image_when_specify_server_by_uuid(self):
 
@@ -852,6 +869,7 @@ class ServersTest(FunctionalTest):
         resp, _ = self.ss_client.create_image(test_id, alt_name)
         self.assertEquals('403', resp['status'])
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_create_image_when_server_is_during_reboot_process(self):
 
@@ -1013,6 +1031,7 @@ class ServersTest(FunctionalTest):
         self.img_client.delete_image(alt_name)
         self.img_client.wait_for_image_not_exists(alt_name)
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_create_image_when_other_image_is_during_saving_process(self):
 
