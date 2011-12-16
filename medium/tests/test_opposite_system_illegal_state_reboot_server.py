@@ -386,12 +386,12 @@ class LibvirtRebootErrorTest(LibvirtFunctionalTest):
     @attr(kind='medium')
     def test_d02_324(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'virdomain-error',
-                                'fake_libvirt.libvirt_patch_undefine')
+                            'fake_libvirt.libvirt_patch_undefine', 'ACTIVE')
 
     @attr(kind='medium')
     def test_d02_325(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'virdomain-error',
-                    'fake_libvirt.libvirt_undefine_patch_invalid_operation')
+            'fake_libvirt.libvirt_undefine_patch_invalid_operation', 'ACTIVE')
 
     @attr(kind='medium')
     def test_d02_327(self):
