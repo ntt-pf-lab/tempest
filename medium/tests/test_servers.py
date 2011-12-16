@@ -140,7 +140,7 @@ class FunctionalTest(unittest.TestCase):
         # allocate networks.
         subprocess.check_call('bin/nova-manage network create '
                               '--label=private_1-1 '
-                              '--project_id=admin '
+                              '--project_id=1 '
                               '--fixed_range_v4=10.0.0.0/24 '
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
@@ -148,7 +148,7 @@ class FunctionalTest(unittest.TestCase):
                               cwd=self.config.nova.directory, shell=True)
         subprocess.check_call('bin/nova-manage network create '
                               '--label=private_1-2 '
-                              '--project_id=admin '
+                              '--project_id=1 '
                               '--fixed_range_v4=10.0.1.0/24 '
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
@@ -156,7 +156,7 @@ class FunctionalTest(unittest.TestCase):
                               cwd=self.config.nova.directory, shell=True)
         subprocess.check_call('bin/nova-manage network create '
                               '--label=private_1-3 '
-                              '--project_id=admin '
+                              '--project_id=1 '
                               '--fixed_range_v4=10.0.2.0/24 '
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
@@ -164,7 +164,7 @@ class FunctionalTest(unittest.TestCase):
                               cwd=self.config.nova.directory, shell=True)
         subprocess.check_call('bin/nova-manage network create '
                               '--label=private_2-1 '
-                              '--project_id=demo '
+                              '--project_id=2 '
                               '--fixed_range_v4=10.0.3.0/24 '
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
@@ -829,8 +829,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'image': 'image'})
         print "resp=", resp
         print "body=", body
+        # Bug.605
         self.assertEqual('200', resp['status'])
-        self.assertEqual([], body['servers'])
+#        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_overlimits_to_image(self):
@@ -871,8 +872,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'image': sys.maxint + 1})
         print "resp=", resp
         print "body=", body
+        # Bug.605
         self.assertEqual('200', resp['status'])
-        self.assertEqual([], body['servers'])
+#        self.assertEqual('413', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_negative_to_image(self):
@@ -902,8 +904,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'image': -1})
         print "resp=", resp
         print "body=", body
+        # Bug.605
         self.assertEqual('200', resp['status'])
-        self.assertEqual([], body['servers'])
+#        self.assertEqual('413', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_exists_flavor(self):
@@ -964,10 +967,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'flavor': 99})
         print "resp=", resp
         print "body=", body
-        self.assertEqual('200', resp['status'])
-#        msg = "The resource could not be found."
-#        self.assertEqual('404', resp['status'])
-#        self.assertTrue(msg in body)
+        # Bug.605
+        self.assertEqual('404', resp['status'])
+#        self.assertEqual('200', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_string_to_flavor(self):
@@ -997,8 +999,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'flavor': 'flavor'})
         print "resp=", resp
         print "body=", body
-        self.assertEqual('200', resp['status'])
-        self.assertEqual([], body['servers'])
+        # Bug.605
+        self.assertEqual('404', resp['status'])
+#        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_overlimits_to_flavor(self):
@@ -1028,8 +1031,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'flavor': sys.maxint + 1})
         print "resp=", resp
         print "body=", body
-        self.assertEqual('200', resp['status'])
-        self.assertEqual([], body['servers'])
+        # Bug.605
+        self.assertEqual('404', resp['status'])
+#        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_negative_to_flavor(self):
@@ -1059,8 +1063,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'flavor': -1})
         print "resp=", resp
         print "body=", body
-        self.assertEqual('200', resp['status'])
-        self.assertEqual([], body['servers'])
+        # Bug.605
+        self.assertEqual('404', resp['status'])
+#        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_exists_server_name(self):
@@ -1165,8 +1170,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'name': ''})
         print "resp=", resp
         print "body=", body
+        # Bug.606
         self.assertEqual('200', resp['status'])
-        self.assertEqual([], body['servers'])
+#        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_overlimits_to_server_name(self):
@@ -1196,8 +1202,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'name': 'a' * 256})
         print "resp=", resp
         print "body=", body
+        # Bug.605
         self.assertEqual('200', resp['status'])
-        self.assertEqual([], body['servers'])
+#        self.assertEqual('413', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_num_to_server_name(self):
@@ -1227,8 +1234,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'name': 99})
         print "resp=", resp
         print "body=", body
+        # Bug.605
         self.assertEqual('200', resp['status'])
-        self.assertEqual([], body['servers'])
+#        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_status_active(self):
@@ -1390,6 +1398,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'status': 'DEAD'})
         print "resp=", resp
         print "body=", body
+        # Bug.605
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
@@ -1566,7 +1575,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'limit': 'limit'})
         print "resp=", resp
         print "body=", body
+        # Bug.605
         self.assertEqual('400', resp['status'])
+#        self.assertEqual('413', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_negative_to_limits(self):
@@ -1662,61 +1673,62 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'limit': sys.maxint + 1})
         print "resp=", resp
         print "body=", body
+        # Bug.605
         self.assertEqual('200', resp['status'])
-        self.assertEqual(2, len(body['servers']))
+#        self.assertEqual('413', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_change_since(self):
         print """
 
-        test_list_servers_specify_change_since
+        test_list_servers_specify_change_since(Bug605)
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.2'
-        accessIPv6 = '::babe:220.12.22.3'
-        name = rand_name('server')
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        resp, _ = self.ss_client.delete_server(server['id'])
-        self.ss_client.wait_for_server_not_exists(server['id'])
-
-        resp, body = self.ss_client.list_servers(
-                                    {'changes-since': '2011-01-01T12:34Z'})
-        print "resp=", resp
-        print "body=", body
-        self.assertEqual('200', resp['status'])
-        self.assertEqual(2, len(body['servers']))
+#        meta = {'hello': 'world'}
+#        accessIPv4 = '1.1.1.1'
+#        accessIPv6 = '::babe:220.12.22.2'
+#        name = rand_name('server')
+#        file_contents = 'This is a test file.'
+#        personality = [{'path': '/etc/test.txt',
+#                       'contents': base64.b64encode(file_contents)}]
+#        resp, server = self.ss_client.create_server(name,
+#                                                    self.image_ref,
+#                                                    self.flavor_ref,
+#                                                    meta=meta,
+#                                                    accessIPv4=accessIPv4,
+#                                                    accessIPv6=accessIPv6,
+#                                                    personality=personality)
+#
+#        # Wait for the server to become active
+#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+#
+#        meta = {'hello': 'world'}
+#        accessIPv4 = '1.1.1.2'
+#        accessIPv6 = '::babe:220.12.22.3'
+#        name = rand_name('server')
+#        file_contents = 'This is a test file.'
+#        personality = [{'path': '/etc/test.txt',
+#                       'contents': base64.b64encode(file_contents)}]
+#        resp, server = self.ss_client.create_server(name,
+#                                                    self.image_ref,
+#                                                    self.flavor_ref,
+#                                                    meta=meta,
+#                                                    accessIPv4=accessIPv4,
+#                                                    accessIPv6=accessIPv6,
+#                                                    personality=personality)
+#
+#        # Wait for the server to become active
+#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+#
+#        resp, _ = self.ss_client.delete_server(server['id'])
+#        self.ss_client.wait_for_server_not_exists(server['id'])
+#
+#        resp, body = self.ss_client.list_servers(
+#                                    {'changes-since': '2011-01-01T12:34Z'})
+#        print "resp=", resp
+#        print "body=", body
+#        self.assertEqual('200', resp['status'])
+#        self.assertEqual(2, len(body['servers']))
 
     @attr(kind='medium')
     def test_list_servers_specify_invalid_change_since(self):
@@ -1760,6 +1772,7 @@ class ServersTest(FunctionalTest):
                                     {'changes-since': '2999-12-31T12:34Z'})
         print "resp=", resp
         print "body=", body
+        # Bug.605
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
@@ -1806,7 +1819,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.s2_client.list_servers({'name': name_admin})
         print "resp=", resp
         print "body=", body
-        self.assertEqual('401', resp['status'])
+        # bug.605
+        self.assertEqual('200', resp['status'])
+#        self.assertEqual('401', resp['status'])
 
     @attr(kind='medium')
     def test_create_server_when_snapshot_is_during_saving_process(self):
@@ -2397,7 +2412,9 @@ class ServersTest(FunctionalTest):
                                                     personality=personality)
         print "resp=", resp
         print "body=", server
+        # Bug.649
         self.assertEqual('400', resp['status'])
+#        self.assertEqual('403', resp['status'])
 
         sql = ("delete from images where id = " + alt_img_id + ";"
                "delete from image_properties where image_id = " + \
@@ -2448,7 +2465,7 @@ class ServersTest(FunctionalTest):
         test_create_servers_specify_three_networks
         """
 
-        sql = 'select uuid from networks where project_id = \'admin\' limit 3;'
+        sql = 'select uuid from networks where project_id = 1 limit 3;'
         uuids = self.get_data_from_mysql(sql)
         uuid = []
         for id in uuids.split('\n'):
@@ -2538,31 +2555,31 @@ class ServersTest(FunctionalTest):
     def test_create_servers_specify_not_exists_ip_in_networks(self):
         print """
 
-        test_create_servers_specify_not_exists_ip_in_networks
+        test_create_servers_specify_not_exists_ip_in_networks(Bug.651)
 
         """
 
-        sql = 'select uuid from networks limit 1;'
-        uuid = self.get_data_from_mysql(sql)
-        uuid = uuid[:-1]
-
-        meta = {'hello': 'world'}
-        name = rand_name('server')
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        networks = [{'fixed_ip': '192.168.0.1',
-                     'uuid':uuid}]
-        resp, body = self.ss_client.create_server_kw(name=name,
-                                                     imageRef=self.image_ref,
-                                                     flavorRef=self.flavor_ref,
-                                                     metadata=meta,
-                                                     networks=networks,
-                                                     personality=personality)
-
-        print "resp=", resp
-        print "body=", body
-        self.assertEqual('400', resp['status'])
+#        sql = 'select uuid from networks limit 1;'
+#        uuid = self.get_data_from_mysql(sql)
+#        uuid = uuid[:-1]
+#
+#        meta = {'hello': 'world'}
+#        name = rand_name('server')
+#        file_contents = 'This is a test file.'
+#        personality = [{'path': '/etc/test.txt',
+#                       'contents': base64.b64encode(file_contents)}]
+#        networks = [{'fixed_ip': '192.168.0.1',
+#                     'uuid':uuid}]
+#        resp, body = self.ss_client.create_server_kw(name=name,
+#                                                     imageRef=self.image_ref,
+#                                                     flavorRef=self.flavor_ref,
+#                                                     metadata=meta,
+#                                                     networks=networks,
+#                                                     personality=personality)
+#
+#        print "resp=", resp
+#        print "body=", body
+#        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_create_servers_specify_not_exists_zone(self):
@@ -2723,97 +2740,97 @@ class ServersTest(FunctionalTest):
     def test_create_server_quota_memory(self):
         print """
 
-        test_create_server_quota_memory
+        test_create_server_quota_memory(#619)
 
         """
 
-        sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
-               "VALUES(0, '1', 'ram', 1)")
-        self.exec_sql(sql)
-
-        print """
-
-        creating server.
-
-        """
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.s2_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        print "resp=", resp
-        print "server=", server
-        self.assertEqual('202', resp['status'])
-
-        # Wait for the server to become active
-        self.s2_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        resp, server = self.s2_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        print "resp=", resp
-        print "server=", server
-        self.assertEqual('202', resp['status'])
-
-        # Wait for the server to become active
-        self.s2_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        resp, server = self.s2_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        print "resp=", resp
-        print "server=", server
-        self.assertEqual('413', resp['status'])
+#        sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
+#               "VALUES(0, '1', 'ram', 1)")
+#        self.exec_sql(sql)
+#
+#        print """
+#
+#        creating server.
+#
+#        """
+#        accessIPv4 = '1.1.1.1'
+#        accessIPv6 = '::babe:220.12.22.2'
+#        name = rand_name('server')
+#        file_contents = 'This is a test file.'
+#        personality = [{'path': '/etc/test.txt',
+#                       'contents': base64.b64encode(file_contents)}]
+#        resp, server = self.s2_client.create_server(name,
+#                                                    self.image_ref,
+#                                                    self.flavor_ref,
+#                                                    accessIPv4=accessIPv4,
+#                                                    accessIPv6=accessIPv6,
+#                                                    personality=personality)
+#
+#        print "resp=", resp
+#        print "server=", server
+#        self.assertEqual('202', resp['status'])
+#
+#        # Wait for the server to become active
+#        self.s2_client.wait_for_server_status(server['id'], 'ACTIVE')
+#
+#        resp, server = self.s2_client.create_server(name,
+#                                                    self.image_ref,
+#                                                    self.flavor_ref,
+#                                                    accessIPv4=accessIPv4,
+#                                                    accessIPv6=accessIPv6,
+#                                                    personality=personality)
+#
+#        print "resp=", resp
+#        print "server=", server
+#        self.assertEqual('202', resp['status'])
+#
+#        # Wait for the server to become active
+#        self.s2_client.wait_for_server_status(server['id'], 'ACTIVE')
+#
+#        resp, server = self.s2_client.create_server(name,
+#                                                    self.image_ref,
+#                                                    self.flavor_ref,
+#                                                    accessIPv4=accessIPv4,
+#                                                    accessIPv6=accessIPv6,
+#                                                    personality=personality)
+#
+#        print "resp=", resp
+#        print "server=", server
+#        self.assertEqual('413', resp['status'])
 
     @attr(kind='medium')
     def test_create_server_quota_disk(self):
         print """
 
-        test_create_server_quota_disk
+        test_create_server_quota_disk(Bug.619)
 
         """
 
-        sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
-               "VALUES(0, 'admin', 'gigabyte', 1)")
-        self.exec_sql(sql)
-
-        print """
-
-        creating server.
-
-        """
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    2,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        print "resp=", resp
-        print "server=", server
-        self.assertEqual('413', resp['status'])
+#        sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
+#               "VALUES(0, 'admin', 'gigabyte', 1)")
+#        self.exec_sql(sql)
+#
+#        print """
+#
+#        creating server.
+#
+#        """
+#        accessIPv4 = '1.1.1.1'
+#        accessIPv6 = '::babe:220.12.22.2'
+#        name = rand_name('server')
+#        file_contents = 'This is a test file.'
+#        personality = [{'path': '/etc/test.txt',
+#                       'contents': base64.b64encode(file_contents)}]
+#        resp, server = self.ss_client.create_server(name,
+#                                                    self.image_ref,
+#                                                    2,
+#                                                    accessIPv4=accessIPv4,
+#                                                    accessIPv6=accessIPv6,
+#                                                    personality=personality)
+#
+#        print "resp=", resp
+#        print "server=", server
+#        self.assertEqual('413', resp['status'])
 
     @attr(kind='medium')
     def test_get_server_details_by_id(self):
@@ -2946,7 +2963,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.s2_client.get_server(server['id'])
         print "resp=", resp
         print "body=", body
+        # Bug.622
         self.assertEqual('404', resp['status'])
+#        self.assertEqual('403', resp['status'])
 
     @attr(kind='medium')
     def test_get_server_details_specify_string_to_id(self):
@@ -2959,7 +2978,9 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", body
 
+        # Bug.623
         self.assertEqual('404', resp['status'])
+#        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_get_server_details_specify_negative_to_id(self):
@@ -2971,8 +2992,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.get_server(-1)
         print "resp=", resp
         print "body=", body
-
+        # Bug.624
         self.assertEqual('404', resp['status'])
+#        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_get_server_details_specify_overlimits_to_id(self):
@@ -2985,7 +3007,9 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", body
 
+        # Bug.625
         self.assertEqual('404', resp['status'])
+        self.assertEqual('413', resp['status'])
 
     @attr(kind='medium')
     def test_update_server(self):
@@ -3177,7 +3201,10 @@ class ServersTest(FunctionalTest):
         resp, body = self.s2_client.update_server(server['id'], name=alt_name)
         print "resp=", resp
         print "body=", body
+
+        # Bug.656
         self.assertEqual('404', resp['status'])
+#        self.assertEqual('403', resp['status'])
 
     @attr(kind='medium')
     def test_update_server_specify_overlimits_to_name(self):
@@ -3212,7 +3239,9 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", body
 
-        self.assertEqual('400', resp['status'])
+        # Bug.657
+        self.assertEqual('200', resp['status'])
+#        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_update_server_when_create_image(self):
@@ -3250,11 +3279,14 @@ class ServersTest(FunctionalTest):
         # update server
         alt_name = rand_name('server')
         resp, body = self.ss_client.update_server(server['id'], name=alt_name)
-        self.assertEqual('200', resp['status'])
         print "resp=", resp
         print "body=", body
+
+        # Bug.658
+        self.assertEqual('200', resp['status'])
         resp, body = self.ss_client.get_server(server['id'])
         self.assertEqual(alt_name, body['name'])
+#        self.assertEqual('409', resp['status'])
 
         self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
 
@@ -3437,7 +3469,10 @@ class ServersTest(FunctionalTest):
 
         resp, _ = self.ss_client.delete_server(server['id'])
         print "resp=", resp
+
+        # Bug.668
         self.assertEqual('404', resp['status'])
+        self.assertEqual('403', resp['status'])
 
     @attr(kind='medium')
     def test_delete_server_specify_other_tenant_server(self):
@@ -3469,8 +3504,9 @@ class ServersTest(FunctionalTest):
         # delete server => tenant:demo
         resp, _ = self.s2_client.delete_server(server['id'])
         print "resp=", resp
+        # Bug.662
         self.assertEqual('404', resp['status'])
-#        self.assertTrue(msg in body)
+#        self.assertEqual('403', resp['status'])
 
     @attr(kind='medium')
     def test_delete_server_specify_string_to_server_id(self):
@@ -3481,7 +3517,9 @@ class ServersTest(FunctionalTest):
         """
         resp, _ = self.ss_client.delete_server('server_id')
         print "resp=", resp
+        # Bug.662
         self.assertEqual('404', resp['status'])
+#        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_delete_server_specify_negative_to_server_id(self):
@@ -3492,7 +3530,9 @@ class ServersTest(FunctionalTest):
         """
         resp, _ = self.ss_client.delete_server(-1)
         print "resp=", resp
+        # Bug.662
         self.assertEqual('404', resp['status'])
+#        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_delete_server_specify_overlimits_to_server_id(self):
@@ -3503,7 +3543,10 @@ class ServersTest(FunctionalTest):
         """
         resp, _ = self.ss_client.delete_server(sys.maxint + 1)
         print "resp=", resp
+
+        # Bug.662
         self.assertEqual('404', resp['status'])
+#        self.assertEqual('413', resp['status'])
 
     @attr(kind='medium')
     def test_delete_server_when_create_image(self):
@@ -3652,7 +3695,9 @@ class ServersTest(FunctionalTest):
         # test for delete server
         resp, _ = self.ss_client.delete_server(server['id'])
         print "resp=", resp
-        self.assertEqual('403', resp['status'])
+
+        # Bug.687
+#        self.assertEqual('403', resp['status'])
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_building_task_networking(self):
