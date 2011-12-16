@@ -61,7 +61,7 @@ def tearDownModule(module):
     del module.environ_processes[:]
 
 
-class QuantumFunctionalTest(unittest.TestCase):
+class QuantumManagerFunctionalTest(unittest.TestCase):
 
     config = config
 
@@ -124,7 +124,7 @@ class QuantumFunctionalTest(unittest.TestCase):
     def check_create_network(self, retcode):
         self.assertEqual(subprocess.call('bin/nova-manage network create '
                                              '--label=private_1-1 '
-                                             '--project_id=admin '
+                                             '--project_id=1 '
                                              '--fixed_range_v4=10.0.0.0/24 '
                                              '--bridge_interface=br-int '
                                              '--num_networks=1 '
@@ -132,18 +132,14 @@ class QuantumFunctionalTest(unittest.TestCase):
                                          cwd=self.config.nova.directory,
                                          shell=True), retcode)
 
-    def _execute_and_wait_for_error(self, **param):
-        # quantum.
-        quantum = QuantumProcess(self.config.quantum.directory,
-                        self.config.quantum.config)
-        quantum_plugin = QuantumPluginOvsAgentProcess(
-                        self.config.quantum.directory,
-                        self.config.quantum.agent_config)
 
+class QuantumManagerQuantumResetTest(QuantumManagerFunctionalTest):
+    @attr(kind='medium')
+    def test_it(self):
+        # quantum.
+        quantum = FakeQuantumProcess('1')
         self.testing_processes.append(quantum)
-        self.testing_processes.append(quantum_plugin)
         quantum.start()
-        quantum_plugin.start()
 
         self.check_create_network(0)
 
@@ -157,17 +153,10 @@ class QuantumFunctionalTest(unittest.TestCase):
                                                     accessIPv6=accessIPv6)
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
+        # flush data by restarting the process.
+        quantum.stop()
+        quantum.start()
         emphasised_print('Start testing %s' % self.id())
-
-        if param['delete_vif_db']:
-            subprocess.check_call('mysql -u%s -p%s -e "'
-                              'connect nova;'
-                              'delete from fixed_ips;'
-                              'delete from virtual_interfaces;'
-                              '"' % (
-                                  self.config.mysql.user,
-                                  self.config.mysql.password),
-                              shell=True)
 
         self.ss_client.reboot(server['id'], 'HARD')
         # Wait for the server to become ERROR.DELETED
@@ -175,10 +164,11 @@ class QuantumFunctionalTest(unittest.TestCase):
                           self.ss_client.wait_for_server_status,
                           server['id'], 'ERROR')
 
+
+class QuantumManagerRestServiceTest(QuantumManagerFunctionalTest):
     def _execute_fake_and_wait_for_error(self, **param):
         # quantum.
-        quantum = FakeQuantumProcess('admin', **param)
-#        quantum = FakeQuantumProcess(self.config.nova.tenant_name)
+        quantum = FakeQuantumProcess('1', **param)
         self.testing_processes.append(quantum)
         quantum.start()
 
@@ -205,10 +195,6 @@ class QuantumFunctionalTest(unittest.TestCase):
 
     def _test_show_port_attachment(self, status_code):
         self._execute_fake_and_wait_for_error(show_port_attachment=status_code)
-
-    @attr(kind='medium')
-    def test_d02_310(self):
-        self._execute_and_wait_for_error(delete_vif_db=True)
 
     @attr(kind='medium')
     def test_d02_311(self):
@@ -265,7 +251,7 @@ class LibvirtFunctionalTest(unittest.TestCase):
 
         # quantum.
         self.testing_processes.append(
-                FakeQuantumProcess(self.config.nova.tenant_name))
+                FakeQuantumProcess('1'))
 
         # reset db.
         silent_check_call('mysql -u%s -p%s -e "'
@@ -285,11 +271,11 @@ class LibvirtFunctionalTest(unittest.TestCase):
         # allocate networks.
         silent_check_call('bin/nova-manage network create '
                           '--label=private_1-1 '
-                          '--project_id=%s '
+                          '--project_id=1 '
                           '--fixed_range_v4=10.0.0.0/24 '
                           '--bridge_interface=br-int '
                           '--num_networks=1 '
-                          '--network_size=32 ' % self.config.nova.tenant_name,
+                          '--network_size=32 ',
                           cwd=self.config.nova.directory, shell=True)
 
         self.addCleanup(cleanup_virtual_instances)
