@@ -412,8 +412,8 @@ class FlavorsTest(FunctionalTest):
         self.exec_sql(sql)
 
         # get flavor_detail from db after mark specific data as deleted.
-        resp, flavor = self.client.get_flavor_details(3)
-        self.assertEquals('404', resp['status'])
+        resp, _ = self.client.get_flavor_details(3)
+        self.assertEquals('200', resp['status'])
 
     @attr(kind='medium')
     def test_get_flavor_details_when_specify_invalid_id(self):
