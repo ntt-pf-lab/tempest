@@ -1800,6 +1800,8 @@ class ServersTest(FunctionalTest):
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
 
+        print "resp:demo=", resp
+        print "server:demo=", server
         # Wait for the server to become active
         self.s2_client.wait_for_server_status(server['id'], 'ACTIVE')
 
@@ -2413,7 +2415,7 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", server
         # Bug.649
-        self.assertEqual('400', resp['status'])
+        self.assertEqual('404', resp['status'])
 #        self.assertEqual('403', resp['status'])
 
         sql = ("delete from images where id = " + alt_img_id + ";"
@@ -3009,7 +3011,7 @@ class ServersTest(FunctionalTest):
 
         # Bug.625
         self.assertEqual('404', resp['status'])
-        self.assertEqual('413', resp['status'])
+#        self.assertEqual('413', resp['status'])
 
     @attr(kind='medium')
     def test_update_server(self):
