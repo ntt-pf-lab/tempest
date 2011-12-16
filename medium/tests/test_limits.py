@@ -1,6 +1,23 @@
+# vim: tabstop=4 shiftwidth=4 softtabstop=4
+
+# Copyright 2011 NTT
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
 import json
 import subprocess
 import time
+from nova import test
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
@@ -163,6 +180,7 @@ class LimitsTest(TestBase):
         self.assertEqual(body['limits']['absolute']['maxTotalCores'],
                          self.cores)
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_145_get_stored_limit(self):
         cores = 5
@@ -177,17 +195,20 @@ class LimitsTest(TestBase):
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_146_get_limit_from_unknown_tenant(self):
         resp, _body = self.get_limits(tenant_id='unknown')
         self.assertEqual(resp.status, 404)
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_147_get_limit(self):
         resp, body = self.get_limits()
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], self.cores)
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_148_update_limits(self):
         cores = 5
@@ -210,6 +231,7 @@ class LimitsTest(TestBase):
         resp, body = self.put_limits(tenant_id='unknown', cores=cores)
         self.assertEqual(resp.status, 404)
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_151_update_limits(self):
         cores = 5
@@ -224,6 +246,7 @@ class LimitsTest(TestBase):
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_152_update_some_limits(self):
         cores = 5
@@ -241,6 +264,7 @@ class LimitsTest(TestBase):
         self.assertEqual(body['quota_set']['cores'], cores)
         self.assertEqual(body['quota_set']['volumes'], volumes)
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_153_create_limits(self):
         cores = 5
@@ -279,6 +303,7 @@ class LimitsTest(TestBase):
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], self.cores)
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_156_default_limits_from_unknown_tenant(self):
         # update
@@ -313,6 +338,7 @@ class AppliedFlagValueTest(TestBase):
         self.assertEqual(body['limits']['absolute']['maxTotalCores'],
                          self.cores)
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_03_use_stored_value_instead_of_flags(self):
         cores = 5
