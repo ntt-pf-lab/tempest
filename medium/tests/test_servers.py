@@ -3721,9 +3721,9 @@ class ServersTest(FunctionalTest):
     def test_delete_server_instance_vm_active_task_rebuilding(self):
         self._test_delete_server_base('active', 'rebuilding')
 
-    @attr(kind='medium')
-    def test_delete_server_instance_vm_error_task_building(self):
-        self._test_delete_server_base('error', 'building')
+#    @attr(kind='medium')
+#    def test_delete_server_instance_vm_error_task_building(self):
+#        self._test_delete_server_base('error', 'building')
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_active_task_rebooting(self):
