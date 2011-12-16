@@ -12,6 +12,7 @@ from storm import exceptions
 from storm.common.utils.data_utils import rand_name
 from nova import utils
 from nova import flags
+from nova import test
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -340,21 +341,25 @@ class LibvirtErrorTest(LibvirtFunctionalTest):
         self._delete_server_with_fake_libvirt('virdomain-error', [
             ('libvirt', 'fake_libvirt.libvirt_undefine_patch_invalid_operation')])
 
+    @test.skip_test('skip temply')
     @attr(kind='medium')
     def test_d02_232(self):
         self._delete_server_with_fake_libvirt('vif-unplug-error', [
             ('nova.virt.libvirt.vif', 'fake_libvirt_vif.vif_patch')])
 
+    @test.skip_test('skip temply')
     @attr(kind='medium')
     def test_d02_234(self):
         self._delete_server_with_fake_libvirt('vif-unplug-error', [
             ('nova.virt.libvirt.vif', 'fake_libvirt_vif.vif_patch')])
 
+    @test.skip_test('skip temply')
     @attr(kind='medium')
     def test_d02_236(self):
         self._delete_server_with_fake_libvirt('firewall-error', [
             ('nova.virt.libvirt.firewall', 'fake_iptables.unfilter_patch')])
 
+    @test.skip_test('skip temply')
     @attr(kind='medium')
     def test_d02_237(self):
         self._delete_server_with_fake_libvirt('general-error', [
