@@ -56,7 +56,6 @@ class TestBase(unittest.TestCase):
 
     def setUp(self):
         self.testing_processes = []
-        import pdb; pdb.set_trace()
         self.os = openstack.Manager(config=self.config)
         # take a rest client from storm internal.
         self.rest_client = self.os.servers_client.client
@@ -134,11 +133,11 @@ class TestBase(unittest.TestCase):
         if defaults:
             return tenant_url + '/os-quota-sets/defaults'
         else:
-            return tenant_url + '/os-quota-sets'
+            # return tenant_url + '/os-quota-sets'
             # XXX treat this strange url as valid until the bug #427 is fixed.
-            # if tenant_id is None:
-            #     tenant_id = tenant_url.rsplit('/', 1)[1]
-            # return tenant_url + '/os-quota-sets/%s' % tenant_id
+            if tenant_id is None:
+                tenant_id = tenant_url.rsplit('/', 1)[1]
+            return tenant_url + '/os-quota-sets/%s' % tenant_id
 
     def get_absolute_limits(self, tenant_id=None):
         return self.request_for_limit(
@@ -180,7 +179,6 @@ class LimitsTest(TestBase):
         self.assertEqual(body['limits']['absolute']['maxTotalCores'],
                          self.cores)
 
-    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_145_get_stored_limit(self):
         cores = 5
@@ -201,14 +199,12 @@ class LimitsTest(TestBase):
         resp, _body = self.get_limits(tenant_id='unknown')
         self.assertEqual(resp.status, 404)
 
-    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_147_get_limit(self):
         resp, body = self.get_limits()
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], self.cores)
 
-    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_148_update_limits(self):
         cores = 5
@@ -223,6 +219,7 @@ class LimitsTest(TestBase):
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_149_update_limits_with_unknown_tenant(self):
         cores = 5
@@ -231,7 +228,6 @@ class LimitsTest(TestBase):
         resp, body = self.put_limits(tenant_id='unknown', cores=cores)
         self.assertEqual(resp.status, 404)
 
-    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_151_update_limits(self):
         cores = 5
@@ -246,7 +242,6 @@ class LimitsTest(TestBase):
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
 
-    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_152_update_some_limits(self):
         cores = 5
@@ -264,7 +259,6 @@ class LimitsTest(TestBase):
         self.assertEqual(body['quota_set']['cores'], cores)
         self.assertEqual(body['quota_set']['volumes'], volumes)
 
-    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_153_create_limits(self):
         cores = 5
@@ -283,6 +277,7 @@ class LimitsTest(TestBase):
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], cores)
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_154_update_unknown_limits(self):
         # prepare
@@ -338,7 +333,6 @@ class AppliedFlagValueTest(TestBase):
         self.assertEqual(body['limits']['absolute']['maxTotalCores'],
                          self.cores)
 
-    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_A00_03_use_stored_value_instead_of_flags(self):
         cores = 5
