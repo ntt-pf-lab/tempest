@@ -53,13 +53,13 @@ def setUpModule(module):
 #    environ_processes = module.environ_processes
     config = module.config
     try:
-        # create users.
-        subprocess.check_call('bin/nova-manage user create '
-                              '--name=admin --access=secrete --secret=secrete',
-                              cwd=self.config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage user create '
-                              '--name=demo --access=secrete --secret=secrete',
-                              cwd=self.config.nova.directory, shell=True)
+#        # create users.
+#        subprocess.check_call('bin/nova-manage user create '
+#                              '--name=admin --access=secrete --secret=secrete',
+#                              cwd=config.nova.directory, shell=True)
+#        subprocess.check_call('bin/nova-manage user create '
+#                              '--name=demo --access=secrete --secret=secrete',
+#                              cwd=config.nova.directory, shell=True)
         subprocess.check_call('bin/nova-manage network create '
                                '--label=private_1-1 '
                                '--project_id=1 '
@@ -93,8 +93,7 @@ def setUpModule(module):
                               '--network_size=32 ',
                               cwd=config.nova.directory, shell=True)
     except Exception:
-       pass
-
+        pass
 
 
 class FunctionalTest(unittest.TestCase):
@@ -102,46 +101,60 @@ class FunctionalTest(unittest.TestCase):
     config = default_config
 
     def setUp(self):
-      self.os = openstack.Manager(config=self.config)
-      self.testing_processes = []
-      try: 
-        # create tenants.
-        subprocess.check_call('bin/keystone-manage tenant add tenant1',
-                              cwd=self.config.keystone.directory, shell=True)
-        subprocess.check_call('bin/keystone-manage tenant add tenant2',
-                              cwd=self.config.keystone.directory, shell=True)
+        # reset db
+        subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
+                              'DELETE FROM users WHERE name = \'user1\';'
+                              'DELETE FROM users WHERE name = \'user2\';'
+                              'DELETE FROM users WHERE name = \'user3\';'
+                              'DELETE FROM tenants WHERE name = \'tenant1\';'
+                              'DELETE FROM tenants WHERE name = \'tenant2\';'
+                              'DELETE FROM user_roles WHERE NOT EXISTS '
+                              '(SELECT * FROM users WHERE id = user_id);'
+                              '"' % (
+                                  self.config.mysql.user,
+                                  self.config.mysql.password),
+                              shell=True)
 
-        # create users.
-        subprocess.check_call('bin/keystone-manage user add '
-                              'user1 user1 tenant1',
-                              cwd=self.config.keystone.directory, shell=True)
-        subprocess.check_call('bin/keystone-manage user add '
-                              'user2 user2 tenant1',
-                              cwd=self.config.keystone.directory, shell=True)
-        subprocess.check_call('bin/keystone-manage user add '
-                              'user3 user3 tenant2',
-                              cwd=self.config.keystone.directory, shell=True)
+        self.os = openstack.Manager(config=self.config)
+        self.testing_processes = []
+        try: 
+            # create tenants.
+            subprocess.check_call('bin/keystone-manage tenant add tenant1',
+                                  cwd=self.config.keystone.directory, shell=True)
+            subprocess.check_call('bin/keystone-manage tenant add tenant2',
+                                  cwd=self.config.keystone.directory, shell=True)
+    
+            # create users.
+            subprocess.check_call('bin/keystone-manage user add '
+                                  'user1 user1 tenant1',
+                                  cwd=self.config.keystone.directory, shell=True)
+            subprocess.check_call('bin/keystone-manage user add '
+                                  'user2 user2 tenant1',
+                                  cwd=self.config.keystone.directory, shell=True)
+            subprocess.check_call('bin/keystone-manage user add '
+                                  'user3 user3 tenant2',
+                                  cwd=self.config.keystone.directory, shell=True)
 
-        # create projects.
-#        subprocess.check_call('bin/nova-manage project create '
-#                              '--project=1 --user=admin',
-#                              cwd=self.config.nova.directory, shell=True)
-#        subprocess.check_call('bin/nova-manage project create '
-#                              '--project=2 --user=demo',
-#                              cwd=self.config.nova.directory, shell=True)
+            # create projects.
+#            subprocess.check_call('bin/nova-manage project create '
+#                                  '--project=1 --user=admin',
+#                                  cwd=self.config.nova.directory, shell=True)
+#            subprocess.check_call('bin/nova-manage project create '
+#                                  '--project=2 --user=demo',
+#                                  cwd=self.config.nova.directory, shell=True)
 
-        # grant role
-        subprocess.check_call('bin/keystone-manage role grant '
-                              'Member user1 tenant1',
-                              cwd=self.config.keystone.directory, shell=True)
-        subprocess.check_call('bin/keystone-manage role grant '
-                              'Member user2 tenant1',
-                              cwd=self.config.keystone.directory, shell=True)
-        subprocess.check_call('bin/keystone-manage role grant '
-                              'Member user3 tenant2',
-                              cwd=self.config.keystone.directory, shell=True)
-      except Exception:
-        pass
+            # grant role
+            subprocess.check_call('bin/keystone-manage role grant '
+                                  'Member user1 tenant1',
+                                  cwd=self.config.keystone.directory, shell=True)
+            subprocess.check_call('bin/keystone-manage role grant '
+                                  'Member user2 tenant1',
+                                  cwd=self.config.keystone.directory, shell=True)
+            subprocess.check_call('bin/keystone-manage role grant '
+                                  'Member user3 tenant2',
+                                  cwd=self.config.keystone.directory, shell=True)
+        except Exception:
+            pass
 
     def tearDown(self):
         # kill still existing virtual instances.
@@ -155,15 +168,15 @@ class FunctionalTest(unittest.TestCase):
             print "Servers : %s" % servers
             for s in servers['servers']:
                 try:
-                  print "Find existing instance %s" % s['id']
-                  resp, body = self.os.servers_client.delete_server(s['id'])
-                  if resp['status'] == '200' or resp['status'] == '202':
-                      self.os.servers_client.wait_for_server_not_exists(s['id'])
-                      time.sleep(5)
+                    print "Find existing instance %s" % s['id']
+                    resp, body = self.os.servers_client.delete_server(s['id'])
+                    if resp['status'] == '200' or resp['status'] == '202':
+                        self.os.servers_client.wait_for_server_not_exists(s['id'])
+                        time.sleep(5)
                 except Exception as e:
-                  print e
+                    print e
         except Exception:
-           pass
+            pass
         print """
 
         Cleanup DB
