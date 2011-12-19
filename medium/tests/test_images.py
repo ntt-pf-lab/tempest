@@ -665,16 +665,12 @@ class ImagesTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client_for_user1.create_image(server['id'],
                                                            alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -684,15 +680,11 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user2
         resp, images = self.img_client_for_user2.list_images()
-        print 'resp(list_images_for_user2)=====' + str(resp)
-        print 'images(list_images_for_user2)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
         # user1
         resp, images = self.img_client_for_user1.list_images()
-        print 'resp(list_images_for_user1)=====' + str(resp)
-        print 'images(list_images_for_user1)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
@@ -714,16 +706,12 @@ class ImagesTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client_for_user1.create_image(server['id'],
                                                            alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -733,15 +721,11 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user3
         resp, images = self.img_client_for_user3.list_images()
-        print 'resp(list_images_for_user3)=====' + str(resp)
-        print 'images(list_images_for_user3)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertFalse(str(image_id) in [x['id'] for x in images])
 
         # user1
         resp, images = self.img_client_for_user1.list_images()
-        print 'resp(list_images_for_user1)=====' + str(resp)
-        print 'images(list_images_for_user1)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
@@ -1164,16 +1148,12 @@ class ImagesTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client_for_user1.create_image(server['id'],
                                                            alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1183,15 +1163,11 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user2
         resp, images = self.img_client_for_user2.list_images_with_detail()
-        print 'resp(list_images_for_user2)=====' + str(resp)
-        print 'images(list_images_for_user2)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
         # user1
         resp, images = self.img_client_for_user1.list_images_with_detail()
-        print 'resp(list_images_for_user1)=====' + str(resp)
-        print 'images(list_images_for_user1)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
@@ -1214,16 +1190,12 @@ class ImagesTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client_for_user1.create_image(server['id'],
                                                            alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1233,15 +1205,11 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user3
         resp, images = self.img_client_for_user3.list_images_with_detail()
-        print 'resp(list_images_for_user3)=====' + str(resp)
-        print 'images(list_images_for_user3)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertFalse(str(image_id) in [x['id'] for x in images])
 
         # user1
         resp, images = self.img_client_for_user1.list_images_with_detail()
-        print 'resp(list_images_for_user1)=====' + str(resp)
-        print 'images(list_images_for_user1)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
@@ -1630,16 +1598,12 @@ class ImagesTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client_for_user1.create_image(server['id'],
                                                            alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1649,16 +1613,12 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user2
         resp, image = self.img_client_for_user2.get_image(image_id)
-        print 'resp(get_image_for_user2)=====' + str(resp)
-        print 'image(get_image_for_user2)=====' + str(image)
         self.assertEqual('200', resp['status'])
         self.assertTrue(image)
         self.assertEqual(image_id, image['id'])
 
         # user1
         resp, image = self.img_client_for_user1.get_image(image_id)
-        print 'resp(get_image_for_user1)=====' + str(resp)
-        print 'image(get_image_for_user1)=====' + str(image)
         self.assertEqual('200', resp['status'])
         self.assertTrue(image)
         self.assertEqual(image_id, image['id'])
@@ -1681,16 +1641,12 @@ class ImagesTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client_for_user1.create_image(server['id'],
                                                            alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1700,14 +1656,10 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user3
         resp, image = self.img_client_for_user3.get_image(image_id)
-        print 'resp(get_image_for_user3)=====' + str(resp)
-        print 'image(get_image_for_user3)=====' + str(image)
         self.assertEqual('404', resp['status'])
 
         # user1
         resp, image = self.img_client_for_user1.get_image(image_id)
-        print 'resp(get_image_for_user1)=====' + str(resp)
-        print 'image(get_image_for_user1)=====' + str(image)
         self.assertEqual('200', resp['status'])
         self.assertTrue(image)
         self.assertEqual(image_id, image['id'])
@@ -1729,8 +1681,6 @@ class ImagesTest(FunctionalTest):
 
         # execute and assert
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=' + str(resp)
-        print 'body=' + str(body)
         self.assertEqual('204', resp['status'])
 
         resp, body = self.img_client.get_image(image_id)
@@ -1757,8 +1707,6 @@ class ImagesTest(FunctionalTest):
 
         # execute and assert
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=' + str(resp)
-        print 'body=' + str(body)
         #TODO 404 is expected
         #self.assertEqual('404', resp['status'])
         self.assertEqual('400', resp['status'])
@@ -1769,8 +1717,6 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         image_id = ''
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=' + str(resp)
-        print 'body=' + str(body)
         #TODO 400 is expected
         #self.assertEqual('400', resp['status'])
         self.assertEqual('404', resp['status'])
@@ -1781,8 +1727,6 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         image_id = 'abc'
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=====' + str(resp)
-        print 'body=====' + str(body)
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
@@ -1791,8 +1735,6 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         image_id = -1
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=====' + str(resp)
-        print 'body=====' + str(body)
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
@@ -1801,8 +1743,6 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         image_id = sys.maxint + 1
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=====' + str(resp)
-        print 'body=====' + str(body)
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
@@ -1822,8 +1762,6 @@ class ImagesTest(FunctionalTest):
 
         # execute and assert
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=' + str(resp)
-        print 'body=' + str(body)
         self.assertEqual('204', resp['status'])
 
         resp, body = self.img_client.get_image(image_id)
@@ -1845,8 +1783,6 @@ class ImagesTest(FunctionalTest):
 
         # execute and assert
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=' + str(resp)
-        print 'body=' + str(body)
         self.assertEqual('204', resp['status'])
 
         resp, body = self.img_client.get_image(image_id)
@@ -1870,16 +1806,12 @@ class ImagesTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client_for_user1.create_image(server['id'],
                                                            alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1889,8 +1821,6 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user2
         resp, body = self.img_client_for_user2.delete_image(image_id)
-        print 'resp(delete_image_for_user2)=====' + str(resp)
-        print 'body(delete_image_for_user2)=====' + str(body)
         self.assertEqual('204', resp['status'])
 
     @attr(kind='medium')
@@ -1911,16 +1841,12 @@ class ImagesTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client_for_user1.create_image(server['id'],
                                                            alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1930,14 +1856,10 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user3
         resp, body = self.img_client_for_user3.delete_image(image_id)
-        print 'resp(delete_image_for_user3)=====' + str(resp)
-        print 'body(delete_image_for_user3)=====' + str(body)
         #TODO 401 is expected
         #self.assertEqual('401', resp['status'])
         self.assertEqual('400', resp['status'])
 
         # user1
         resp, body = self.img_client_for_user1.delete_image(image_id)
-        print 'resp(delete_image_for_user1)=====' + str(resp)
-        print 'body(delete_image_for_user1)=====' + str(body)
         self.assertEqual('204', resp['status'])
