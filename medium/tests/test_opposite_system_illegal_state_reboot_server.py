@@ -12,6 +12,7 @@ from storm import exceptions
 from storm.common.utils.data_utils import rand_name
 from nova import utils
 from nova import flags
+from nova import test
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -196,16 +197,19 @@ class QuantumManagerRestServiceTest(QuantumManagerFunctionalTest):
     def _test_show_port_attachment(self, status_code):
         self._execute_fake_and_wait_for_error(show_port_attachment=status_code)
 
+    @test.skip_test('not merge into kirin master brach')
     @attr(kind='medium')
     def test_d02_311(self):
         """show_port_attachment_forbidden"""
         self._test_show_port_attachment(403)
 
+    @test.skip_test('not merge into kirin master brach')
     @attr(kind='medium')
     def test_d02_312(self):
         """show_port_attachment_network_not_found"""
         self._test_show_port_attachment(420)
 
+    @test.skip_test('not merge into kirin master brach')
     @attr(kind='medium')
     def test_d02_313(self):
         """show_port_attachment_port_not_found"""
