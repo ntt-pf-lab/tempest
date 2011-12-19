@@ -52,14 +52,51 @@ environ_processes = []
 def setUpModule(module):
 #    environ_processes = module.environ_processes
     config = module.config
+
+    # reset db
+    subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
+                          'DELETE FROM users WHERE name = \'user1\';'
+                          'DELETE FROM users WHERE name = \'user2\';'
+                          'DELETE FROM users WHERE name = \'user3\';'
+                          'DELETE FROM tenants WHERE name = \'tenant1\';'
+                          'DELETE FROM tenants WHERE name = \'tenant2\';'
+                          'DELETE FROM user_roles WHERE NOT EXISTS '
+                          '(SELECT * FROM users WHERE id = user_id);'
+                          '"' % (
+                              config.mysql.user,
+                              config.mysql.password),
+                          shell=True)
+
     try:
-#        # create users.
-#        subprocess.check_call('bin/nova-manage user create '
-#                              '--name=admin --access=secrete --secret=secrete',
-#                              cwd=config.nova.directory, shell=True)
-#        subprocess.check_call('bin/nova-manage user create '
-#                              '--name=demo --access=secrete --secret=secrete',
-#                              cwd=config.nova.directory, shell=True)
+        # create tenants.
+        subprocess.check_call('bin/keystone-manage tenant add tenant1',
+                              cwd=config.keystone.directory, shell=True)
+        subprocess.check_call('bin/keystone-manage tenant add tenant2',
+                              cwd=config.keystone.directory, shell=True)
+
+        # create users.
+        subprocess.check_call('bin/keystone-manage user add '
+                              'user1 user1 tenant1',
+                              cwd=config.keystone.directory, shell=True)
+        subprocess.check_call('bin/keystone-manage user add '
+                              'user2 user2 tenant1',
+                              cwd=config.keystone.directory, shell=True)
+        subprocess.check_call('bin/keystone-manage user add '
+                              'user3 user3 tenant2',
+                              cwd=config.keystone.directory, shell=True)
+
+        # grant role
+        subprocess.check_call('bin/keystone-manage role grant '
+                              'Member user1 tenant1',
+                              cwd=config.keystone.directory, shell=True)
+        subprocess.check_call('bin/keystone-manage role grant '
+                              'Member user2 tenant1',
+                              cwd=config.keystone.directory, shell=True)
+        subprocess.check_call('bin/keystone-manage role grant '
+                              'Member user3 tenant2',
+                              cwd=config.keystone.directory, shell=True)
+
+        # allocate networks.
         subprocess.check_call('bin/nova-manage network create '
                                '--label=private_1-1 '
                                '--project_id=1 '
@@ -96,65 +133,38 @@ def setUpModule(module):
         pass
 
 
+def tearDownModule(module):
+    config = module.config
+    # reset db
+    subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
+                          'SELECT * FROM tenants;'
+                          'SELECT users.id AS user_id, users.name AS '
+                          'user_name, password, tenants.name AS '
+                          'tenant_name, roles.name AS role_name FROM '
+                          'user_roles, users, tenants, roles WHERE '
+                          'user_roles.user_id = users.id AND '
+                          'user_roles.tenant_id = tenants.id AND '
+                          'user_roles.role_id = roles.id;'
+                          'DELETE FROM users WHERE name = \'user1\';'
+                          'DELETE FROM users WHERE name = \'user2\';'
+                          'DELETE FROM users WHERE name = \'user3\';'
+                          'DELETE FROM tenants WHERE name = \'tenant1\';'
+                          'DELETE FROM tenants WHERE name = \'tenant2\';'
+                          'DELETE FROM user_roles WHERE NOT EXISTS '
+                          '(SELECT * FROM users WHERE id = user_id);'
+                          '"' % (
+                              config.mysql.user,
+                              config.mysql.password),
+                          shell=True)
+
+
 class FunctionalTest(unittest.TestCase):
 
     config = default_config
 
     def setUp(self):
-        # reset db
-        subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
-                              'DELETE FROM users WHERE name = \'user1\';'
-                              'DELETE FROM users WHERE name = \'user2\';'
-                              'DELETE FROM users WHERE name = \'user3\';'
-                              'DELETE FROM tenants WHERE name = \'tenant1\';'
-                              'DELETE FROM tenants WHERE name = \'tenant2\';'
-                              'DELETE FROM user_roles WHERE NOT EXISTS '
-                              '(SELECT * FROM users WHERE id = user_id);'
-                              '"' % (
-                                  self.config.mysql.user,
-                                  self.config.mysql.password),
-                              shell=True)
-
         self.os = openstack.Manager(config=self.config)
         self.testing_processes = []
-        try: 
-            # create tenants.
-            subprocess.check_call('bin/keystone-manage tenant add tenant1',
-                                  cwd=self.config.keystone.directory, shell=True)
-            subprocess.check_call('bin/keystone-manage tenant add tenant2',
-                                  cwd=self.config.keystone.directory, shell=True)
-    
-            # create users.
-            subprocess.check_call('bin/keystone-manage user add '
-                                  'user1 user1 tenant1',
-                                  cwd=self.config.keystone.directory, shell=True)
-            subprocess.check_call('bin/keystone-manage user add '
-                                  'user2 user2 tenant1',
-                                  cwd=self.config.keystone.directory, shell=True)
-            subprocess.check_call('bin/keystone-manage user add '
-                                  'user3 user3 tenant2',
-                                  cwd=self.config.keystone.directory, shell=True)
-
-            # create projects.
-#            subprocess.check_call('bin/nova-manage project create '
-#                                  '--project=1 --user=admin',
-#                                  cwd=self.config.nova.directory, shell=True)
-#            subprocess.check_call('bin/nova-manage project create '
-#                                  '--project=2 --user=demo',
-#                                  cwd=self.config.nova.directory, shell=True)
-
-            # grant role
-            subprocess.check_call('bin/keystone-manage role grant '
-                                  'Member user1 tenant1',
-                                  cwd=self.config.keystone.directory, shell=True)
-            subprocess.check_call('bin/keystone-manage role grant '
-                                  'Member user2 tenant1',
-                                  cwd=self.config.keystone.directory, shell=True)
-            subprocess.check_call('bin/keystone-manage role grant '
-                                  'Member user3 tenant2',
-                                  cwd=self.config.keystone.directory, shell=True)
-        except Exception:
-            pass
 
     def tearDown(self):
         # kill still existing virtual instances.
@@ -182,31 +192,9 @@ class FunctionalTest(unittest.TestCase):
         Cleanup DB
 
         """
-        # reset db
-        subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
-                              'SELECT * FROM tenants;'
-                              'SELECT users.id AS user_id, users.name AS '
-                              'user_name, password, tenants.name AS '
-                              'tenant_name, roles.name AS role_name FROM '
-                              'user_roles, users, tenants, roles WHERE '
-                              'user_roles.user_id = users.id AND '
-                              'user_roles.tenant_id = tenants.id AND '
-                              'user_roles.role_id = roles.id;'
-                              'DELETE FROM users WHERE name = \'user1\';'
-                              'DELETE FROM users WHERE name = \'user2\';'
-                              'DELETE FROM users WHERE name = \'user3\';'
-                              'DELETE FROM tenants WHERE name = \'tenant1\';'
-                              'DELETE FROM tenants WHERE name = \'tenant2\';'
-                              'DELETE FROM user_roles WHERE NOT EXISTS '
-                              '(SELECT * FROM users WHERE id = user_id);'
-                              '"' % (
-                                  self.config.mysql.user,
-                                  self.config.mysql.password),
-                              shell=True)
 
 
 class ImagesTest(FunctionalTest):
-
 
     def setUp(self):
         super(ImagesTest, self).setUp()
@@ -239,6 +227,7 @@ class ImagesTest(FunctionalTest):
         self.ss_client_for_user3 = ServersClient(**user3)
         self.img_client_for_user3 = ImagesClient(**user3)
 
+    def create_server(self):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -253,6 +242,7 @@ class ImagesTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
+        time.sleep(5)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -290,6 +280,9 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_when_image_amount_is_one(self):
         """ List of all images should contain the expected image """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
@@ -336,7 +329,10 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_when_image_amount_is_three(self):
         """ List of all images should contain the expected image """
-        # Make snapshot of the instance.
+        # create a server for test
+        self.create_server()
+
+        # create an image for test
         image_ids = []
         for _ in range(0, 3):
             alt_name = rand_name('server')
@@ -606,7 +602,10 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_when_status_is_active(self):
         """ List of all images should contain the active image """
-        # Make snapshot of the instance.
+        # create a server for test
+        self.create_server()
+
+        # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
         alt_img_url = resp['location']
@@ -628,7 +627,10 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_when_status_is_not_active(self):
         """ List of all images should contain the inactive image """
-        # Make snapshot of the instance.
+        # create a server for test
+        self.create_server()
+
+        # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
         alt_img_url = resp['location']
@@ -775,6 +777,9 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_with_detail_when_image_amount_is_one(self):
         """ Detailed list of images should contain the expected image """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
@@ -821,6 +826,9 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_with_detail_when_image_amount_is_three(self):
         """ Detailed list of images should contain the expected image """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
         image_ids = []
         for _ in range(0, 3):
@@ -1092,6 +1100,9 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_with_detail_when_status_is_active(self):
         """ Detailed list of the image should contain the active image """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
@@ -1114,6 +1125,9 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_with_detail_when_status_is_not_active(self):
         """ Detailed list of the image should contain the inactive image """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
@@ -1234,6 +1248,9 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_get_image_when_image_exists(self):
         """ Detail of the image should be returned """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
@@ -1257,6 +1274,9 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_get_image_when_image_does_not_exist(self):
         """ Error occurs that the specified image does not exist """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
@@ -1542,6 +1562,9 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_get_image_when_status_is_active(self):
         """ Detail of the image should be returned """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
@@ -1566,6 +1589,9 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_get_image_when_status_is_not_active(self):
         """ Detail of the image should be returned """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
@@ -1689,6 +1715,9 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_delete_image_when_image_exists(self):
         """ The specified image should be deleted """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
@@ -1710,6 +1739,9 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_delete_image_when_image_does_not_exist(self):
         """ Returns 404 response """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
@@ -1776,6 +1808,9 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_delete_image_when_status_is_active(self):
         """ The specified image should be deleted """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
@@ -1797,6 +1832,9 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_delete_image_when_status_is_not_active(self):
         """ The specified image should be deleted """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
         alt_name = rand_name('server')
         resp, body = self.ss_client.create_image(self.server_id, alt_name)
