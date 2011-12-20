@@ -1,6 +1,5 @@
 import base64
 import re
-import subprocess
 import time
 
 import unittest2 as unittest
@@ -103,6 +102,15 @@ class FunctionalTest(unittest.TestCase):
         for process in self.testing_processes:
             process.start()
         time.sleep(10)
+
+        # create users.
+        silent_check_call('bin/nova-manage user create '
+                          '--name=admin --access=secrete --secret=secrete',
+                          cwd=self.config.nova.directory, shell=True)
+        # create projects.
+        silent_check_call('bin/nova-manage project create '
+                          '--project=1 --user=admin',
+                          cwd=self.config.nova.directory, shell=True)
 
         # allocate networks.
         silent_check_call('bin/nova-manage network create '
