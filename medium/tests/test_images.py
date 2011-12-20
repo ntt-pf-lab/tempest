@@ -52,21 +52,21 @@ def setUpModule(module):
 #    environ_processes = module.environ_processes
     config = module.config
 
-    # reset db
-    subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
-                          'DELETE FROM users WHERE name = \'user1\';'
-                          'DELETE FROM users WHERE name = \'user2\';'
-                          'DELETE FROM users WHERE name = \'user3\';'
-                          'DELETE FROM tenants WHERE name = \'tenant1\';'
-                          'DELETE FROM tenants WHERE name = \'tenant2\';'
-                          'DELETE FROM user_roles WHERE NOT EXISTS '
-                          '(SELECT * FROM users WHERE id = user_id);'
-                          '"' % (
-                              config.mysql.user,
-                              config.mysql.password),
-                          shell=True)
-
     try:
+        # reset db
+        subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
+                              'DELETE FROM users WHERE name = \'user1\';'
+                              'DELETE FROM users WHERE name = \'user2\';'
+                              'DELETE FROM users WHERE name = \'user3\';'
+                              'DELETE FROM tenants WHERE name = \'tenant1\';'
+                              'DELETE FROM tenants WHERE name = \'tenant2\';'
+                              'DELETE FROM user_roles WHERE NOT EXISTS '
+                              '(SELECT * FROM users WHERE id = user_id);'
+                              '"' % (
+                                  config.mysql.user,
+                                  config.mysql.password),
+                              shell=True)
+
         # create tenants.
         subprocess.check_call('bin/keystone-manage tenant add tenant1',
                               cwd=config.keystone.directory, shell=True)
@@ -134,27 +134,38 @@ def setUpModule(module):
 
 def tearDownModule(module):
     config = module.config
+
     # reset db
-    subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
-                          'SELECT * FROM tenants;'
-                          'SELECT users.id AS user_id, users.name AS '
-                          'user_name, password, tenants.name AS '
-                          'tenant_name, roles.name AS role_name FROM '
-                          'user_roles, users, tenants, roles WHERE '
-                          'user_roles.user_id = users.id AND '
-                          'user_roles.tenant_id = tenants.id AND '
-                          'user_roles.role_id = roles.id;'
-                          'DELETE FROM users WHERE name = \'user1\';'
-                          'DELETE FROM users WHERE name = \'user2\';'
-                          'DELETE FROM users WHERE name = \'user3\';'
-                          'DELETE FROM tenants WHERE name = \'tenant1\';'
-                          'DELETE FROM tenants WHERE name = \'tenant2\';'
-                          'DELETE FROM user_roles WHERE NOT EXISTS '
-                          '(SELECT * FROM users WHERE id = user_id);'
-                          '"' % (
-                              config.mysql.user,
-                              config.mysql.password),
-                          shell=True)
+    time.sleep(5)
+    try:
+        subprocess.check_call('mysql -u%s -p%s -D nova -e "'
+                              'DELETE FROM instances WHERE deleted = 1;'
+                              '"' % (
+                                  config.mysql.user,
+                                  config.mysql.password),
+                              shell=True)
+        subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
+                              'SELECT * FROM tenants;'
+                              'SELECT users.id AS user_id, users.name AS '
+                              'user_name, password, tenants.name AS '
+                              'tenant_name, roles.name AS role_name FROM '
+                              'user_roles, users, tenants, roles WHERE '
+                              'user_roles.user_id = users.id AND '
+                              'user_roles.tenant_id = tenants.id AND '
+                              'user_roles.role_id = roles.id;'
+                              'DELETE FROM users WHERE name = \'user1\';'
+                              'DELETE FROM users WHERE name = \'user2\';'
+                              'DELETE FROM users WHERE name = \'user3\';'
+                              'DELETE FROM tenants WHERE name = \'tenant1\';'
+                              'DELETE FROM tenants WHERE name = \'tenant2\';'
+                              'DELETE FROM user_roles WHERE NOT EXISTS '
+                              '(SELECT * FROM users WHERE id = user_id);'
+                              '"' % (
+                                  config.mysql.user,
+                                  config.mysql.password),
+                              shell=True)
+    except Exception:
+        pass
 
 
 class FunctionalTest(unittest.TestCase):
