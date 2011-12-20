@@ -13,122 +13,106 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import base64
-import re
 import subprocess
 import time
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
-
+from nova import test
 from storm import openstack
 import storm.config
-from storm.common.utils.data_utils import rand_name
 
-from medium.tests.processes import (
-        GlanceRegistryProcess, GlanceApiProcess,
-        KeystoneProcess,
-        QuantumProcess, QuantumPluginOvsAgentProcess,
-        NovaApiProcess, NovaComputeProcess,
-        NovaNetworkProcess, NovaSchedulerProcess)
-from medium.tests.utils import (
-        emphasised_print, silent_check_call,
-        cleanup_virtual_instances, cleanup_processes)
 
 """
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
 
+# for admin tenant
 default_config = storm.config.StormConfig('etc/medium.conf')
+# for demo tenant
+test_config = storm.config.StormConfig('etc/medium_test.conf')
 config = default_config
 environ_processes = []
 
 
 def setUpModule(module):
-    environ_processes = module.environ_processes
     config = module.config
+    try:
+        subprocess.check_call('bin/nova-manage network create '
+                             '--label=private_1-1 '
+                             '--project_id=1 '
+                             '--fixed_range_v4=10.0.0.0/24 '
+                             '--bridge_interface=br-int '
+                             '--num_networks=1 '
+                             '--network_size=32 ',
+                             cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                            '--label=private_1-2 '
+                            '--project_id=1 '
+                            '--fixed_range_v4=10.0.1.0/24 '
+                            '--bridge_interface=br-int '
+                            '--num_networks=1 '
+                            '--network_size=32 ',
+                            cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                            '--label=private_1-3 '
+                            '--project_id=1 '
+                            '--fixed_range_v4=10.0.2.0/24 '
+                            '--bridge_interface=br-int '
+                            '--num_networks=1 '
+                            '--network_size=32 ',
+                            cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                            '--label=private_2-1 '
+                            '--project_id=2 '
+                            '--fixed_range_v4=10.0.3.0/24 '
+                            '--bridge_interface=br-int '
+                            '--num_networks=1 '
+                            '--network_size=32 ',
+                            cwd=config.nova.directory, shell=True)
+    except Exception:
+        pass
 
-    # glance.
-    environ_processes.append(GlanceRegistryProcess(
-            config.glance.directory,
-            config.glance.registry_config))
-    environ_processes.append(GlanceApiProcess(
-            config.glance.directory,
-            config.glance.api_config,
-            config.glance.host,
-            config.glance.port))
-
-    # keystone.
-    environ_processes.append(KeystoneProcess(
-            config.keystone.directory,
-            config.keystone.config,
-            config.keystone.host,
-            config.keystone.port))
-
-    # quantum.
-    environ_processes.append(QuantumProcess(
-        config.quantum.directory,
-        config.quantum.config))
-    environ_processes.append(QuantumPluginOvsAgentProcess(
-        config.quantum.directory,
-        config.quantum.agent_config))
-
-    for process in environ_processes:
-        process.start()
-    time.sleep(10)
-
-
-def tearDownModule(module):
-    for process in module.environ_processes:
-        process.stop()
-    del module.environ_processes[:]
 
 
 class FunctionalTest(unittest.TestCase):
 
     config = default_config
+    config2 = test_config
 
     def setUp(self):
+        # for admin tenant
         self.os = openstack.Manager(config=self.config)
+        # for demo tenant
+        self.os2 = openstack.Manager(config=self.config2)
         self.testing_processes = []
 
-        # nova.
-        self.testing_processes.append(NovaApiProcess(
-                self.config.nova.directory,
-                self.config.nova.host,
-                self.config.nova.port))
-        self.testing_processes.append(NovaComputeProcess(
-                self.config.nova.directory))
-        self.testing_processes.append(NovaNetworkProcess(
-                self.config.nova.directory))
-        self.testing_processes.append(NovaSchedulerProcess(
-                self.config.nova.directory))
-
-#        reset db.
-        subprocess.check_call('mysql -uroot -pnova -e "'
-                              'DROP DATABASE IF EXISTS nova;'
-                              'CREATE DATABASE nova;'
-                              '"',
-                              shell=True)
-        subprocess.call(['bin/nova-manage', 'db', 'sync'],
-                        cwd=self.config.nova.directory)
-
-        for process in self.testing_processes:
-            process.start()
-        time.sleep(10)
 
     def tearDown(self):
-        # kill still existing virtual instances.
-        for line in subprocess.check_output('virsh list --all',
-                                            shell=True).split('\n')[2:-2]:
-            (id, name, state) = line.split()
-            if state == 'running':
-                subprocess.check_call('virsh destroy %s' % id, shell=True)
-            subprocess.check_call('virsh undefine %s' % name, shell=True)
+        print """
 
-        for process in self.testing_processes:
-            process.stop()
-        del self.testing_processes[:]
+        Terminate All Instances
+
+        """
+        try:
+            _, servers= self.os.servers_client.list_servers()
+            print "Servers : %s" % servers
+            for s in servers['servers']:
+                try:
+                    print "Find existing instance %s" % s['id']
+                    resp, _ = self.os.servers_client.delete_server(s['id'])
+                    if resp['status'] == '200' or resp['status'] == '202':
+                        self.os.servers_client.wait_for_server_not_exists(s['id'])
+                        time.sleep(5)
+                except Exception as e:
+                    print e
+        except Exception:
+            pass
+        print """
+
+        Cleanup DB
+
+        """
 
     def exec_sql(self, sql):
         exec_sql = 'mysql -u %s -p%s nova -e "' + sql + '"'
@@ -144,6 +128,8 @@ class FunctionalTest(unittest.TestCase):
                                          self.config.mysql.password),
                                          shell=True)
 
+        return result
+
 
 class FlavorsTest(FunctionalTest):
     # Almost same as storm.tests.test_flavors,
@@ -157,9 +143,9 @@ class FlavorsTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_flavors_show_all_default_flavors(self):
         """ List of all flavors should contain the expected flavor """
-        resp, body = self.client.list_flavors()
+        _, body = self.client.list_flavors()
         flavors = body['flavors']
-        resp, flavor = self.client.get_flavor_details(self.flavor_ref)
+        _, flavor = self.client.get_flavor_details(self.flavor_ref)
         flavor_min_detail = {'id': flavor['id'], 'links': flavor['links'],
                              'name': flavor['name']}
         self.assertTrue(flavor_min_detail in flavors)
@@ -282,9 +268,9 @@ class FlavorsTest(FunctionalTest):
     def test_list_detail_flavors_show_all_default_flavors(self):
         """ Detailed list of all flavors should contain the expected flavor """
 
-        resp, body = self.client.list_flavors_with_detail()
+        _, body = self.client.list_flavors_with_detail()
         flavors = body['flavors']
-        resp, flavor = self.client.get_flavor_details(self.flavor_ref)
+        _, flavor = self.client.get_flavor_details(self.flavor_ref)
         self.assertTrue(flavor in flavors)
 
     @attr(kind='medium')
@@ -326,7 +312,7 @@ class FlavorsTest(FunctionalTest):
         self.exec_sql(sql)
 
         # get list_detail from db after added new data.
-        resp, body = self.client.list_flavors_with_detail()
+        _, body = self.client.list_flavors_with_detail()
         flavors = body['flavors']
         self.flag = False
         for i in range(0, 5):
@@ -387,13 +373,13 @@ class FlavorsTest(FunctionalTest):
     @attr(type='smoke')
     def test_get_flavor_details_when_flavor_exists(self):
         """ The expected flavor details should be returned """
-        resp, flavor = self.client.get_flavor_details(1)
+        _, flavor = self.client.get_flavor_details(1)
         self.assertEqual(self.flavor_ref, flavor['id'])
 
     @attr(kind='medium')
     def test_get_flavor_details_when_flavor_not_exist(self):
         """ Return error because specified flavor does not exist """
-        resp, flavor = self.client.get_flavor_details(10)
+        resp, _ = self.client.get_flavor_details(10)
         self.assertEquals('404', resp['status'])
 
     @attr(kind='medium')
@@ -407,7 +393,7 @@ class FlavorsTest(FunctionalTest):
         self.exec_sql(sql)
 
         # get flavor_detail from db after removing apecific data.
-        resp, flavor = self.client.get_flavor_details(3)
+        resp, _ = self.client.get_flavor_details(3)
         self.assertEquals('404', resp['status'])
 
         # initialize db correctly.
@@ -416,6 +402,7 @@ class FlavorsTest(FunctionalTest):
                "DROP TABLE IF EXISTS instance_types_bk;")
         self.exec_sql(sql)
 
+    @test.skip_test('Skip this case for bug #422')
     @attr(kind='medium')
     def test_get_flavor_details_when_specify_destroyed_flavor(self):
         """ Return error because specified flavor is destroyed """
@@ -428,12 +415,19 @@ class FlavorsTest(FunctionalTest):
 
         # get flavor_detail from db after mark specific data as deleted.
         resp, _ = self.client.get_flavor_details(3)
-        self.assertEquals('200', resp['status'])
+        self.assertEquals('404', resp['status'])
 
+        # initialize db correctly.
+        sql = ("TRUNCATE table instance_types;"
+               "INSERT INTO instance_types SELECT * FROM instance_types_bk;"
+               "DROP TABLE IF EXISTS instance_types_bk;")
+        self.exec_sql(sql)
+
+    @test.skip_test('Skip this case for bug #697')
     @attr(kind='medium')
     def test_get_flavor_details_when_specify_invalid_id(self):
         """ Return error because way to specify is inappropriate """
 
         # get flavor_detail from db after mark specific data as deleted.
-        resp, flavor = self.client.get_flavor_details('test_opst')
-        self.assertEquals('404', resp['status'])
+        resp, _ = self.client.get_flavor_details('test_opst')
+        self.assertEquals('400', resp['status'])
