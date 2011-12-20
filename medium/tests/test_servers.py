@@ -28,13 +28,6 @@ from storm import openstack
 import storm.config
 from storm.common.utils.data_utils import rand_name
 
-from medium.tests.processes import (
-        GlanceRegistryProcess, GlanceApiProcess,
-        KeystoneProcess,
-        QuantumProcess, QuantumPluginOvsAgentProcess,
-        NovaApiProcess, NovaComputeProcess,
-        NovaNetworkProcess, NovaSchedulerProcess)
-
 """
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
