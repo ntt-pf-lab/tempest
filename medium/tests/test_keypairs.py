@@ -123,6 +123,8 @@ class KeypairsTest(FunctionalTest):
         super(KeypairsTest, self).setUp()
         self.kp_client = self.os.keypairs_client
         self.ss_client = self.os.servers_client
+        # Please wait, it will fail otherwise.
+        time.sleep(5)
 
     @attr(kind='medium')
     def test_list_keypairs_when_keypair_amount_is_zero(self):
