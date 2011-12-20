@@ -174,14 +174,15 @@ class FunctionalTest(unittest.TestCase):
 
         """
         try:
-            _, servers= self.os.servers_client.list_servers()
+            _, servers = self.os.servers_client.list_servers()
             print "Servers : %s" % servers
             for s in servers['servers']:
                 try:
                     print "Find existing instance %s" % s['id']
                     resp, body = self.os.servers_client.delete_server(s['id'])
                     if resp['status'] == '200' or resp['status'] == '202':
-                        self.os.servers_client.wait_for_server_not_exists(s['id'])
+                        self.os.servers_client.wait_for_server_not_exists(
+                                                                    s['id'])
                         time.sleep(5)
                 except Exception as e:
                     print e
@@ -192,6 +193,7 @@ class FunctionalTest(unittest.TestCase):
         Cleanup DB
 
         """
+#        self.output_eventlog()
 
 
 class ImagesTest(FunctionalTest):
@@ -228,7 +230,6 @@ class ImagesTest(FunctionalTest):
         self.img_client_for_user3 = ImagesClient(**user3)
 
     def create_server(self):
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
         name = rand_name('server')
@@ -238,7 +239,6 @@ class ImagesTest(FunctionalTest):
         resp, server = self.ss_client.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
@@ -1263,7 +1263,7 @@ class ImagesTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
 
     @attr(kind='medium')
-    @tests.skip_test('ValueError occurred. Issue #444')
+    @tests.skip_test('Ignore this testcase for Issue #444')
     def test_get_image_when_image_id_is_empty_string(self):
         """ Error occurs that the format of parameter is invalid """
         # execute and assert
@@ -1272,34 +1272,31 @@ class ImagesTest(FunctionalTest):
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
+    @tests.skip_test('Ignore this testcase for Bug #612')
     def test_get_image_when_image_id_is_string(self):
         """ Returns 400 response """
         # execute and assert
         image_id = 'abc'
         resp, body = self.img_client.get_image(image_id)
-        #TODO 400 is expected
-        #self.assertEqual('400', resp['status'])
-        self.assertEqual('404', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
+    @tests.skip_test('Ignore this testcase for Bug #612')
     def test_get_image_when_image_id_is_negative_value(self):
-        """ Error occurs that the format of parameter is invalid """
+        """ Returns 400 response """
         # execute and assert
         image_id = -1
         resp, body = self.img_client.get_image(image_id)
-        #TODO 400 is expected
-        #self.assertEqual('400', resp['status'])
-        self.assertEqual('404', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
+    @tests.skip_test('Ignore this testcase for Bug #612')
     def test_get_image_when_image_id_is_over_maxint(self):
         """ Error occurs that the format of parameter is invalid """
         # execute and assert
         image_id = sys.maxint + 1
         resp, body = self.img_client.get_image(image_id)
-        #TODO 400 is expected
-        #self.assertEqual('400', resp['status'])
-        self.assertEqual('404', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_get_image_when_disk_format_is_aki(self):
@@ -1687,6 +1684,7 @@ class ImagesTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
 
     @attr(kind='medium')
+    @tests.skip_test('Ignore this testcase for Bug #455')
     def test_delete_image_when_image_does_not_exist(self):
         """ Returns 404 response """
         # create a server for test
@@ -1707,19 +1705,16 @@ class ImagesTest(FunctionalTest):
 
         # execute and assert
         resp, body = self.img_client.delete_image(image_id)
-        #TODO 404 is expected
-        #self.assertEqual('404', resp['status'])
-        self.assertEqual('400', resp['status'])
+        self.assertEqual('404', resp['status'])
 
     @attr(kind='medium')
+    @tests.skip_test('Ignore this testcase for Bug #610')
     def test_delete_image_when_image_id_is_empty_string(self):
         """ Returns 400 response """
         # execute and assert
         image_id = ''
         resp, body = self.img_client.delete_image(image_id)
-        #TODO 400 is expected
-        #self.assertEqual('400', resp['status'])
-        self.assertEqual('404', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_delete_image_when_image_id_is_string(self):
@@ -1824,6 +1819,7 @@ class ImagesTest(FunctionalTest):
         self.assertEqual('204', resp['status'])
 
     @attr(kind='medium')
+    @tests.skip_test('Ignore this testcase for Bug #607')
     def test_delete_image_when_unauthenticated_for_user(self):
         """ Only the authenticated image should be deleted """
         # create a server for test
@@ -1856,9 +1852,7 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user3
         resp, body = self.img_client_for_user3.delete_image(image_id)
-        #TODO 401 is expected
-        #self.assertEqual('401', resp['status'])
-        self.assertEqual('400', resp['status'])
+        self.assertEqual('401', resp['status'])
 
         # user1
         resp, body = self.img_client_for_user1.delete_image(image_id)
