@@ -1,6 +1,7 @@
 import base64
 import re
 import time
+import subprocess
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
@@ -32,40 +33,31 @@ def setUpModule(module):
     environ_processes = module.environ_processes
     config = module.config
 
-    # glance.
-    environ_processes.append(GlanceRegistryProcess(
-            config.glance.directory,
-            config.glance.registry_config))
-    environ_processes.append(GlanceApiProcess(
-            config.glance.directory,
-            config.glance.api_config,
-            config.glance.host,
-            config.glance.port))
-
-    # keystone.
-    environ_processes.append(KeystoneProcess(
-            config.keystone.directory,
-            config.keystone.config,
-            config.keystone.host,
-            config.keystone.port))
-
-    # quantum.
-    environ_processes.append(QuantumProcess(
-        config.quantum.directory,
-        config.quantum.config))
-    environ_processes.append(QuantumPluginOvsAgentProcess(
-        config.quantum.directory,
-        config.quantum.agent_config))
-
-    for process in environ_processes:
-        process.start()
-    time.sleep(10)
+    try:
+        # create users.
+        subprocess.check_call('bin/nova-manage user create '
+                          '--name=admin --access=secrete --secret=secrete',
+                          cwd=config.nova.directory, shell=True)
+        # create projects.
+        subprocess.check_call('bin/nova-manage project create '
+                          '--project=1 --user=admin',
+                          cwd=config.nova.directory, shell=True)
+    
+        # allocate networks.
+        subprocess.check_call('bin/nova-manage network create '
+                          '--label=private_1-1 '
+                          '--project_id=1 '
+                          '--fixed_range_v4=10.0.0.0/24 '
+                          '--bridge_interface=br-int '
+                          '--num_networks=1 '
+                          '--network_size=32 ',
+                          cwd=config.nova.directory, shell=True)
+    except Exception:
+        pass
 
 
 def tearDownModule(module):
-    for process in module.environ_processes:
-        process.stop()
-    del module.environ_processes[:]
+    pass
 
 
 class FunctionalTest(unittest.TestCase):
@@ -75,55 +67,6 @@ class FunctionalTest(unittest.TestCase):
     def setUp(self):
         self.os = openstack.Manager(config=self.config)
         self.testing_processes = []
-
-        # nova.
-        self.testing_processes.append(NovaApiProcess(
-                self.config.nova.directory,
-                self.config.nova.host,
-                self.config.nova.port))
-        self.testing_processes.append(NovaComputeProcess(
-                self.config.nova.directory))
-        self.testing_processes.append(NovaNetworkProcess(
-                self.config.nova.directory))
-        self.testing_processes.append(NovaSchedulerProcess(
-                self.config.nova.directory))
-
-        # reset db.
-        silent_check_call('mysql -u%s -p%s -e "'
-                          'DROP DATABASE IF EXISTS nova;'
-                          'CREATE DATABASE nova;'
-                          '"' % (
-                              self.config.mysql.user,
-                              self.config.mysql.password),
-                          shell=True)
-        silent_check_call('bin/nova-manage db sync',
-                          cwd=self.config.nova.directory, shell=True)
-
-        for process in self.testing_processes:
-            process.start()
-        time.sleep(10)
-
-        # create users.
-        silent_check_call('bin/nova-manage user create '
-                          '--name=admin --access=secrete --secret=secrete',
-                          cwd=self.config.nova.directory, shell=True)
-        # create projects.
-        silent_check_call('bin/nova-manage project create '
-                          '--project=1 --user=admin',
-                          cwd=self.config.nova.directory, shell=True)
-
-        # allocate networks.
-        silent_check_call('bin/nova-manage network create '
-                          '--label=private_1-1 '
-                          '--project_id=1 '
-                          '--fixed_range_v4=10.0.0.0/24 '
-                          '--bridge_interface=br-int '
-                          '--num_networks=1 '
-                          '--network_size=32 ',
-                          cwd=self.config.nova.directory, shell=True)
-
-        self.addCleanup(cleanup_virtual_instances)
-        self.addCleanup(cleanup_processes, self.testing_processes)
 
 
 class ServersTest(FunctionalTest):
