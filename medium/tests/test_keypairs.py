@@ -45,40 +45,40 @@ def setUpModule(module):
 #    environ_processes = module.environ_processes
     config = module.config
     try:
-      subprocess.check_call('bin/nova-manage network create '
-                             '--label=private_1-1 '
-                             '--project_id=1 '
-                             '--fixed_range_v4=10.0.0.0/24 '
-                             '--bridge_interface=br-int '
-                             '--num_networks=1 '
-                             '--network_size=32 ',
-                             cwd=config.nova.directory, shell=True)
-      subprocess.check_call('bin/nova-manage network create '
-                            '--label=private_1-2 '
-                            '--project_id=1 '
-                            '--fixed_range_v4=10.0.1.0/24 '
-                            '--bridge_interface=br-int '
-                            '--num_networks=1 '
-                            '--network_size=32 ',
-                            cwd=config.nova.directory, shell=True)
-      subprocess.check_call('bin/nova-manage network create '
-                            '--label=private_1-3 '
-                            '--project_id=1 '
-                            '--fixed_range_v4=10.0.2.0/24 '
-                            '--bridge_interface=br-int '
-                            '--num_networks=1 '
-                            '--network_size=32 ',
-                            cwd=config.nova.directory, shell=True)
-      subprocess.check_call('bin/nova-manage network create '
-                            '--label=private_2-1 '
-                            '--project_id=2 '
-                            '--fixed_range_v4=10.0.3.0/24 '
-                            '--bridge_interface=br-int '
-                            '--num_networks=1 '
-                            '--network_size=32 ',
-                            cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                               '--label=private_1-1 '
+                               '--project_id=1 '
+                               '--fixed_range_v4=10.0.0.0/24 '
+                               '--bridge_interface=br-int '
+                               '--num_networks=1 '
+                               '--network_size=32 ',
+                               cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_1-2 '
+                              '--project_id=1 '
+                              '--fixed_range_v4=10.0.1.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_1-3 '
+                              '--project_id=1 '
+                              '--fixed_range_v4=10.0.2.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_2-1 '
+                              '--project_id=2 '
+                              '--fixed_range_v4=10.0.3.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=config.nova.directory, shell=True)
     except Exception:
-       pass
+        pass
 
 
 class FunctionalTest(unittest.TestCase):
@@ -96,19 +96,19 @@ class FunctionalTest(unittest.TestCase):
 
         """
         try:
-            _, servers= self.os.servers_client.list_servers()
+            _, servers = self.os.servers_client.list_servers()
             print "Servers : %s" % servers
             for s in servers['servers']:
                 try:
-                  print "Find existing instance %s" % s['id']
-                  resp, body = self.os.servers_client.delete_server(s['id'])
-                  if resp['status'] == '200' or resp['status'] == '202':
-                      self.os.servers_client.wait_for_server_not_exists(s['id'])
-                      time.sleep(5)
+                    print "Find existing instance %s" % s['id']
+                    resp, body = self.os.servers_client.delete_server(s['id'])
+                    if resp['status'] == '200' or resp['status'] == '202':
+                        self.os.servers_client.wait_for_server_not_exists(s['id'])
+                        time.sleep(5)
                 except Exception as e:
-                  print e
+                    print e
         except Exception:
-           pass
+            pass
         print """
 
         Cleanup DB
