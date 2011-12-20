@@ -12,6 +12,7 @@ from storm import exceptions
 from storm.common.utils.data_utils import rand_name
 from nova import utils
 from nova import flags
+from nova import test
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -118,6 +119,15 @@ class QuantumManagerFunctionalTest(unittest.TestCase):
         self.ss_client = self.os.servers_client
         self.img_client = self.os.images_client
 
+        # create users.
+        silent_check_call('bin/nova-manage user create '
+                          '--name=admin --access=secrete --secret=secrete',
+                          cwd=self.config.nova.directory, shell=True)
+        # create projects.
+        silent_check_call('bin/nova-manage project create '
+                          '--project=1 --user=admin',
+                          cwd=self.config.nova.directory, shell=True)
+
         self.addCleanup(cleanup_virtual_instances)
         self.addCleanup(cleanup_processes, self.testing_processes)
 
@@ -196,16 +206,19 @@ class QuantumManagerRestServiceTest(QuantumManagerFunctionalTest):
     def _test_show_port_attachment(self, status_code):
         self._execute_fake_and_wait_for_error(show_port_attachment=status_code)
 
+    @test.skip_test('not merge into kirin master brach')
     @attr(kind='medium')
     def test_d02_311(self):
         """show_port_attachment_forbidden"""
         self._test_show_port_attachment(403)
 
+    @test.skip_test('not merge into kirin master brach')
     @attr(kind='medium')
     def test_d02_312(self):
         """show_port_attachment_network_not_found"""
         self._test_show_port_attachment(420)
 
+    @test.skip_test('not merge into kirin master brach')
     @attr(kind='medium')
     def test_d02_313(self):
         """show_port_attachment_port_not_found"""
@@ -267,6 +280,15 @@ class LibvirtFunctionalTest(unittest.TestCase):
         for process in self.testing_processes:
             process.start()
         time.sleep(10)
+
+        # create users.
+        silent_check_call('bin/nova-manage user create '
+                          '--name=admin --access=secrete --secret=secrete',
+                          cwd=self.config.nova.directory, shell=True)
+        # create projects.
+        silent_check_call('bin/nova-manage project create '
+                          '--project=1 --user=admin',
+                          cwd=self.config.nova.directory, shell=True)
 
         # allocate networks.
         silent_check_call('bin/nova-manage network create '
