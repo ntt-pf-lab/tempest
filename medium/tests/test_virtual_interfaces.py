@@ -25,7 +25,6 @@ from nose.plugins.attrib import attr
 from kong import tests
 from storm import openstack
 import storm.config
-from storm.common.utils.data_utils import rand_name
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -55,7 +54,7 @@ def setUpModule(module):
         subprocess.check_call('bin/nova-manage user create '
                               '--name=demo --access=secrete --secret=secrete',
                               cwd=config.nova.directory, shell=True)
-    
+
         # create projects.
         subprocess.check_call('bin/nova-manage project create '
                               '--project=1 --user=admin',
@@ -63,7 +62,7 @@ def setUpModule(module):
         subprocess.check_call('bin/nova-manage project create '
                               '--project=2 --user=demo',
                               cwd=config.nova.directory, shell=True)
-    
+
         # allocate networks.
         subprocess.check_call('bin/nova-manage network create '
                               '--label=private_1-1 '
@@ -178,18 +177,14 @@ class VirtualInterfacesTest(FunctionalTest):
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
         network_fixed_ip, network_uuid, network_gw = self.exec_sql(sql)[0]
-        print 'network_uuid=' + str(network_uuid)
-        print 'network_fixed_ip=' + str(network_uuid)
-        print 'network_gw=' + str(network_gw)
         networks.append({'fixed_ip': network_fixed_ip,
                          'uuid': network_uuid,
                          'gw': network_gw})
 
         # create a server with a virtual_interface for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         image_ref = self.config.env.image_ref
         flavor_ref = self.config.env.flavor_ref
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
         file_contents = 'This is a test file.'
@@ -198,14 +193,11 @@ class VirtualInterfacesTest(FunctionalTest):
         resp, server = self.ss_client.create_server(name,
                                                     image_ref,
                                                     flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality,
                                                     networks=networks)
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-        print 'resp=' + str(resp)
-        print 'server=' + str(server)
 
         # execute and assert
         resp, body = self.ss_client.list_server_virtual_interfaces(
@@ -259,18 +251,14 @@ class VirtualInterfacesTest(FunctionalTest):
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
         network_fixed_ip, network_uuid, network_gw = self.exec_sql(sql)[0]
-        print 'network_uuid=' + str(network_uuid)
-        print 'network_fixed_ip=' + str(network_uuid)
-        print 'network_gw=' + str(network_gw)
         networks.append({'fixed_ip': network_fixed_ip,
                          'uuid': network_uuid,
                          'gw': network_gw})
 
         # create a server with a virtual_interface for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         image_ref = self.config.env.image_ref
         flavor_ref = self.config.env.flavor_ref
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
         file_contents = 'This is a test file.'
@@ -279,14 +267,11 @@ class VirtualInterfacesTest(FunctionalTest):
         resp, server = self.ss_client.create_server(name,
                                                     image_ref,
                                                     flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality,
                                                     networks=networks)
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-        print 'resp=' + str(resp)
-        print 'server=' + str(server)
 
         # execute and assert
         resp, body = self.ss_client.list_server_virtual_interfaces(
@@ -384,10 +369,9 @@ class VirtualInterfacesTest(FunctionalTest):
                               shell=True)
 
         # create a server with a virtual_interface for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         image_ref = self.config.env.image_ref
         flavor_ref = self.config.env.flavor_ref
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
         file_contents = 'This is a test file.'
@@ -396,13 +380,10 @@ class VirtualInterfacesTest(FunctionalTest):
         resp, server = self.ss_client.create_server(name,
                                                     image_ref,
                                                     flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-        print 'resp=' + str(resp)
-        print 'server=' + str(server)
 
         # execute and assert
         resp, body = self.ss_client.list_server_virtual_interfaces(
@@ -435,18 +416,14 @@ class VirtualInterfacesTest(FunctionalTest):
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
         network_fixed_ip, network_uuid, network_gw = self.exec_sql(sql)[0]
-        print 'network_uuid=' + str(network_uuid)
-        print 'network_fixed_ip=' + str(network_uuid)
-        print 'network_gw=' + str(network_gw)
         networks.append({'fixed_ip': network_fixed_ip,
                          'uuid': network_uuid,
                          'gw': network_gw})
 
         # create a server with a virtual_interface for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         image_ref = self.config.env.image_ref
         flavor_ref = self.config.env.flavor_ref
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
         file_contents = 'This is a test file.'
@@ -455,14 +432,11 @@ class VirtualInterfacesTest(FunctionalTest):
         resp, server = self.ss_client.create_server(name,
                                                     image_ref,
                                                     flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality,
                                                     networks=networks)
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-        print 'resp=' + str(resp)
-        print 'server=' + str(server)
 
         # execute and assert
         resp, body = self.ss_client.list_server_virtual_interfaces(
@@ -517,18 +491,14 @@ class VirtualInterfacesTest(FunctionalTest):
             sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
                   'WHERE cidr = \'%s\';' % cidr
             network_fixed_ip, network_uuid, network_gw = self.exec_sql(sql)[0]
-            print 'network_uuid=' + str(network_uuid)
-            print 'network_fixed_ip=' + str(network_uuid)
-            print 'network_gw=' + str(network_gw)
             networks.append({'fixed_ip': network_fixed_ip,
                              'uuid': network_uuid,
                              'gw': network_gw})
 
         # create a server with virtual_interfaces for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         image_ref = self.config.env.image_ref
         flavor_ref = self.config.env.flavor_ref
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
         file_contents = 'This is a test file.'
@@ -537,14 +507,11 @@ class VirtualInterfacesTest(FunctionalTest):
         resp, server = self.ss_client.create_server(name,
                                                     image_ref,
                                                     flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality,
                                                     networks=networks)
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-        print 'resp=' + str(resp)
-        print 'server=' + str(server)
 
         # execute and assert
         resp, body = self.ss_client.list_server_virtual_interfaces(
