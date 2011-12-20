@@ -101,6 +101,15 @@ class LibvirtFunctionalTest(unittest.TestCase):
             process.start()
         time.sleep(10)
 
+        # create users.
+        silent_check_call('bin/nova-manage user create '
+                          '--name=admin --access=secrete --secret=secrete',
+                          cwd=self.config.nova.directory, shell=True)
+        # create projects.
+        silent_check_call('bin/nova-manage project create '
+                          '--project=1 --user=admin',
+                          cwd=self.config.nova.directory, shell=True)
+
         # allocate networks.
         silent_check_call('bin/nova-manage network create '
                           '--label=private_1-1 '
@@ -247,6 +256,15 @@ class QuantumFunctionalTest(unittest.TestCase):
         self.flavor_ref = self.config.env.flavor_ref
         self.ss_client = self.os.servers_client
         self.img_client = self.os.images_client
+
+        # create users.
+        silent_check_call('bin/nova-manage user create '
+                          '--name=admin --access=secrete --secret=secrete',
+                          cwd=self.config.nova.directory, shell=True)
+        # create projects.
+        silent_check_call('bin/nova-manage project create '
+                          '--project=1 --user=admin',
+                          cwd=self.config.nova.directory, shell=True)
 
         self.addCleanup(cleanup_virtual_instances)
         self.addCleanup(cleanup_processes, self.testing_processes)

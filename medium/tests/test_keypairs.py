@@ -23,7 +23,6 @@ from nose.plugins.attrib import attr
 
 from storm import openstack
 import storm.config
-from storm.common.utils.data_utils import rand_name
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -45,40 +44,40 @@ def setUpModule(module):
 #    environ_processes = module.environ_processes
     config = module.config
     try:
-      subprocess.check_call('bin/nova-manage network create '
-                             '--label=private_1-1 '
-                             '--project_id=1 '
-                             '--fixed_range_v4=10.0.0.0/24 '
-                             '--bridge_interface=br-int '
-                             '--num_networks=1 '
-                             '--network_size=32 ',
-                             cwd=config.nova.directory, shell=True)
-      subprocess.check_call('bin/nova-manage network create '
-                            '--label=private_1-2 '
-                            '--project_id=1 '
-                            '--fixed_range_v4=10.0.1.0/24 '
-                            '--bridge_interface=br-int '
-                            '--num_networks=1 '
-                            '--network_size=32 ',
-                            cwd=config.nova.directory, shell=True)
-      subprocess.check_call('bin/nova-manage network create '
-                            '--label=private_1-3 '
-                            '--project_id=1 '
-                            '--fixed_range_v4=10.0.2.0/24 '
-                            '--bridge_interface=br-int '
-                            '--num_networks=1 '
-                            '--network_size=32 ',
-                            cwd=config.nova.directory, shell=True)
-      subprocess.check_call('bin/nova-manage network create '
-                            '--label=private_2-1 '
-                            '--project_id=2 '
-                            '--fixed_range_v4=10.0.3.0/24 '
-                            '--bridge_interface=br-int '
-                            '--num_networks=1 '
-                            '--network_size=32 ',
-                            cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                               '--label=private_1-1 '
+                               '--project_id=1 '
+                               '--fixed_range_v4=10.0.0.0/24 '
+                               '--bridge_interface=br-int '
+                               '--num_networks=1 '
+                               '--network_size=32 ',
+                               cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_1-2 '
+                              '--project_id=1 '
+                              '--fixed_range_v4=10.0.1.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_1-3 '
+                              '--project_id=1 '
+                              '--fixed_range_v4=10.0.2.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_2-1 '
+                              '--project_id=2 '
+                              '--fixed_range_v4=10.0.3.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=config.nova.directory, shell=True)
     except Exception:
-       pass
+        pass
 
 
 class FunctionalTest(unittest.TestCase):
@@ -96,19 +95,20 @@ class FunctionalTest(unittest.TestCase):
 
         """
         try:
-            _, servers= self.os.servers_client.list_servers()
+            _, servers = self.os.servers_client.list_servers()
             print "Servers : %s" % servers
             for s in servers['servers']:
                 try:
-                  print "Find existing instance %s" % s['id']
-                  resp, body = self.os.servers_client.delete_server(s['id'])
-                  if resp['status'] == '200' or resp['status'] == '202':
-                      self.os.servers_client.wait_for_server_not_exists(s['id'])
-                      time.sleep(5)
+                    print "Find existing instance %s" % s['id']
+                    resp, body = self.os.servers_client.delete_server(s['id'])
+                    if resp['status'] == '200' or resp['status'] == '202':
+                        self.os.servers_client.wait_for_server_not_exists(
+                                                                    s['id'])
+                        time.sleep(5)
                 except Exception as e:
-                  print e
+                    print e
         except Exception:
-           pass
+            pass
         print """
 
         Cleanup DB
@@ -123,6 +123,8 @@ class KeypairsTest(FunctionalTest):
         super(KeypairsTest, self).setUp()
         self.kp_client = self.os.keypairs_client
         self.ss_client = self.os.servers_client
+        # Please wait, it will fail otherwise.
+        time.sleep(5)
 
     @attr(kind='medium')
     def test_list_keypairs_when_keypair_amount_is_zero(self):
@@ -153,7 +155,7 @@ class KeypairsTest(FunctionalTest):
                               shell=True)
 
         # create a keypair for test
-        keyname = rand_name('key')
+        keyname = 'key_' + self._testMethodName
         self.kp_client.create_keypair(keyname)
 
         # execute and assert
@@ -187,8 +189,8 @@ class KeypairsTest(FunctionalTest):
 
         # create three keypairs for test
         keynames = []
-        for _ in range(0, 3):
-            keyname = rand_name('key')
+        for i in range(0, 3):
+            keyname = 'key_' + self._testMethodName + '_' + str(i)
             self.kp_client.create_keypair(keyname)
 
         # execute and assert
@@ -211,7 +213,7 @@ class KeypairsTest(FunctionalTest):
     def test_create_keypair_when_keypair_name_is_specified(self):
         """Returns 200 response with an information of the created keypair"""
         # execute and assert
-        keyname = rand_name('key')
+        keyname = 'key_' + self._testMethodName
         resp, body = self.kp_client.create_keypair(keyname)
         self.assertEqual('200', resp['status'])
         keypair = body['keypair']
@@ -233,7 +235,7 @@ class KeypairsTest(FunctionalTest):
     def test_create_keypair_when_keypair_name_is_duplicated(self):
         """Returns 409 response"""
         # create a keypair for test
-        keyname = rand_name('key')
+        keyname = 'key_' + self._testMethodName
         self.kp_client.create_keypair(keyname)
 
         # execute and assert
@@ -268,7 +270,7 @@ class KeypairsTest(FunctionalTest):
     def test_create_keypair_when_public_key_is_specified(self):
         """Returns 200 response with information of the created keypair"""
         # execute and assert
-        keyname = rand_name('key')
+        keyname = 'key_' + self._testMethodName
         publickey = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCefjXKz8NBgmqEXF5' \
                     'gCbiiHcYmHuZ/ZjO497sXvcOsguxLQa+27HjQmg0osIedBgf1AbyBG0' \
                     'gMX7C3muXUHTgiF2QNjhZ6a2ZszmB062rXpL+iC4MEUOFZuzDwzjMGI' \
@@ -297,7 +299,7 @@ class KeypairsTest(FunctionalTest):
     def test_create_keypair_when_public_key_is_empty_string(self):
         """Returns 400 response"""
         # execute and assert
-        keyname = rand_name('key')
+        keyname = 'key_' + self._testMethodName
         publickey = ''
         resp, body = self.kp_client.create_keypair(keyname, publickey)
         self.assertEqual('400', resp['status'])
@@ -306,7 +308,7 @@ class KeypairsTest(FunctionalTest):
     def test_create_keypair_when_public_key_is_not_rsa_format(self):
         """Returns 400 response"""
         # execute and assert
-        keyname = rand_name('key')
+        keyname = 'key_' + self._testMethodName
         publickey = 'abc'
         resp, body = self.kp_client.create_keypair(keyname, publickey)
         self.assertEqual('400', resp['status'])
@@ -315,7 +317,7 @@ class KeypairsTest(FunctionalTest):
     def test_create_keypair_when_public_key_bits_exceeds_maximum(self):
         """Returns 400 response"""
         # execute and assert
-        keyname = rand_name('key')
+        keyname = 'key_' + self._testMethodName
         # over 16384 bits
         publickey = 'ssh-rsa ' + 'A' * 2048 + ' openstack@ubuntu'
         resp, body = self.kp_client.create_keypair(keyname, publickey)
@@ -325,7 +327,7 @@ class KeypairsTest(FunctionalTest):
     def test_delete_keypair_when_keypair_exists(self):
         """Returns 202 response"""
         # create a keypair for test
-        keyname = rand_name('key')
+        keyname = 'key_' + self._testMethodName
         self.kp_client.create_keypair(keyname)
 
         # execute and assert
@@ -344,14 +346,13 @@ class KeypairsTest(FunctionalTest):
     def test_delete_keypair_when_keypair_is_used_by_server(self):
         """Returns 409 response"""
         # create a keypair for test
-        keyname = rand_name('key')
+        keyname = 'key_' + self._testMethodName
         self.kp_client.create_keypair(keyname)
 
         # create a server for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         image_ref = self.config.env.image_ref
         flavor_ref = self.config.env.flavor_ref
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
         file_contents = 'This is a test file.'
@@ -360,7 +361,6 @@ class KeypairsTest(FunctionalTest):
         resp, server = self.ss_client.create_server(name,
                                                     image_ref,
                                                     flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality,
@@ -387,7 +387,7 @@ class KeypairsTest(FunctionalTest):
     def test_delete_keypair_when_keypair_does_not_exist(self):
         """Returns 404 response"""
         # execute and assert
-        keyname = rand_name('key')
+        keyname = 'key_' + self._testMethodName
         resp, body = self.kp_client.delete_keypair('')
         self.assertEqual('404', resp['status'])
 

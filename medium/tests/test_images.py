@@ -29,7 +29,6 @@ from kong import tests
 from storm import exceptions
 from storm import openstack
 import storm.config
-from storm.common.utils.data_utils import rand_name
 from storm.services.nova.json.images_client import ImagesClient
 from storm.services.nova.json.servers_client import ServersClient
 
@@ -52,14 +51,51 @@ environ_processes = []
 def setUpModule(module):
 #    environ_processes = module.environ_processes
     config = module.config
+
+    # reset db
+    subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
+                          'DELETE FROM users WHERE name = \'user1\';'
+                          'DELETE FROM users WHERE name = \'user2\';'
+                          'DELETE FROM users WHERE name = \'user3\';'
+                          'DELETE FROM tenants WHERE name = \'tenant1\';'
+                          'DELETE FROM tenants WHERE name = \'tenant2\';'
+                          'DELETE FROM user_roles WHERE NOT EXISTS '
+                          '(SELECT * FROM users WHERE id = user_id);'
+                          '"' % (
+                              config.mysql.user,
+                              config.mysql.password),
+                          shell=True)
+
     try:
-#        # create users.
-#        subprocess.check_call('bin/nova-manage user create '
-#                              '--name=admin --access=secrete --secret=secrete',
-#                              cwd=config.nova.directory, shell=True)
-#        subprocess.check_call('bin/nova-manage user create '
-#                              '--name=demo --access=secrete --secret=secrete',
-#                              cwd=config.nova.directory, shell=True)
+        # create tenants.
+        subprocess.check_call('bin/keystone-manage tenant add tenant1',
+                              cwd=config.keystone.directory, shell=True)
+        subprocess.check_call('bin/keystone-manage tenant add tenant2',
+                              cwd=config.keystone.directory, shell=True)
+
+        # create users.
+        subprocess.check_call('bin/keystone-manage user add '
+                              'user1 user1 tenant1',
+                              cwd=config.keystone.directory, shell=True)
+        subprocess.check_call('bin/keystone-manage user add '
+                              'user2 user2 tenant1',
+                              cwd=config.keystone.directory, shell=True)
+        subprocess.check_call('bin/keystone-manage user add '
+                              'user3 user3 tenant2',
+                              cwd=config.keystone.directory, shell=True)
+
+        # grant role
+        subprocess.check_call('bin/keystone-manage role grant '
+                              'Member user1 tenant1',
+                              cwd=config.keystone.directory, shell=True)
+        subprocess.check_call('bin/keystone-manage role grant '
+                              'Member user2 tenant1',
+                              cwd=config.keystone.directory, shell=True)
+        subprocess.check_call('bin/keystone-manage role grant '
+                              'Member user3 tenant2',
+                              cwd=config.keystone.directory, shell=True)
+
+        # allocate networks.
         subprocess.check_call('bin/nova-manage network create '
                                '--label=private_1-1 '
                                '--project_id=1 '
@@ -96,65 +132,38 @@ def setUpModule(module):
         pass
 
 
+def tearDownModule(module):
+    config = module.config
+    # reset db
+    subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
+                          'SELECT * FROM tenants;'
+                          'SELECT users.id AS user_id, users.name AS '
+                          'user_name, password, tenants.name AS '
+                          'tenant_name, roles.name AS role_name FROM '
+                          'user_roles, users, tenants, roles WHERE '
+                          'user_roles.user_id = users.id AND '
+                          'user_roles.tenant_id = tenants.id AND '
+                          'user_roles.role_id = roles.id;'
+                          'DELETE FROM users WHERE name = \'user1\';'
+                          'DELETE FROM users WHERE name = \'user2\';'
+                          'DELETE FROM users WHERE name = \'user3\';'
+                          'DELETE FROM tenants WHERE name = \'tenant1\';'
+                          'DELETE FROM tenants WHERE name = \'tenant2\';'
+                          'DELETE FROM user_roles WHERE NOT EXISTS '
+                          '(SELECT * FROM users WHERE id = user_id);'
+                          '"' % (
+                              config.mysql.user,
+                              config.mysql.password),
+                          shell=True)
+
+
 class FunctionalTest(unittest.TestCase):
 
     config = default_config
 
     def setUp(self):
-        # reset db
-        subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
-                              'DELETE FROM users WHERE name = \'user1\';'
-                              'DELETE FROM users WHERE name = \'user2\';'
-                              'DELETE FROM users WHERE name = \'user3\';'
-                              'DELETE FROM tenants WHERE name = \'tenant1\';'
-                              'DELETE FROM tenants WHERE name = \'tenant2\';'
-                              'DELETE FROM user_roles WHERE NOT EXISTS '
-                              '(SELECT * FROM users WHERE id = user_id);'
-                              '"' % (
-                                  self.config.mysql.user,
-                                  self.config.mysql.password),
-                              shell=True)
-
         self.os = openstack.Manager(config=self.config)
         self.testing_processes = []
-        try: 
-            # create tenants.
-            subprocess.check_call('bin/keystone-manage tenant add tenant1',
-                                  cwd=self.config.keystone.directory, shell=True)
-            subprocess.check_call('bin/keystone-manage tenant add tenant2',
-                                  cwd=self.config.keystone.directory, shell=True)
-    
-            # create users.
-            subprocess.check_call('bin/keystone-manage user add '
-                                  'user1 user1 tenant1',
-                                  cwd=self.config.keystone.directory, shell=True)
-            subprocess.check_call('bin/keystone-manage user add '
-                                  'user2 user2 tenant1',
-                                  cwd=self.config.keystone.directory, shell=True)
-            subprocess.check_call('bin/keystone-manage user add '
-                                  'user3 user3 tenant2',
-                                  cwd=self.config.keystone.directory, shell=True)
-
-            # create projects.
-#            subprocess.check_call('bin/nova-manage project create '
-#                                  '--project=1 --user=admin',
-#                                  cwd=self.config.nova.directory, shell=True)
-#            subprocess.check_call('bin/nova-manage project create '
-#                                  '--project=2 --user=demo',
-#                                  cwd=self.config.nova.directory, shell=True)
-
-            # grant role
-            subprocess.check_call('bin/keystone-manage role grant '
-                                  'Member user1 tenant1',
-                                  cwd=self.config.keystone.directory, shell=True)
-            subprocess.check_call('bin/keystone-manage role grant '
-                                  'Member user2 tenant1',
-                                  cwd=self.config.keystone.directory, shell=True)
-            subprocess.check_call('bin/keystone-manage role grant '
-                                  'Member user3 tenant2',
-                                  cwd=self.config.keystone.directory, shell=True)
-        except Exception:
-            pass
 
     def tearDown(self):
         # kill still existing virtual instances.
@@ -164,14 +173,15 @@ class FunctionalTest(unittest.TestCase):
 
         """
         try:
-            _, servers= self.os.servers_client.list_servers()
+            _, servers = self.os.servers_client.list_servers()
             print "Servers : %s" % servers
             for s in servers['servers']:
                 try:
                     print "Find existing instance %s" % s['id']
                     resp, body = self.os.servers_client.delete_server(s['id'])
                     if resp['status'] == '200' or resp['status'] == '202':
-                        self.os.servers_client.wait_for_server_not_exists(s['id'])
+                        self.os.servers_client.wait_for_server_not_exists(
+                                                                    s['id'])
                         time.sleep(5)
                 except Exception as e:
                     print e
@@ -182,31 +192,10 @@ class FunctionalTest(unittest.TestCase):
         Cleanup DB
 
         """
-        # reset db
-        subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
-                              'SELECT * FROM tenants;'
-                              'SELECT users.id AS user_id, users.name AS '
-                              'user_name, password, tenants.name AS '
-                              'tenant_name, roles.name AS role_name FROM '
-                              'user_roles, users, tenants, roles WHERE '
-                              'user_roles.user_id = users.id AND '
-                              'user_roles.tenant_id = tenants.id AND '
-                              'user_roles.role_id = roles.id;'
-                              'DELETE FROM users WHERE name = \'user1\';'
-                              'DELETE FROM users WHERE name = \'user2\';'
-                              'DELETE FROM users WHERE name = \'user3\';'
-                              'DELETE FROM tenants WHERE name = \'tenant1\';'
-                              'DELETE FROM tenants WHERE name = \'tenant2\';'
-                              'DELETE FROM user_roles WHERE NOT EXISTS '
-                              '(SELECT * FROM users WHERE id = user_id);'
-                              '"' % (
-                                  self.config.mysql.user,
-                                  self.config.mysql.password),
-                              shell=True)
+#        self.output_eventlog()
 
 
 class ImagesTest(FunctionalTest):
-
 
     def setUp(self):
         super(ImagesTest, self).setUp()
@@ -239,20 +228,20 @@ class ImagesTest(FunctionalTest):
         self.ss_client_for_user3 = ServersClient(**user3)
         self.img_client_for_user3 = ImagesClient(**user3)
 
-        meta = {'hello': 'world'}
+    def create_server(self):
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
+        time.sleep(5)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -290,9 +279,12 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_when_image_amount_is_one(self):
         """ List of all images should contain the expected image """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -336,11 +328,14 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_when_image_amount_is_three(self):
         """ List of all images should contain the expected image """
-        # Make snapshot of the instance.
+        # create a server for test
+        self.create_server()
+
+        # create an image for test
         image_ids = []
-        for _ in range(0, 3):
-            alt_name = rand_name('server')
-            resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        for i in range(0, 3):
+            name = 'server_' + self._testMethodName + '_' + str(i)
+            resp, body = self.ss_client.create_image(self.server_id, name)
             alt_img_url = resp['location']
             match = re.search('/images/(?P<image_id>.+)', alt_img_url)
             self.assertIsNotNone(match)
@@ -419,7 +414,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=raw container_format=ovf '
                                       '< %s' % (name, tmp_file),
@@ -453,7 +448,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       '< %s' % (name, tmp_file),
@@ -496,7 +491,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=x86_64 < %s'
@@ -534,7 +529,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=i386 < %s'
@@ -572,7 +567,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=test < %s'
@@ -606,9 +601,12 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_when_status_is_active(self):
         """ List of all images should contain the active image """
-        # Make snapshot of the instance.
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        # create a server for test
+        self.create_server()
+
+        # create an image for test
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -628,9 +626,12 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_when_status_is_not_active(self):
         """ List of all images should contain the inactive image """
-        # Make snapshot of the instance.
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        # create a server for test
+        self.create_server()
+
+        # create an image for test
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -649,30 +650,22 @@ class ImagesTest(FunctionalTest):
     def test_list_images_when_image_is_in_same_tenant(self):
         """ List of all images should contain images in the same tenant """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -682,15 +675,11 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user2
         resp, images = self.img_client_for_user2.list_images()
-        print 'resp(list_images_for_user2)=====' + str(resp)
-        print 'images(list_images_for_user2)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
         # user1
         resp, images = self.img_client_for_user1.list_images()
-        print 'resp(list_images_for_user1)=====' + str(resp)
-        print 'images(list_images_for_user1)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
@@ -698,30 +687,22 @@ class ImagesTest(FunctionalTest):
     def test_list_images_when_image_unauthenticated_for_user(self):
         """ List of all images should only contain the authenticated image """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -731,15 +712,11 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user3
         resp, images = self.img_client_for_user3.list_images()
-        print 'resp(list_images_for_user3)=====' + str(resp)
-        print 'images(list_images_for_user3)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertFalse(str(image_id) in [x['id'] for x in images])
 
         # user1
         resp, images = self.img_client_for_user1.list_images()
-        print 'resp(list_images_for_user1)=====' + str(resp)
-        print 'images(list_images_for_user1)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
@@ -775,9 +752,12 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_with_detail_when_image_amount_is_one(self):
         """ Detailed list of images should contain the expected image """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -821,11 +801,14 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_with_detail_when_image_amount_is_three(self):
         """ Detailed list of images should contain the expected image """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
         image_ids = []
-        for _ in range(0, 3):
-            alt_name = rand_name('server')
-            resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        for i in range(0, 3):
+            name = 'server_' + self._testMethodName + '_' + str(i)
+            resp, body = self.ss_client.create_image(self.server_id, name)
             alt_img_url = resp['location']
             match = re.search('/images/(?P<image_id>.+)', alt_img_url)
             self.assertIsNotNone(match)
@@ -904,7 +887,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=raw container_format=ovf '
                                       '< %s' % (name, tmp_file),
@@ -938,7 +921,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       '< %s' % (name, tmp_file),
@@ -981,7 +964,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=x86_64 < %s'
@@ -1019,7 +1002,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=i386 < %s'
@@ -1058,7 +1041,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=test < %s'
@@ -1092,9 +1075,12 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_with_detail_when_status_is_active(self):
         """ Detailed list of the image should contain the active image """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1114,9 +1100,12 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_with_detail_when_status_is_not_active(self):
         """ Detailed list of the image should contain the inactive image """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1136,30 +1125,22 @@ class ImagesTest(FunctionalTest):
         """ Detailed list of the image should contain
             images in the same tenant """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1169,15 +1150,11 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user2
         resp, images = self.img_client_for_user2.list_images_with_detail()
-        print 'resp(list_images_for_user2)=====' + str(resp)
-        print 'images(list_images_for_user2)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
         # user1
         resp, images = self.img_client_for_user1.list_images_with_detail()
-        print 'resp(list_images_for_user1)=====' + str(resp)
-        print 'images(list_images_for_user1)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
@@ -1186,30 +1163,22 @@ class ImagesTest(FunctionalTest):
         """ Detailed list of the image should only contain
             the authenticated image """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1219,24 +1188,23 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user3
         resp, images = self.img_client_for_user3.list_images_with_detail()
-        print 'resp(list_images_for_user3)=====' + str(resp)
-        print 'images(list_images_for_user3)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertFalse(str(image_id) in [x['id'] for x in images])
 
         # user1
         resp, images = self.img_client_for_user1.list_images_with_detail()
-        print 'resp(list_images_for_user1)=====' + str(resp)
-        print 'images(list_images_for_user1)=====' + str(images)
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
     @attr(kind='medium')
     def test_get_image_when_image_exists(self):
         """ Detail of the image should be returned """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1257,9 +1225,12 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_get_image_when_image_does_not_exist(self):
         """ Error occurs that the specified image does not exist """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1275,7 +1246,7 @@ class ImagesTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
 
     @attr(kind='medium')
-    @tests.skip_test('ValueError occurred. Issue #444')
+    @tests.skip_test('Ignore this testcase for Issue #444')
     def test_get_image_when_image_id_is_empty_string(self):
         """ Error occurs that the format of parameter is invalid """
         # execute and assert
@@ -1284,34 +1255,31 @@ class ImagesTest(FunctionalTest):
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
+    @tests.skip_test('Ignore this testcase for Bug #612')
     def test_get_image_when_image_id_is_string(self):
         """ Returns 400 response """
         # execute and assert
         image_id = 'abc'
         resp, body = self.img_client.get_image(image_id)
-        #TODO 400 is expected
-        #self.assertEqual('400', resp['status'])
-        self.assertEqual('404', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
+    @tests.skip_test('Ignore this testcase for Bug #612')
     def test_get_image_when_image_id_is_negative_value(self):
-        """ Error occurs that the format of parameter is invalid """
+        """ Returns 400 response """
         # execute and assert
         image_id = -1
         resp, body = self.img_client.get_image(image_id)
-        #TODO 400 is expected
-        #self.assertEqual('400', resp['status'])
-        self.assertEqual('404', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
+    @tests.skip_test('Ignore this testcase for Bug #612')
     def test_get_image_when_image_id_is_over_maxint(self):
         """ Error occurs that the format of parameter is invalid """
         # execute and assert
         image_id = sys.maxint + 1
         resp, body = self.img_client.get_image(image_id)
-        #TODO 400 is expected
-        #self.assertEqual('400', resp['status'])
-        self.assertEqual('404', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_get_image_when_disk_format_is_aki(self):
@@ -1350,7 +1318,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=raw container_format=ovf '
                                       '< %s' % (name, tmp_file),
@@ -1385,7 +1353,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       '< %s' % (name, tmp_file),
@@ -1429,7 +1397,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=x86_64 < %s'
@@ -1468,7 +1436,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=i386 < %s'
@@ -1507,7 +1475,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=test < %s'
@@ -1542,9 +1510,12 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_get_image_when_status_is_active(self):
         """ Detail of the image should be returned """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1556,7 +1527,7 @@ class ImagesTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         self.assertTrue(image)
         self.assertEqual(image_id, image['id'])
-        self.assertEqual(alt_name, image['name'])
+        self.assertEqual(name, image['name'])
         self.assertEqual('ACTIVE', image['status'])
 
         # delete the snapshot
@@ -1566,9 +1537,12 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_get_image_when_status_is_not_active(self):
         """ Detail of the image should be returned """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1579,7 +1553,7 @@ class ImagesTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         self.assertTrue(image)
         self.assertEqual(image_id, image['id'])
-        self.assertEqual(alt_name, image['name'])
+        self.assertEqual(name, image['name'])
         self.assertNotEqual('ACTIVE', image['status'])
 
         # delete the snapshot
@@ -1590,30 +1564,22 @@ class ImagesTest(FunctionalTest):
     def test_get_image_when_image_is_in_same_tenant(self):
         """ Detail of the image should be returned """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1623,16 +1589,12 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user2
         resp, image = self.img_client_for_user2.get_image(image_id)
-        print 'resp(get_image_for_user2)=====' + str(resp)
-        print 'image(get_image_for_user2)=====' + str(image)
         self.assertEqual('200', resp['status'])
         self.assertTrue(image)
         self.assertEqual(image_id, image['id'])
 
         # user1
         resp, image = self.img_client_for_user1.get_image(image_id)
-        print 'resp(get_image_for_user1)=====' + str(resp)
-        print 'image(get_image_for_user1)=====' + str(image)
         self.assertEqual('200', resp['status'])
         self.assertTrue(image)
         self.assertEqual(image_id, image['id'])
@@ -1641,30 +1603,22 @@ class ImagesTest(FunctionalTest):
     def test_get_image_when_unauthenticated_for_user(self):
         """ Detail of the image should only contain the authenticated image """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1674,14 +1628,10 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user3
         resp, image = self.img_client_for_user3.get_image(image_id)
-        print 'resp(get_image_for_user3)=====' + str(resp)
-        print 'image(get_image_for_user3)=====' + str(image)
         self.assertEqual('404', resp['status'])
 
         # user1
         resp, image = self.img_client_for_user1.get_image(image_id)
-        print 'resp(get_image_for_user1)=====' + str(resp)
-        print 'image(get_image_for_user1)=====' + str(image)
         self.assertEqual('200', resp['status'])
         self.assertTrue(image)
         self.assertEqual(image_id, image['id'])
@@ -1689,9 +1639,12 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_delete_image_when_image_exists(self):
         """ The specified image should be deleted """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1700,19 +1653,21 @@ class ImagesTest(FunctionalTest):
 
         # execute and assert
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=' + str(resp)
-        print 'body=' + str(body)
         self.assertEqual('204', resp['status'])
 
         resp, body = self.img_client.get_image(image_id)
         self.assertEqual('404', resp['status'])
 
     @attr(kind='medium')
+    @tests.skip_test('Ignore this testcase for Bug #455')
     def test_delete_image_when_image_does_not_exist(self):
         """ Returns 404 response """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1725,23 +1680,16 @@ class ImagesTest(FunctionalTest):
 
         # execute and assert
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=' + str(resp)
-        print 'body=' + str(body)
-        #TODO 404 is expected
-        #self.assertEqual('404', resp['status'])
-        self.assertEqual('400', resp['status'])
+        self.assertEqual('404', resp['status'])
 
     @attr(kind='medium')
+    @tests.skip_test('Ignore this testcase for Bug #610')
     def test_delete_image_when_image_id_is_empty_string(self):
         """ Returns 400 response """
         # execute and assert
         image_id = ''
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=' + str(resp)
-        print 'body=' + str(body)
-        #TODO 400 is expected
-        #self.assertEqual('400', resp['status'])
-        self.assertEqual('404', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_delete_image_when_image_id_is_string(self):
@@ -1749,8 +1697,6 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         image_id = 'abc'
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=====' + str(resp)
-        print 'body=====' + str(body)
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
@@ -1759,8 +1705,6 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         image_id = -1
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=====' + str(resp)
-        print 'body=====' + str(body)
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
@@ -1769,16 +1713,17 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         image_id = sys.maxint + 1
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=====' + str(resp)
-        print 'body=====' + str(body)
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_delete_image_when_status_is_active(self):
         """ The specified image should be deleted """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1787,8 +1732,6 @@ class ImagesTest(FunctionalTest):
 
         # execute and assert
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=' + str(resp)
-        print 'body=' + str(body)
         self.assertEqual('204', resp['status'])
 
         resp, body = self.img_client.get_image(image_id)
@@ -1797,9 +1740,12 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_delete_image_when_status_is_not_active(self):
         """ The specified image should be deleted """
+        # create a server for test
+        self.create_server()
+
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1807,8 +1753,6 @@ class ImagesTest(FunctionalTest):
 
         # execute and assert
         resp, body = self.img_client.delete_image(image_id)
-        print 'resp=' + str(resp)
-        print 'body=' + str(body)
         self.assertEqual('204', resp['status'])
 
         resp, body = self.img_client.get_image(image_id)
@@ -1818,30 +1762,22 @@ class ImagesTest(FunctionalTest):
     def test_delete_image_when_image_is_in_same_tenant(self):
         """ The specified image should be deleted """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1851,38 +1787,29 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user2
         resp, body = self.img_client_for_user2.delete_image(image_id)
-        print 'resp(delete_image_for_user2)=====' + str(resp)
-        print 'body(delete_image_for_user2)=====' + str(body)
         self.assertEqual('204', resp['status'])
 
     @attr(kind='medium')
+    @tests.skip_test('Ignore this testcase for Bug #607')
     def test_delete_image_when_unauthenticated_for_user(self):
         """ Only the authenticated image should be deleted """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        print 'resp(create_server)=====' + str(resp)
-        print 'server(create_server)=====' + str(server)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
-        print 'resp(create_image)=====' + str(resp)
-        print 'body(create_image)=====' + str(body)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1892,14 +1819,8 @@ class ImagesTest(FunctionalTest):
         # execute and assert
         # user3
         resp, body = self.img_client_for_user3.delete_image(image_id)
-        print 'resp(delete_image_for_user3)=====' + str(resp)
-        print 'body(delete_image_for_user3)=====' + str(body)
-        #TODO 401 is expected
-        #self.assertEqual('401', resp['status'])
-        self.assertEqual('400', resp['status'])
+        self.assertEqual('401', resp['status'])
 
         # user1
         resp, body = self.img_client_for_user1.delete_image(image_id)
-        print 'resp(delete_image_for_user1)=====' + str(resp)
-        print 'body(delete_image_for_user1)=====' + str(body)
         self.assertEqual('204', resp['status'])
