@@ -29,7 +29,6 @@ from kong import tests
 from storm import exceptions
 from storm import openstack
 import storm.config
-from storm.common.utils.data_utils import rand_name
 from storm.services.nova.json.images_client import ImagesClient
 from storm.services.nova.json.servers_client import ServersClient
 
@@ -232,7 +231,7 @@ class ImagesTest(FunctionalTest):
     def create_server(self):
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -284,8 +283,8 @@ class ImagesTest(FunctionalTest):
         self.create_server()
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -334,9 +333,9 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         image_ids = []
-        for _ in range(0, 3):
-            alt_name = rand_name('server')
-            resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        for i in range(0, 3):
+            name = 'server_' + self._testMethodName + '_' + str(i)
+            resp, body = self.ss_client.create_image(self.server_id, name)
             alt_img_url = resp['location']
             match = re.search('/images/(?P<image_id>.+)', alt_img_url)
             self.assertIsNotNone(match)
@@ -415,7 +414,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=raw container_format=ovf '
                                       '< %s' % (name, tmp_file),
@@ -449,7 +448,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       '< %s' % (name, tmp_file),
@@ -492,7 +491,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=x86_64 < %s'
@@ -530,7 +529,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=i386 < %s'
@@ -568,7 +567,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=test < %s'
@@ -606,8 +605,8 @@ class ImagesTest(FunctionalTest):
         self.create_server()
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -631,8 +630,8 @@ class ImagesTest(FunctionalTest):
         self.create_server()
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -651,26 +650,22 @@ class ImagesTest(FunctionalTest):
     def test_list_images_when_image_is_in_same_tenant(self):
         """ List of all images should contain images in the same tenant """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -692,26 +687,22 @@ class ImagesTest(FunctionalTest):
     def test_list_images_when_image_unauthenticated_for_user(self):
         """ List of all images should only contain the authenticated image """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -765,8 +756,8 @@ class ImagesTest(FunctionalTest):
         self.create_server()
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -815,9 +806,9 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         image_ids = []
-        for _ in range(0, 3):
-            alt_name = rand_name('server')
-            resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        for i in range(0, 3):
+            name = 'server_' + self._testMethodName + '_' + str(i)
+            resp, body = self.ss_client.create_image(self.server_id, name)
             alt_img_url = resp['location']
             match = re.search('/images/(?P<image_id>.+)', alt_img_url)
             self.assertIsNotNone(match)
@@ -896,7 +887,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=raw container_format=ovf '
                                       '< %s' % (name, tmp_file),
@@ -930,7 +921,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       '< %s' % (name, tmp_file),
@@ -973,7 +964,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=x86_64 < %s'
@@ -1011,7 +1002,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=i386 < %s'
@@ -1050,7 +1041,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=test < %s'
@@ -1088,8 +1079,8 @@ class ImagesTest(FunctionalTest):
         self.create_server()
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1113,8 +1104,8 @@ class ImagesTest(FunctionalTest):
         self.create_server()
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1134,26 +1125,22 @@ class ImagesTest(FunctionalTest):
         """ Detailed list of the image should contain
             images in the same tenant """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1176,26 +1163,22 @@ class ImagesTest(FunctionalTest):
         """ Detailed list of the image should only contain
             the authenticated image """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1220,8 +1203,8 @@ class ImagesTest(FunctionalTest):
         self.create_server()
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1246,8 +1229,8 @@ class ImagesTest(FunctionalTest):
         self.create_server()
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1335,7 +1318,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=raw container_format=ovf '
                                       '< %s' % (name, tmp_file),
@@ -1370,7 +1353,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       '< %s' % (name, tmp_file),
@@ -1414,7 +1397,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=x86_64 < %s'
@@ -1453,7 +1436,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=i386 < %s'
@@ -1492,7 +1475,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
 
         # create an image for test
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         out = subprocess.check_output('bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=test < %s'
@@ -1531,8 +1514,8 @@ class ImagesTest(FunctionalTest):
         self.create_server()
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1544,7 +1527,7 @@ class ImagesTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         self.assertTrue(image)
         self.assertEqual(image_id, image['id'])
-        self.assertEqual(alt_name, image['name'])
+        self.assertEqual(name, image['name'])
         self.assertEqual('ACTIVE', image['status'])
 
         # delete the snapshot
@@ -1558,8 +1541,8 @@ class ImagesTest(FunctionalTest):
         self.create_server()
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1570,7 +1553,7 @@ class ImagesTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         self.assertTrue(image)
         self.assertEqual(image_id, image['id'])
-        self.assertEqual(alt_name, image['name'])
+        self.assertEqual(name, image['name'])
         self.assertNotEqual('ACTIVE', image['status'])
 
         # delete the snapshot
@@ -1581,26 +1564,22 @@ class ImagesTest(FunctionalTest):
     def test_get_image_when_image_is_in_same_tenant(self):
         """ Detail of the image should be returned """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1624,26 +1603,22 @@ class ImagesTest(FunctionalTest):
     def test_get_image_when_unauthenticated_for_user(self):
         """ Detail of the image should only contain the authenticated image """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1668,8 +1643,8 @@ class ImagesTest(FunctionalTest):
         self.create_server()
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1691,8 +1666,8 @@ class ImagesTest(FunctionalTest):
         self.create_server()
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1747,8 +1722,8 @@ class ImagesTest(FunctionalTest):
         self.create_server()
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1769,8 +1744,8 @@ class ImagesTest(FunctionalTest):
         self.create_server()
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client.create_image(self.server_id, alt_name)
+        name = 'server_' + self._testMethodName
+        resp, body = self.ss_client.create_image(self.server_id, name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1787,26 +1762,22 @@ class ImagesTest(FunctionalTest):
     def test_delete_image_when_image_is_in_same_tenant(self):
         """ The specified image should be deleted """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
@@ -1823,26 +1794,22 @@ class ImagesTest(FunctionalTest):
     def test_delete_image_when_unauthenticated_for_user(self):
         """ Only the authenticated image should be deleted """
         # create a server for test
-        meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = 'server_' + self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         resp, server = self.ss_client_for_user1.create_server(name,
                                                     self.image_ref,
                                                     self.flavor_ref,
-                                                    meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
-        alt_name = rand_name('server')
-        resp, body = self.ss_client_for_user1.create_image(server['id'],
-                                                           alt_name)
+        resp, body = self.ss_client_for_user1.create_image(server['id'], name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
