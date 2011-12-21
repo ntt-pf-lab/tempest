@@ -3091,7 +3091,6 @@ class ServersTest(FunctionalTest):
 
         self.assertEqual('403', resp['status'])
 
-    @test.skip_test('ignore this case for bug.657')
     @attr(kind='medium')
     def test_update_server_specify_overlimits_to_name(self):
         print """
