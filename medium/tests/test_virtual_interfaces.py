@@ -16,6 +16,7 @@
 # under the License.
 import base64
 import subprocess
+import sys
 import time
 
 import unittest2 as unittest
@@ -311,7 +312,7 @@ class VirtualInterfacesTest(FunctionalTest):
                               shell=True)
 
         # execute and assert
-        server_id = 99999999  # not found
+        server_id = sys.maxint  # not found
         resp, body = self.ss_client.list_server_virtual_interfaces(server_id)
         self.assertEqual('404', resp['status'])
         error = body['itemNotFound']
@@ -395,6 +396,7 @@ class VirtualInterfacesTest(FunctionalTest):
         """Returns 200 response with a list of virtual interfaces"""
         # make sure no record in db
         subprocess.check_call('mysql -u %s -p%s -D nova -e "'
+                              'DELETE FROM fixed_ips;'
                               'DELETE FROM virtual_interfaces;'
                               '"' % (
                                   self.config.mysql.user,
@@ -469,6 +471,7 @@ class VirtualInterfacesTest(FunctionalTest):
         """Returns 200 response with a list of virtual interfaces"""
         # make sure no record in db
         subprocess.check_call('mysql -u %s -p%s -D nova -e "'
+                              'DELETE FROM fixed_ips;'
                               'DELETE FROM virtual_interfaces;'
                               '"' % (
                                   self.config.mysql.user,
