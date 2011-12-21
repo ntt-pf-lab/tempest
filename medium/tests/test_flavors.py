@@ -74,7 +74,6 @@ def setUpModule(module):
         pass
 
 
-
 class FunctionalTest(unittest.TestCase):
 
     config = default_config
@@ -87,7 +86,6 @@ class FunctionalTest(unittest.TestCase):
         self.os2 = openstack.Manager(config=self.config2)
         self.testing_processes = []
 
-
     def tearDown(self):
         print """
 
@@ -95,14 +93,15 @@ class FunctionalTest(unittest.TestCase):
 
         """
         try:
-            _, servers= self.os.servers_client.list_servers()
+            _, servers = self.os.servers_client.list_servers()
             print "Servers : %s" % servers
             for s in servers['servers']:
                 try:
                     print "Find existing instance %s" % s['id']
                     resp, _ = self.os.servers_client.delete_server(s['id'])
                     if resp['status'] == '200' or resp['status'] == '202':
-                        self.os.servers_client.wait_for_server_not_exists(s['id'])
+                        self.os.servers_client.wait_for_server_not_exists(
+                                                                    s['id'])
                         time.sleep(5)
                 except Exception as e:
                     print e
@@ -251,7 +250,8 @@ class FlavorsTest(FunctionalTest):
     def test_list_flavors_when_specify_get_parameter(self):
         """ List of all flavors match with specified GET parameter"""
 
-        resp, body = self.client.list_flavors({'minDisk':'aaa', 'minRam':'bbb'})
+        resp, body = self.client.list_flavors(
+                                        {'minDisk': 'aaa', 'minRam': 'bbb'})
         print "resp=", resp
         print "body=", body
 
@@ -259,10 +259,9 @@ class FlavorsTest(FunctionalTest):
     def test_list_flavors_when_specify_invalid_get_parameter(self):
         """ List of all flavors match with specified GET parameter"""
 
-        resp, body = self.client.list_flavors({'aaa':80, 'bbb':8192})
+        resp, body = self.client.list_flavors({'aaa': 80, 'bbb': 8192})
         print "resp=", resp
         print "body=", body
-
 
     @attr(kind='medium')
     def test_list_detail_flavors_show_all_default_flavors(self):
