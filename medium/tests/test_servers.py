@@ -2493,7 +2493,7 @@ class ServersTest(FunctionalTest):
                                                      personality=personality)
         print "resp=", resp
         print "body=", body
-        self.assertEqual('404', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_create_servers_specify_exists_zone(self):
