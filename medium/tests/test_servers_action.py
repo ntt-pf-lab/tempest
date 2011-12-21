@@ -1042,7 +1042,6 @@ class ServersActionTest(FunctionalTest):
         self.img_client.delete_image(alt_img_id)
         self.img_client.wait_for_image_not_exists(alt_img_id)
 
-    @test.skip_test('Skip this case for bug #600')
     @attr(kind='medium')
     def test_create_image_when_specify_duplicate_image_name(self):
         print """
@@ -1079,6 +1078,7 @@ class ServersActionTest(FunctionalTest):
         self.assertEqual(str(self.image_ref), server['image']['id'])
         self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
 
+        
         print """
 
         creating snapshot.
@@ -1097,7 +1097,13 @@ class ServersActionTest(FunctionalTest):
         _, images = self.img_client.get_image(alt_img_id)
         self.assertEquals('ACTIVE', images['status'])
 
-        time.sleep(10)
+        # if task_state became none, can accept next api.
+        db_result = 'server_state'
+        while db_result != 'NULL':
+            sql = ("SELECT task_state FROM instances WHERE id = %s;") % (test_server_id)
+            db_result = (self.get_data_from_mysql(sql))[:-1]
+            if db_result == 'NULL':
+                break
 
         print """
 
@@ -1117,8 +1123,6 @@ class ServersActionTest(FunctionalTest):
         self.img_client.wait_for_image_status(alt_test_img_id, 'ACTIVE')
         _, images = self.img_client.get_image(alt_test_img_id)
         self.assertEquals('ACTIVE', images['status'])
-
-        time.sleep(10)
 
         print """
 
