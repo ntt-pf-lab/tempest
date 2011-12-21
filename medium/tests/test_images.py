@@ -26,7 +26,6 @@ import unittest2 as unittest
 from nose.plugins.attrib import attr
 
 from kong import tests
-from storm import exceptions
 from storm import openstack
 import storm.config
 from storm.services.nova.json.images_client import ImagesClient
@@ -136,14 +135,7 @@ def tearDownModule(module):
     config = module.config
 
     # reset db
-    time.sleep(5)
     try:
-        subprocess.check_call('mysql -u%s -p%s -D nova -e "'
-                              'DELETE FROM instances WHERE deleted = 1;'
-                              '"' % (
-                                  config.mysql.user,
-                                  config.mysql.password),
-                              shell=True)
         subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
                               'SELECT * FROM tenants;'
                               'SELECT users.id AS user_id, users.name AS '

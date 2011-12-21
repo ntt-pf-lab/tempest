@@ -81,19 +81,7 @@ def setUpModule(module):
 
 
 def tearDownModule(module):
-    config = module.config
-
-    # reset db
-    time.sleep(5)
-    try:
-        subprocess.check_call('mysql -u%s -p%s -D nova -e "'
-                              'DELETE FROM instances WHERE deleted = 1;'
-                              '"' % (
-                                  config.mysql.user,
-                                  config.mysql.password),
-                              shell=True)
-    except Exception:
-        pass
+    pass
 
 
 class FunctionalTest(unittest.TestCase):
