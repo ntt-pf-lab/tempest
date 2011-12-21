@@ -699,7 +699,7 @@ class ServersTest(FunctionalTest):
         list servers.
 
         """
-        resp, body = self.ss_client.list_servers({'image': 99})
+        resp, body = self.ss_client.list_servers({'image': sys.maxint})
         print "resp=", resp
         print "body=", body
         self.assertEqual('200', resp['status'])
@@ -877,7 +877,7 @@ class ServersTest(FunctionalTest):
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
-        resp, body = self.ss_client.list_servers({'flavor': 99})
+        resp, body = self.ss_client.list_servers({'flavor': sys.maxint})
         print "resp=", resp
         print "body=", body
         self.assertEqual('200', resp['status'])
@@ -1992,7 +1992,7 @@ class ServersTest(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        image_ref = 99
+        image_ref = sys.maxint
         resp, body = self.ss_client.create_server(name,
                                                   image_ref,
                                                   self.flavor_ref,
@@ -2131,7 +2131,7 @@ class ServersTest(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        flavor_ref = 99
+        flavor_ref = sys.maxint
         resp, body = self.ss_client.create_server(name,
                                                   self.image_ref,
                                                   flavor_ref,
@@ -2820,8 +2820,7 @@ class ServersTest(FunctionalTest):
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
-        self.assertNotEqual(99, server['id'])
-        resp, body = self.ss_client.get_server(99)
+        resp, body = self.ss_client.get_server(sys.maxint)
         print "resp=", resp
         print "body=", body
 
@@ -2966,8 +2965,7 @@ class ServersTest(FunctionalTest):
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         alt_name = self._testMethodName + '_rename'
-        self.assertNotEqual(99, server['id'])
-        resp, body = self.ss_client.update_server(99, name=alt_name)
+        resp, body = self.ss_client.update_server(sys.maxint, name=alt_name)
         print "resp=", resp
         print "body=", body
 
@@ -3249,7 +3247,7 @@ class ServersTest(FunctionalTest):
         test_delete_server_not_exists_id
 
         """
-        resp = self.ss_client.delete_server(99)
+        resp = self.ss_client.delete_server(sys.maxint)
         print "resp=", resp
         self.assertEqual('404', resp[0]['status'])
 
@@ -3612,7 +3610,7 @@ class ServersTest(FunctionalTest):
     def test_delete_server_instance_vm_active_task_deleting(self):
         self._test_delete_server_403_base('active', 'deleting')
 
-    @test.skip_test('ignore this case for bug.687')
+#    @test.skip_test('ignore this case for bug.687')
     @attr(kind='medium')
     def test_delete_server_instance_vm_error_task_error(self):
         self._test_delete_server_403_base('error', 'error')
