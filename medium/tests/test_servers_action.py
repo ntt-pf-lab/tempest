@@ -18,6 +18,7 @@ import re
 import subprocess
 import time
 
+import sys
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 from nova import test
@@ -242,7 +243,7 @@ class ServersActionTest(FunctionalTest):
         reboot server
 
          """
-        test_id = 5
+        test_id = sys.maxint
         resp, server = self.ss_client.reboot(test_id, 'HARD')
         print "resp= ", resp
         print "server= ", server
@@ -732,7 +733,7 @@ class ServersActionTest(FunctionalTest):
 
         """
         # Make snapshot of the instance.
-        resp, _ = self.ss_client.create_image(99, 'opst_test')
+        resp, _ = self.ss_client.create_image(sys.maxint, 'opst_test')
         self.assertEquals('404', resp['status'])
 
     @attr(kind='medium')
