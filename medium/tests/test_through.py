@@ -42,7 +42,7 @@ def setUpModule(module):
         subprocess.check_call('bin/nova-manage project create '
                           '--project=1 --user=admin',
                           cwd=config.nova.directory, shell=True)
-    
+
         # allocate networks.
         subprocess.check_call('bin/nova-manage network create '
                           '--label=private_1-1 '
@@ -145,7 +145,8 @@ class ServersTest(FunctionalTest):
 
 
 class FlavorsTest(FunctionalTest):
-    # Almost same as storm.tests.test_flavors, but extends MT environment behavior.
+    # Almost same as storm.tests.test_flavors,
+    # but extends MT environment behavior.
 
     def setUp(self):
         super(FlavorsTest, self).setUp()
