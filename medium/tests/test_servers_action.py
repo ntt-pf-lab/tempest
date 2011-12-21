@@ -290,11 +290,7 @@ class ServersActionTest(FunctionalTest):
 
          """
         resp, server = self.ss_client.reboot(test_id, 'HARD')
-        time.sleep(5)
-        print "resp=", resp
-        print "server=", server
-        resp, server = self.ss_client.get_server(test_id)
-        self.assertEquals('ACTIVE', server['status'])
+        self.assertEqual('202', resp['status'])
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
@@ -627,7 +623,6 @@ class ServersActionTest(FunctionalTest):
         resp, server = self.ss_client.get_server(test_id)
         self.assertEquals('ACTIVE', server['status'])
 
-    @test.skip_test('Skip this case for bug validation')
     @attr(kind='medium')
     def test_create_image_when_specify_server_by_uuid(self):
 
