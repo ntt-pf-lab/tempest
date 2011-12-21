@@ -3610,7 +3610,7 @@ class ServersTest(FunctionalTest):
     def test_delete_server_instance_vm_active_task_deleting(self):
         self._test_delete_server_403_base('active', 'deleting')
 
-#    @test.skip_test('ignore this case for bug.687')
+    @test.skip_test('ignore this case for bug.687')
     @attr(kind='medium')
     def test_delete_server_instance_vm_error_task_error(self):
         self._test_delete_server_403_base('error', 'error')
