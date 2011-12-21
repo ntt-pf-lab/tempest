@@ -42,40 +42,40 @@ def setUpModule(module):
 #    environ_processes = module.environ_processes
     config = module.config
     try:
-      subprocess.check_call('bin/nova-manage network create '
-                             '--label=private_1-1 '
-                             '--project_id=1 '
-                             '--fixed_range_v4=10.0.0.0/24 '
-                             '--bridge_interface=br-int '
-                             '--num_networks=1 '
-                             '--network_size=32 ',
-                             cwd=config.nova.directory, shell=True)
-      subprocess.check_call('bin/nova-manage network create '
-                            '--label=private_1-2 '
-                            '--project_id=1 '
-                            '--fixed_range_v4=10.0.1.0/24 '
-                            '--bridge_interface=br-int '
-                            '--num_networks=1 '
-                            '--network_size=32 ',
-                            cwd=config.nova.directory, shell=True)
-      subprocess.check_call('bin/nova-manage network create '
-                            '--label=private_1-3 '
-                            '--project_id=1 '
-                            '--fixed_range_v4=10.0.2.0/24 '
-                            '--bridge_interface=br-int '
-                            '--num_networks=1 '
-                            '--network_size=32 ',
-                            cwd=config.nova.directory, shell=True)
-      subprocess.check_call('bin/nova-manage network create '
-                            '--label=private_2-1 '
-                            '--project_id=2 '
-                            '--fixed_range_v4=10.0.3.0/24 '
-                            '--bridge_interface=br-int '
-                            '--num_networks=1 '
-                            '--network_size=32 ',
-                            cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                               '--label=private_1-1 '
+                               '--project_id=1 '
+                               '--fixed_range_v4=10.0.0.0/24 '
+                               '--bridge_interface=br-int '
+                               '--num_networks=1 '
+                               '--network_size=32 ',
+                               cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_1-2 '
+                              '--project_id=1 '
+                              '--fixed_range_v4=10.0.1.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_1-3 '
+                              '--project_id=1 '
+                              '--fixed_range_v4=10.0.2.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=config.nova.directory, shell=True)
+        subprocess.check_call('bin/nova-manage network create '
+                              '--label=private_2-1 '
+                              '--project_id=2 '
+                              '--fixed_range_v4=10.0.3.0/24 '
+                              '--bridge_interface=br-int '
+                              '--num_networks=1 '
+                              '--network_size=32 ',
+                              cwd=config.nova.directory, shell=True)
     except Exception:
-       pass
+        pass
 
 
 class FunctionalTest(unittest.TestCase):
@@ -95,14 +95,15 @@ class FunctionalTest(unittest.TestCase):
 
         """
         try:
-            _, servers= self.os.servers_client.list_servers()
+            _, servers = self.os.servers_client.list_servers()
             print "Servers : %s" % servers
             for s in servers['servers']:
                 try:
                     print "Find existing instance %s" % s['id']
                     resp, _ = self.os.servers_client.delete_server(s['id'])
                     if resp['status'] == '200' or resp['status'] == '202':
-                        self.os.servers_client.wait_for_server_not_exists(s['id'])
+                        self.os.servers_client.wait_for_server_not_exists(
+                                                                    s['id'])
                         time.sleep(5)
                 except Exception as e:
                     print e
@@ -146,10 +147,8 @@ class ServersTest(FunctionalTest):
                "deleted = %s, "
                "vm_state = '%s', "
                "task_state = '%s' "
-               "WHERE id = %s;"
-               ) % (deleted, vm_state, task_state, server_id)
+               "WHERE id = %s;") % (deleted, vm_state, task_state, server_id)
         self.exec_sql(sql)
-
 
     @attr(kind='medium')
     def test_list_servers_when_no_server_created(self):
@@ -1462,7 +1461,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.2'
         accessIPv6 = '::babe:220.12.22.3'
-        name = self._testMethodName +'2'
+        name = self._testMethodName + '2'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1780,13 +1779,14 @@ class ServersTest(FunctionalTest):
         creating server from snapshot.
 
         """
-        resp, server = self.ss_client.create_server(name + '_from_created_image',
-                                                    alt_img_id,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
+        resp, server = self.ss_client.create_server(
+                                            name + '_from_created_image',
+                                            alt_img_id,
+                                            self.flavor_ref,
+                                            meta=meta,
+                                            accessIPv4=accessIPv4,
+                                            accessIPv6=accessIPv6,
+                                            personality=personality)
         self.assertEquals('400', resp['status'])
 
     @attr(kind='medium')
@@ -2628,7 +2628,6 @@ class ServersTest(FunctionalTest):
         sql = "delete from quotas;"
         self.exec_sql(sql)
 
-
     @test.skip_test('ignore this case for bug.619')
     @attr(kind='medium')
     def test_create_server_quota_memory(self):
@@ -3092,7 +3091,6 @@ class ServersTest(FunctionalTest):
 
         self.assertEqual('403', resp['status'])
 
-    @test.skip_test('ignore this case for bug.657')
     @attr(kind='medium')
     def test_update_server_specify_overlimits_to_name(self):
         print """
@@ -3527,8 +3525,7 @@ class ServersTest(FunctionalTest):
         self.ss_client.wait_for_server_not_exists(server['id'])
 
         sql = ("SELECT deleted, vm_state, task_state "
-               "FROM instances WHERE id = %s;"
-               ) % (server['id'])
+               "FROM instances WHERE id = %s;") % (server['id'])
         rs = self.get_data_from_mysql(sql)
         (deleted, vm_state, task_state) = rs[:-1].split('\t')
         self.assertEqual('1', deleted)
