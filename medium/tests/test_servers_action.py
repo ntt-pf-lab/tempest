@@ -78,7 +78,6 @@ def setUpModule(module):
         pass
 
 
-
 class FunctionalTest(unittest.TestCase):
 
     config = default_config
@@ -91,7 +90,6 @@ class FunctionalTest(unittest.TestCase):
         self.os2 = openstack.Manager(config=self.config2)
         self.testing_processes = []
 
-
     def tearDown(self):
         print """
 
@@ -99,14 +97,15 @@ class FunctionalTest(unittest.TestCase):
 
         """
         try:
-            _, servers= self.os.servers_client.list_servers()
+            _, servers = self.os.servers_client.list_servers()
             print "Servers : %s" % servers
             for s in servers['servers']:
                 try:
                     print "Find existing instance %s" % s['id']
                     resp, _ = self.os.servers_client.delete_server(s['id'])
                     if resp['status'] == '200' or resp['status'] == '202':
-                        self.os.servers_client.wait_for_server_not_exists(s['id'])
+                        self.os.servers_client.wait_for_server_not_exists(
+                                                                    s['id'])
                         time.sleep(5)
                 except Exception as e:
                     print e
@@ -170,8 +169,8 @@ class ServersActionTest(FunctionalTest):
                "deleted = %s, "
                "vm_state = '%s', "
                "task_state = '%s' "
-               "WHERE id = %s;"
-               ) % (deleted, vm_state, task_state, server['id'])
+               "WHERE id = %s;") % (
+                            deleted, vm_state, task_state, server['id'])
         self.exec_sql(sql)
 
         return server['id']
@@ -184,8 +183,7 @@ class ServersActionTest(FunctionalTest):
         sql = ("UPDATE instances SET "
                "vm_state = 'active',"
                "task_state = null "
-               "WHERE id = %s;"
-               ) % server_id
+               "WHERE id = %s;") % server_id
         self.exec_sql(sql)
 
     @attr(kind='medium')
@@ -275,7 +273,6 @@ class ServersActionTest(FunctionalTest):
         # Wait for the server to become active
         test_id = server['uuid']
         self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
-
 
         # Verify the specified attributes are set correctly
         _, server = self.ss_client.get_server(test_id)
@@ -1432,8 +1429,7 @@ class ServersActionTest(FunctionalTest):
         sql = ("UPDATE instances SET "
                "vm_state = 'active',"
                "task_state = null "
-               "WHERE id = %s;"
-               ) % server_id
+               "WHERE id = %s;") % server_id
         self.exec_sql(sql)
 
     @attr(kind='medium')
@@ -1457,7 +1453,7 @@ class ServersActionTest(FunctionalTest):
         self._test_create_image_403_base("active", "image_backup")
 
     @attr(kind='medium')
-    def test_create_image_when_vm_eq_active_and_task_eq_updating_password(self):
+    def test_create_image_when_vm_eq_actv_and_task_eq_updating_password(self):
         self._test_create_image_403_base("active", "updating_password")
 
     @attr(kind='medium')
