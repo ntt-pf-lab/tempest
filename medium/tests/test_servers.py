@@ -3279,43 +3279,6 @@ class ServersTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
 
     @attr(kind='medium')
-    def test_delete_server_when_server_is_deleting(self):
-        print """
-
-        test_delete_server_when_server_is_deleting
-
-        """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        resp, _ = self.ss_client.delete_server(server['id'])
-        print "resp=", resp
-
-        resp, _ = self.ss_client.delete_server(server['id'])
-        print "resp=", resp
-
-        self.assertEqual('204', resp['status'])
-        self.ss_client.wait_for_server_not_exists(server['id'])
-        resp, _ = self.ss_client.get_server(server['id'])
-        self.assertEqual('404', resp['status'])
-
-    @test.skip_test('ignore this case for bug.668')
-    @attr(kind='medium')
     def test_delete_server_when_server_is_deleted(self):
         print """
 
@@ -3346,7 +3309,7 @@ class ServersTest(FunctionalTest):
         resp, _ = self.ss_client.delete_server(server['id'])
         print "resp=", resp
 
-        self.assertEqual('403', resp['status'])
+        self.assertEqual('404', resp['status'])
 
     @test.skip_test('ignore this case for bug.662')
     @attr(kind='medium')
@@ -3522,7 +3485,7 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         self.assertEqual('204', resp['status'])
 
-        self.ss_client.wait_for_server_not_exists(server['id'])
+        self.ss_client.wait_for_server_not_exists_ignore_error(server['id'])
 
         sql = ("SELECT deleted, vm_state, task_state "
                "FROM instances WHERE id = %s;") % (server['id'])
@@ -3582,32 +3545,26 @@ class ServersTest(FunctionalTest):
     def test_delete_server_instance_vm_active_task_rebuilding(self):
         self._test_delete_server_base('active', 'rebuilding')
 
-    @test.skip_test('ignore this case for bug.687')
     @attr(kind='medium')
     def test_delete_server_instance_vm_error_task_building(self):
         self._test_delete_server_base('error', 'building')
 
-    @test.skip_test('ignore this case for bug.687')
     @attr(kind='medium')
     def test_delete_server_instance_vm_active_task_rebooting(self):
         self._test_delete_server_403_base('active', 'rebooting')
 
-    @test.skip_test('ignore this case for bug.687')
     @attr(kind='medium')
     def test_delete_server_instance_vm_reboot_task_rebooting(self):
         self._test_delete_server_403_base('reboot', 'rebooting')
 
-    @test.skip_test('ignore this case for bug.687')
     @attr(kind='medium')
     def test_delete_server_instance_vm_building_task_deleting(self):
         self._test_delete_server_403_base('building', 'deleting')
 
-    @test.skip_test('ignore this case for bug.687')
     @attr(kind='medium')
     def test_delete_server_instance_vm_active_task_deleting(self):
         self._test_delete_server_403_base('active', 'deleting')
 
-    @test.skip_test('ignore this case for bug.687')
     @attr(kind='medium')
     def test_delete_server_instance_vm_error_task_error(self):
-        self._test_delete_server_403_base('error', 'error')
+        self._test_delete_server_base('error', 'error')
