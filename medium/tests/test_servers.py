@@ -2628,7 +2628,6 @@ class ServersTest(FunctionalTest):
         sql = "delete from quotas;"
         self.exec_sql(sql)
 
-    @test.skip_test('ignore this case for bug.619')
     @attr(kind='medium')
     def test_create_server_quota_memory(self):
         print """
@@ -2638,7 +2637,7 @@ class ServersTest(FunctionalTest):
         """
 
         sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
-               "VALUES(0, '1', 'ram', 1)")
+               "VALUES(0, '2', 'ram', 1024)")
         self.exec_sql(sql)
 
         print """
