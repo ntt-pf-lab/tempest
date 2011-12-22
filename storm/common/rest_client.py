@@ -60,6 +60,7 @@ class RestClient(object):
         try:
             auth_data = json.loads(body)['access']
             token = auth_data['token']['id']
+            tenant_id = auth_data['token']['tenant']['id']
             endpoints = auth_data['serviceCatalog'][0]['endpoints']
             mgmt_url = endpoints[0]['publicURL']
 
@@ -67,7 +68,8 @@ class RestClient(object):
             #Need to join strings more cleanly
             temp = mgmt_url.rsplit('/')
             service_url = temp[0] + '//' + temp[2] + '/' + temp[3] + '/'
-            management_url = service_url + tenant_name
+#            management_url = service_url + tenant_name
+            management_url = service_url + tenant_id
             return token, management_url
         except KeyError:
             print "Failed to authenticate user"
