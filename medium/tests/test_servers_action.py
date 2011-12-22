@@ -1094,8 +1094,6 @@ class ServersActionTest(FunctionalTest):
         self.assertIsNotNone(match)
         alt_img_id = match.groupdict()['image_id']
         self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
-        _, images = self.img_client.get_image(alt_img_id)
-        self.assertEquals('ACTIVE', images['status'])
 
         # if task_state became none, can accept next api.
         db_result = 'server_state'
