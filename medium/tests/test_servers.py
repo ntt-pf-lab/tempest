@@ -2142,7 +2142,7 @@ class ServersTest(FunctionalTest):
 
         print "resp=", resp
         print "body=", body
-        self.assertEqual('404', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_create_servers_not_specify_flavor(self):
@@ -3552,10 +3552,6 @@ class ServersTest(FunctionalTest):
     @attr(kind='medium')
     def test_delete_server_instance_vm_active_task_rebooting(self):
         self._test_delete_server_403_base('active', 'rebooting')
-
-    @attr(kind='medium')
-    def test_delete_server_instance_vm_reboot_task_rebooting(self):
-        self._test_delete_server_403_base('reboot', 'rebooting')
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_building_task_deleting(self):
