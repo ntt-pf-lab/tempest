@@ -35,16 +35,16 @@ def setUpModule(module):
 
     try:
         # create users.
-        subprocess.check_call('bin/nova-manage user create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage user create '
                           '--name=admin --access=secrete --secret=secrete',
                           cwd=config.nova.directory, shell=True)
         # create projects.
-        subprocess.check_call('bin/nova-manage project create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage project create '
                           '--project=1 --user=admin',
                           cwd=config.nova.directory, shell=True)
 
         # allocate networks.
-        subprocess.check_call('bin/nova-manage network create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                           '--label=private_1-1 '
                           '--project_id=1 '
                           '--fixed_range_v4=10.0.0.0/24 '

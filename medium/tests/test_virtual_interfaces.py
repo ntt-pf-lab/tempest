@@ -48,23 +48,23 @@ def setUpModule(module):
 
     try:
         # create users.
-        subprocess.check_call('bin/nova-manage user create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage user create '
                               '--name=admin --access=secrete --secret=secrete',
                               cwd=config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage user create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage user create '
                               '--name=demo --access=secrete --secret=secrete',
                               cwd=config.nova.directory, shell=True)
 
         # create projects.
-        subprocess.check_call('bin/nova-manage project create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage project create '
                               '--project=1 --user=admin',
                               cwd=config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage project create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage project create '
                               '--project=2 --user=demo',
                               cwd=config.nova.directory, shell=True)
 
         # allocate networks.
-        subprocess.check_call('bin/nova-manage network create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                               '--label=private_1-1 '
                               '--project_id=1 '
                               '--fixed_range_v4=10.0.0.0/24 '
@@ -72,7 +72,7 @@ def setUpModule(module):
                               '--num_networks=1 '
                               '--network_size=32 ',
                               cwd=config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                               '--label=private_1-2 '
                               '--project_id=1 '
                               '--fixed_range_v4=10.0.1.0/24 '
@@ -80,7 +80,7 @@ def setUpModule(module):
                               '--num_networks=1 '
                               '--network_size=32 ',
                               cwd=config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                               '--label=private_2-1 '
                               '--project_id=2 '
                               '--fixed_range_v4=10.0.2.0/24 '
@@ -166,7 +166,7 @@ class VirtualInterfacesTest(FunctionalTest):
         # create a network for test
         networks = []
         cidr = '10.0.3.0/24'
-        subprocess.check_call('bin/nova-manage network create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                               '--label=label-1 '
                               '--project_id=1 '
                               '--fixed_range_v4=%s '
@@ -240,7 +240,7 @@ class VirtualInterfacesTest(FunctionalTest):
         # create a network for test
         networks = []
         cidr = '10.0.4.0/24'
-        subprocess.check_call('bin/nova-manage network create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                               '--label=label-1 '
                               '--project_id=1 '
                               '--fixed_range_v4=%s '
@@ -406,7 +406,7 @@ class VirtualInterfacesTest(FunctionalTest):
         # create a network for test
         networks = []
         cidr = '10.0.5.0/24'
-        subprocess.check_call('bin/nova-manage network create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                               '--label=label-1 '
                               '--project_id=1 '
                               '--fixed_range_v4=%s '
@@ -482,7 +482,7 @@ class VirtualInterfacesTest(FunctionalTest):
         cidrs = ['10.0.6.0/24', '10.0.7.0/24', '10.0.8.0/24']
         networks = []
         for cidr in cidrs:
-            subprocess.check_call('bin/nova-manage network create '
+            subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                                   '--label=label-1 '
                                   '--project_id=1 '
                                   '--fixed_range_v4=%s '
