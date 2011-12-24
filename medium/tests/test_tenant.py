@@ -37,13 +37,13 @@ def setUpModule(module):
 
     try:
         # create users.
-        subprocess.check_call('bin/nova-manage user create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage user create '
                               '--name=%s --access=secrete --secret=secrete'\
                                       % config.nova.username,
                               cwd=config.nova.directory, shell=True)
 
         # create projects.
-        subprocess.check_call('bin/nova-manage project create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage project create '
                               '--project=1 --user=%s'\
                                       % config.nova.username,
                               cwd=config.nova.directory, shell=True)

@@ -38,7 +38,7 @@ environ_processes = []
 def setUpModule(module):
     config = module.config
     try:
-        subprocess.check_call('bin/nova-manage network create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                              '--label=private_1-1 '
                              '--project_id=1 '
                              '--fixed_range_v4=10.0.0.0/24 '
@@ -46,7 +46,7 @@ def setUpModule(module):
                              '--num_networks=1 '
                              '--network_size=32 ',
                              cwd=config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                             '--label=private_1-2 '
                             '--project_id=1 '
                             '--fixed_range_v4=10.0.1.0/24 '
@@ -54,7 +54,7 @@ def setUpModule(module):
                             '--num_networks=1 '
                             '--network_size=32 ',
                             cwd=config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                             '--label=private_1-3 '
                             '--project_id=1 '
                             '--fixed_range_v4=10.0.2.0/24 '
@@ -62,7 +62,7 @@ def setUpModule(module):
                             '--num_networks=1 '
                             '--network_size=32 ',
                             cwd=config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                             '--label=private_2-1 '
                             '--project_id=2 '
                             '--fixed_range_v4=10.0.3.0/24 '
