@@ -77,7 +77,7 @@ class KeystoneProcess(Process):
     def __init__(self, directory, config, host, port, **kwargs):
         super(KeystoneProcess, self)\
                 .__init__(directory,
-                          "bin/keystone --config-file %s -d" % config,
+                          "/opt/openstack/glance/bin/keystone --config-file %s -d" % config,
                           **kwargs)
         self.host = host
         self.port = port
