@@ -55,7 +55,7 @@ class GlanceRegistryProcess(Process):
     def __init__(self, directory, config, **kwargs):
         super(GlanceRegistryProcess, self)\
                 .__init__(directory,
-                          "bin/glance-registry --config-file=%s" % config,
+                          "/opt/openstack/glance/bin/glance-registry --config-file=%s" % config,
                           **kwargs)
 
 
@@ -63,7 +63,7 @@ class GlanceApiProcess(Process):
     def __init__(self, directory, config, host, port, **kwargs):
         super(GlanceApiProcess, self)\
                 .__init__(directory,
-                          "bin/glance-api --config-file=%s" % config,
+                          "/opt/openstack/glance/bin/glance-api --config-file=%s" % config,
                           **kwargs)
         self.host = host
         self.port = port

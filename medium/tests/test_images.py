@@ -418,7 +418,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=raw container_format=ovf '
                                       '< %s' % (name, tmp_file),
                                       cwd=self.config.glance.directory,
@@ -452,7 +452,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       '< %s' % (name, tmp_file),
                                       cwd=self.config.glance.directory,
@@ -495,7 +495,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=x86_64 < %s'
                                       % (name, tmp_file),
@@ -533,7 +533,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=i386 < %s'
                                       % (name, tmp_file),
@@ -571,7 +571,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=test < %s'
                                       % (name, tmp_file),
@@ -891,7 +891,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=raw container_format=ovf '
                                       '< %s' % (name, tmp_file),
                                       cwd=self.config.glance.directory,
@@ -925,7 +925,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       '< %s' % (name, tmp_file),
                                       cwd=self.config.glance.directory,
@@ -968,7 +968,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=x86_64 < %s'
                                       % (name, tmp_file),
@@ -1006,7 +1006,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=i386 < %s'
                                       % (name, tmp_file),
@@ -1045,7 +1045,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=test < %s'
                                       % (name, tmp_file),
@@ -1322,7 +1322,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=raw container_format=ovf '
                                       '< %s' % (name, tmp_file),
                                       cwd=self.config.glance.directory,
@@ -1357,7 +1357,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       '< %s' % (name, tmp_file),
                                       cwd=self.config.glance.directory,
@@ -1401,7 +1401,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=x86_64 < %s'
                                       % (name, tmp_file),
@@ -1440,7 +1440,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=i386 < %s'
                                       % (name, tmp_file),
@@ -1479,7 +1479,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('bin/glance add -A nova name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A nova name=%s '
                                       'disk_format=aki container_format=aki '
                                       'architecture=test < %s'
                                       % (name, tmp_file),
