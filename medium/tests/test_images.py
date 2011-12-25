@@ -67,30 +67,30 @@ def setUpModule(module):
                               shell=True)
 
         # create tenants.
-        subprocess.check_call('bin/keystone-manage tenant add tenant1',
+        subprocess.check_call('/opt/openstack/glance/bin/keystone-manage tenant add tenant1',
                               cwd=config.keystone.directory, shell=True)
-        subprocess.check_call('bin/keystone-manage tenant add tenant2',
+        subprocess.check_call('/opt/openstack/glance/bin/keystone-manage tenant add tenant2',
                               cwd=config.keystone.directory, shell=True)
 
         # create users.
-        subprocess.check_call('bin/keystone-manage user add '
+        subprocess.check_call('/opt/openstack/glance/bin/keystone-manage user add '
                               'user1 user1 tenant1',
                               cwd=config.keystone.directory, shell=True)
-        subprocess.check_call('bin/keystone-manage user add '
+        subprocess.check_call('/opt/openstack/glance/bin/keystone-manage user add '
                               'user2 user2 tenant1',
                               cwd=config.keystone.directory, shell=True)
-        subprocess.check_call('bin/keystone-manage user add '
+        subprocess.check_call('/opt/openstack/glance/bin/keystone-manage user add '
                               'user3 user3 tenant2',
                               cwd=config.keystone.directory, shell=True)
 
         # grant role
-        subprocess.check_call('bin/keystone-manage role grant '
+        subprocess.check_call('/opt/openstack/glance/bin/keystone-manage role grant '
                               'Member user1 tenant1',
                               cwd=config.keystone.directory, shell=True)
-        subprocess.check_call('bin/keystone-manage role grant '
+        subprocess.check_call('/opt/openstack/glance/bin/keystone-manage role grant '
                               'Member user2 tenant1',
                               cwd=config.keystone.directory, shell=True)
-        subprocess.check_call('bin/keystone-manage role grant '
+        subprocess.check_call('/opt/openstack/glance/bin/keystone-manage role grant '
                               'Member user3 tenant2',
                               cwd=config.keystone.directory, shell=True)
 
