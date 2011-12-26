@@ -46,51 +46,6 @@ def setUpModule(module):
 #    environ_processes = module.environ_processes
     config = module.config
 
-    try:
-        # create users.
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage user create '
-                              '--name=admin --access=secrete --secret=secrete',
-                              cwd=config.nova.directory, shell=True)
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage user create '
-                              '--name=demo --access=secrete --secret=secrete',
-                              cwd=config.nova.directory, shell=True)
-
-        # create projects.
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage project create '
-                              '--project=1 --user=admin',
-                              cwd=config.nova.directory, shell=True)
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage project create '
-                              '--project=2 --user=demo',
-                              cwd=config.nova.directory, shell=True)
-
-        # allocate networks.
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
-                              '--label=private_1-1 '
-                              '--project_id=1 '
-                              '--fixed_range_v4=10.0.0.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=config.nova.directory, shell=True)
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
-                              '--label=private_1-2 '
-                              '--project_id=1 '
-                              '--fixed_range_v4=10.0.1.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=config.nova.directory, shell=True)
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
-                              '--label=private_2-1 '
-                              '--project_id=2 '
-                              '--fixed_range_v4=10.0.2.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=config.nova.directory, shell=True)
-    except Exception:
-        pass
-
 
 def tearDownModule(module):
     pass
