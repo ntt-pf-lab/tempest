@@ -356,7 +356,7 @@ class ImagesTest(FunctionalTest):
         # create an image for test
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add --A tokenAdmin name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
                                       'disk_format=aki container_format=aki '
                                       '< %s' % (name, tmp_file),
                                       cwd=self.config.glance.directory,
@@ -376,7 +376,7 @@ class ImagesTest(FunctionalTest):
         # create an image for test
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add --A tokenAdmin name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
                                       'disk_format=ari container_format=ari '
                                       '< %s' % (name, tmp_file),
                                       cwd=self.config.glance.directory,
@@ -396,7 +396,7 @@ class ImagesTest(FunctionalTest):
         # create an image for test
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add --A tokenAdmin name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
                                       'disk_format=ami container_format=ami '
                                       '< %s' % (name, tmp_file),
                                       cwd=self.config.glance.directory,
@@ -880,7 +880,7 @@ class ImagesTest(FunctionalTest):
         # create an image for test
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add --A tokenAdmin name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
                                       'disk_format=ami container_format=ami '
                                       '< %s' % (name, tmp_file),
                                       cwd=self.config.glance.directory,
@@ -1322,7 +1322,7 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add --A tokenAdmin name=%s '
+        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
                                       'disk_format=ami container_format=ami '
                                       '< %s' % (name, tmp_file),
                                       cwd=self.config.glance.directory,
