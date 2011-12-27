@@ -164,7 +164,7 @@ class VirtualInterfacesTest(FunctionalTest):
         networks = []
         cidr = '10.0.4.0/24'
         subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
-                              '--label=label-1 '
+                              '--label=label-2 '
                               '--project_id=1 '
                               '--fixed_range_v4=%s '
                               '--bridge_interface=br-int '
@@ -313,7 +313,7 @@ class VirtualInterfacesTest(FunctionalTest):
         networks = []
         cidr = '10.0.5.0/24'
         subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
-                              '--label=label-1 '
+                              '--label=label-3 '
                               '--project_id=1 '
                               '--fixed_range_v4=%s '
                               '--bridge_interface=br-int '
@@ -363,7 +363,7 @@ class VirtualInterfacesTest(FunctionalTest):
         networks = []
         for cidr in cidrs:
             subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
-                                  '--label=label-1 '
+                                  '--label=label-4 '
                                   '--project_id=1 '
                                   '--fixed_range_v4=%s '
                                   '--bridge_interface=br-int '
