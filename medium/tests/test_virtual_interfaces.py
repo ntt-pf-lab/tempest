@@ -113,7 +113,7 @@ class VirtualInterfacesTest(FunctionalTest):
 
         # create a network for test
         networks = []
-        cidr = '10.0.3.0/24'
+        cidr = '10.0.10.0/24'
         subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                               '--label=label-1 '
                               '--project_id=1 '
@@ -125,7 +125,7 @@ class VirtualInterfacesTest(FunctionalTest):
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
         network_fixed_ip, network_uuid, network_gw = self.exec_sql(sql)[0]
-        network_fixed_ip = '10.0.3.100'
+        network_fixed_ip = '10.0.10.100'
         networks.append({'fixed_ip': network_fixed_ip,
                          'uuid': network_uuid})
 
