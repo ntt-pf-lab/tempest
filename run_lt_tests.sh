@@ -13,7 +13,6 @@ $cmd network create --label=private_1-1 --project_id=1 --fixed_range_v4=10.0.0.0
 $cmd network create --label=private_1-2 --project_id=1 --fixed_range_v4=10.0.1.0/24 --bridge_interface=br-int --num_networks= --network_size=32
 $cmd network create --label=private_1-3 --project_id=1 --fixed_range_v4=10.0.2.0/24 --bridge_interface=br-int --num_networks= --network_size=32
 $cmd network create --label=private_2-1 --project_id=2 --fixed_range_v4=10.0.3.0/24 --bridge_interface=br-int --num_networks= --network_size=32
-exit
 
 exec_date=`date '+%Y%m%d%H%M'`
 pwd_place=`pwd`
