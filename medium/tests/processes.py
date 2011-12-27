@@ -2,7 +2,7 @@ import os
 import subprocess
 import time
 import urllib
-
+from stackmonkey import manager
 
 def wait_to_launch(host, port):
     while True:
@@ -38,6 +38,7 @@ class Process(object):
         self.cwd = cwd
         self.command = command
         self.env = env
+        self.deploy_mode == 'devstack-local'
 
     def start(self):
         self._process = subprocess.Popen(self.command,
@@ -118,40 +119,60 @@ class NovaApiProcess(NovaProcess):
                 .__init__(directory, "bin/nova-api", **kwargs)
         self.host = host
         self.port = port
+        self.havoc = manager.ControllerHavoc(host, **kwargs)
 
     def start(self):
-        super(NovaApiProcess, self).start()
-        wait_to_launch(self.host, self.port)
+        self.havoc.start_nova_api()
+        #wait_to_launch(self.host, self.port)
+
+    def stop(self):
+        self.havoc.stop_nova_api()
 
 
 class NovaComputeProcess(NovaProcess):
     def __init__(self, directory, **kwargs):
         super(NovaComputeProcess, self)\
                 .__init__(directory, "bin/nova-compute", **kwargs)
+        self.havoc = manager.ComputeHavoc(**kwargs)
 
     def start(self):
         if getattr(self, '_wrapped_command', None) is None:
             self._original_command = self.command
             self._wrapped_command = "sg libvirtd '%s'" % self.command
         self.command = self._wrapped_command
-        super(NovaComputeProcess, self).start()
+        self.havoc.start_nova_compute()
+        #super(NovaComputeProcess, self).start()
         time.sleep(5)
 
     def stop(self):
-        kill_children_process(self._process.pid)
-        super(NovaComputeProcess, self).stop()
+        self.havoc.stop_nova_compute()
+        #kill_children_process(self._process.pid)
 
 
 class NovaNetworkProcess(NovaProcess):
     def __init__(self, directory, **kwargs):
         super(NovaNetworkProcess, self)\
                 .__init__(directory, "bin/nova-network", **kwargs)
+        self.havoc = manager.NetworkHavoc(**kwargs)
+
+    def start(self):
+        self.havoc.start_nova_network()
+
+    def stop(self):
+        self.havoc.stop_nova_network()
 
 
 class NovaSchedulerProcess(NovaProcess):
     def __init__(self, directory, **kwargs):
         super(NovaSchedulerProcess, self)\
                 .__init__(directory, "bin/nova-scheduler", **kwargs)
+        self.havoc = manager.ControllerHavoc(**kwargs)
+
+    def start(self):
+        self.havoc.start_nova_scheduler()
+
+    def stop(self):
+        self.havoc.stop_nova_scheduler()
 
 
 class QuantumProcess(Process):
