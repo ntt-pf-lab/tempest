@@ -113,7 +113,7 @@ class VirtualInterfacesTest(FunctionalTest):
 
         # create a network for test
         networks = []
-        cidr = '10.0.3.0/24'
+        cidr = '10.0.10.0/24'
         subprocess.check_call('bin/nova-manage network create '
                               '--label=label-1 '
                               '--project_id=1 '
@@ -125,7 +125,7 @@ class VirtualInterfacesTest(FunctionalTest):
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
         network_fixed_ip, network_uuid, network_gw = self.exec_sql(sql)[0]
-        network_fixed_ip = '10.0.3.100'
+        network_fixed_ip = '10.0.10.100'
         networks.append({'fixed_ip': network_fixed_ip,
                          'uuid': network_uuid})
 
@@ -209,12 +209,15 @@ class VirtualInterfacesTest(FunctionalTest):
     def test_list_virtual_interfaces_when_not_found_with_server_id(self):
         """Returns 404 response"""
         # make sure no record in db
-        subprocess.check_call('mysql -u %s -p%s -D nova -e "'
+        try:
+            subprocess.check_call('mysql -u %s -p%s -D nova -e "'
                               'DELETE FROM virtual_interfaces;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password),
                               shell=True)
+        except Exception:
+            pass
 
         # execute and assert
         server_id = sys.maxint  # not found
@@ -228,12 +231,15 @@ class VirtualInterfacesTest(FunctionalTest):
     def test_list_virtual_interfaces_when_not_found_with_server_uuid(self):
         """Returns 404 response"""
         # make sure no record in db
-        subprocess.check_call('mysql -u %s -p%s -D nova -e "'
+        try:
+            subprocess.check_call('mysql -u %s -p%s -D nova -e "'
                               'DELETE FROM virtual_interfaces;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password),
                               shell=True)
+        except Exception:
+            pass
 
         # execute and assert
         server_uuid = '99999999-9999-9999-9999-999999999999'  # not found
