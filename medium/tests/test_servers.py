@@ -198,6 +198,7 @@ class ServersTest(FunctionalTest):
                                                 accessIPv6=accessIPv6,
                                                 personality=personality)
 
+            print "%r %r" % (resp, server)
             # Wait for the server to become active
             self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
@@ -2601,7 +2602,7 @@ class ServersTest(FunctionalTest):
         """
 
         sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
-               "VALUES(0, '1', 'ram', 1024)")
+               "VALUES(0, '2', 'ram', 1024)")
         self.exec_sql(sql)
 
         print """
