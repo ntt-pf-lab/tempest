@@ -14,6 +14,11 @@ $cmd network create --label=private_1-2 --project_id=1 --fixed_range_v4=10.0.1.0
 $cmd network create --label=private_1-3 --project_id=1 --fixed_range_v4=10.0.2.0/24 --bridge_interface=br-int --num_networks= --network_size=32
 $cmd network create --label=private_2-1 --project_id=2 --fixed_range_v4=10.0.3.0/24 --bridge_interface=br-int --num_networks= --network_size=32
 
+keystone=/opt/openstack/keystone/bin/keystone-manage
+$keystone tenant add "prjTest"
+$keystone user add usrTest passwordTest
+$keystone role grant Member usrTest prjTest
+
 exec_date=`date '+%Y%m%d%H%M'`
 pwd_place=`pwd`
 EXIT_CODE=0
