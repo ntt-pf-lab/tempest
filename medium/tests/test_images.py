@@ -45,7 +45,7 @@ To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 default_config = storm.config.StormConfig('etc/medium.conf')
 config = default_config
 environ_processes = []
-
+MAX_RETRY=10
 
 def setUpModule(module):
 #    environ_processes = module.environ_processes
@@ -173,7 +173,6 @@ class ImagesTest(FunctionalTest):
         self.flavor_ref = self.config.env.flavor_ref
         self.ss_client = self.os.servers_client
         self.img_client = self.os.images_client
-
         class config(object):
             class env(object):
                 authentication = "keystone_v2"
@@ -197,8 +196,20 @@ class ImagesTest(FunctionalTest):
                  'auth_url': self.config.nova.auth_url, 'config': config}
         self.ss_client_for_user3 = ServersClient(**user3)
         self.img_client_for_user3 = ImagesClient(**user3)
+	retry = 0
+        while True: 
+            try:
+		self._create_server()
+	    except Exception as e:
+                if retry > MAX_RETRY:
+                        raise e
+                        break
+                print e
+                retry += 1
+                continue
+            break
 
-    def create_server(self):
+    def _create_server(self):
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
         name = 'server_' + self._testMethodName
@@ -216,6 +227,9 @@ class ImagesTest(FunctionalTest):
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
         self.server_id = server['id']
+
+    def create_server(self):
+	pass
 
     @attr(kind='medium')
     def test_list_images_when_image_amount_is_zero(self):
