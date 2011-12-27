@@ -2281,7 +2281,7 @@ class ServersTest(FunctionalTest):
 
         """
 
-        sql = 'select uuid from networks limit 1;'
+        sql = 'select uuid from networks where cidr=\'10.0.0.0/24\' limit 1;'
         uuid = self.get_data_from_mysql(sql)
         uuid = uuid[:-1]
 
