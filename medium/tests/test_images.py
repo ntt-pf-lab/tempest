@@ -353,8 +353,19 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_when_disk_format_is_aki(self):
         """ List of all images should contain the aki image """
+        # create an image for test
+        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        name = 'server_' + self._testMethodName
+        out = subprocess.check_output('bin/glance add -A nova name=%s '
+                                      'disk_format=aki container_format=aki '
+                                      '< %s' % (name, tmp_file),
+                                      cwd=self.config.glance.directory,
+                                      shell=True)
+        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
+        self.assertIsNotNone(match)
+        aki_image_id = match.groupdict()['image_id']
+
         # execute and assert
-        aki_image_id = 1
         resp, images = self.img_client.list_images()
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(aki_image_id) in [x['id'] for x in images])
@@ -362,8 +373,19 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_when_disk_format_is_ari(self):
         """ List of all images should contain the ari image """
+        # create an image for test
+        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        name = 'server_' + self._testMethodName
+        out = subprocess.check_output('bin/glance add -A nova name=%s '
+                                      'disk_format=ari container_format=ari '
+                                      '< %s' % (name, tmp_file),
+                                      cwd=self.config.glance.directory,
+                                      shell=True)
+        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
+        self.assertIsNotNone(match)
+        ari_image_id = match.groupdict()['image_id']
+
         # execute and assert
-        ari_image_id = 2
         resp, images = self.img_client.list_images()
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(ari_image_id) in [x['id'] for x in images])
@@ -371,8 +393,19 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_when_disk_format_is_ami(self):
         """ List of all images should contain the ami image """
+        # create an image for test
+        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        name = 'server_' + self._testMethodName
+        out = subprocess.check_output('bin/glance add -A nova name=%s '
+                                      'disk_format=ami container_format=ami '
+                                      '< %s' % (name, tmp_file),
+                                      cwd=self.config.glance.directory,
+                                      shell=True)
+        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
+        self.assertIsNotNone(match)
+        ami_image_id = match.groupdict()['image_id']
+
         # execute and assert
-        ami_image_id = 3
         resp, images = self.img_client.list_images()
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(ami_image_id) in [x['id'] for x in images])
@@ -844,8 +877,19 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_with_detail_when_disk_format_is_ami(self):
         """ Detailed list of images should contain the ami image """
+        # create an image for test
+        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        name = 'server_' + self._testMethodName
+        out = subprocess.check_output('bin/glance add -A nova name=%s '
+                                      'disk_format=ami container_format=ami '
+                                      '< %s' % (name, tmp_file),
+                                      cwd=self.config.glance.directory,
+                                      shell=True)
+        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
+        self.assertIsNotNone(match)
+        ami_image_id = match.groupdict()['image_id']
+
         # execute and assert
-        ami_image_id = 3
         resp, images = self.img_client.list_images_with_detail()
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(ami_image_id) in [x['id'] for x in images])
@@ -1274,8 +1318,20 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_get_image_when_disk_format_is_ami(self):
         """ Detail of the image should be returned """
+        # make an image file
+        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        # create an image for test
+        name = 'server_' + self._testMethodName
+        out = subprocess.check_output('bin/glance add -A nova name=%s '
+                                      'disk_format=ami container_format=ami '
+                                      '< %s' % (name, tmp_file),
+                                      cwd=self.config.glance.directory,
+                                      shell=True)
+        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
+        self.assertIsNotNone(match)
+        ami_image_id = match.groupdict()['image_id']
+
         # execute and assert
-        ami_image_id = 3
         resp, image = self.img_client.get_image(ami_image_id)
         self.assertEqual('200', resp['status'])
         self.assertTrue(image)
