@@ -209,12 +209,15 @@ class VirtualInterfacesTest(FunctionalTest):
     def test_list_virtual_interfaces_when_not_found_with_server_id(self):
         """Returns 404 response"""
         # make sure no record in db
-        subprocess.check_call('mysql -u %s -p%s -D nova -e "'
+        try:
+            subprocess.check_call('mysql -u %s -p%s -D nova -e "'
                               'DELETE FROM virtual_interfaces;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password),
                               shell=True)
+        except Exception:
+            pass
 
         # execute and assert
         server_id = sys.maxint  # not found
@@ -228,12 +231,15 @@ class VirtualInterfacesTest(FunctionalTest):
     def test_list_virtual_interfaces_when_not_found_with_server_uuid(self):
         """Returns 404 response"""
         # make sure no record in db
-        subprocess.check_call('mysql -u %s -p%s -D nova -e "'
+        try:
+            subprocess.check_call('mysql -u %s -p%s -D nova -e "'
                               'DELETE FROM virtual_interfaces;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password),
                               shell=True)
+        except Exception:
+            pass
 
         # execute and assert
         server_uuid = '99999999-9999-9999-9999-999999999999'  # not found
@@ -248,12 +254,15 @@ class VirtualInterfacesTest(FunctionalTest):
     def test_list_virtual_interfaces_when_server_id_is_empty_string(self):
         """Returns 400 response"""
         # make sure no record in db
-        subprocess.check_call('mysql -u %s -p%s -D nova -e "'
+        try:
+            subprocess.check_call('mysql -u %s -p%s -D nova -e "'
                               'DELETE FROM virtual_interfaces;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password),
                               shell=True)
+        except Exception:
+            pass
 
         # execute and assert
         server_id = ''
@@ -264,12 +273,15 @@ class VirtualInterfacesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_virtual_interfaces_when_network_amount_is_zero(self):
         """Returns 200 response with an empty list"""
-        subprocess.check_call('mysql -u %s -p%s -D nova -e "'
+        try:
+            subprocess.check_call('mysql -u %s -p%s -D nova -e "'
                       'DELETE FROM virtual_interfaces;'
                       '"' % (
                           self.config.mysql.user,
                           self.config.mysql.password),
                       shell=True)
+        except Exception:
+            pass
 
         # create a server with a virtual_interface for test
         name = 'server_' + self._testMethodName
