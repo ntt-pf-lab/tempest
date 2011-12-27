@@ -2330,8 +2330,8 @@ class ServersTest(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        networks = [{'fixed_ip': '10.0.0.2', 'uuid': uuid[0]},
-                    {'fixed_ip': '10.0.1.2', 'uuid': uuid[1]}]
+        networks = [{'fixed_ip': '10.0.0.100', 'uuid': uuid[0]},
+                    {'fixed_ip': '10.0.1.100', 'uuid': uuid[1]}]
         resp, server = self.ss_client.create_server_kw(
                                                    name=name,
                                                    imageRef=self.image_ref,
