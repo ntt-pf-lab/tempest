@@ -2602,7 +2602,7 @@ class ServersTest(FunctionalTest):
         """
 
         sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
-               "VALUES(0, '1', 'ram', 1024)")
+               "VALUES(0, '3', 'ram', 1024)")
         self.exec_sql(sql)
 
         print """
@@ -2654,6 +2654,7 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "server=", server
         self.assertEqual('413', resp['status'])
+        
         sql = "delete from quotas;"
         self.exec_sql(sql)
 
