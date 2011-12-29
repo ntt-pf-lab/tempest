@@ -12,19 +12,19 @@ from time import sleep
 class HavocManager(object):
     """Manager Base Class for Havoc actions"""
 
-    def __init__(self):
+    def __init__(self, host, username, password):
         self.config = config.HavocConfig()
         self.nodes = self.config.nodes
         self.services = self.config.services
         self.env = self.config.env
         self.deploy_mode = self.env.deploy_mode
-        self.timeout = self.config.nodes.ssh_timeout
+        timeout = self.config.nodes.ssh_timeout
+        self.client = self.connect(host, username, password,
+                                 timeout)
 
-    def connect(self, host, username, password, timeout=None):
+    def connect(self, host, username, password, timeout):
         """Create Connection object"""
 
-        if timeout is None:
-            timeout = self.timeout
         try:
             ssh_client = ssh.Client(host, username, password, timeout)
             return ssh_client
@@ -47,7 +47,7 @@ class HavocManager(object):
         except:
             raise
 
-    def _is_service_running(self, client, service):
+    def _is_service_running(self, service):
         """Checks if service is running"""
 
         if self.deploy_mode == 'devstack-local':
@@ -69,18 +69,18 @@ class HavocManager(object):
 
         elif self.deploy_mode == 'pkg-multi':
             command = 'sudo service %s status' % service
-            output = self._run_cmd(client, command)
+            output = self._run_cmd(self.client, command)
             if 'start/running' in output:
                 return True
             elif 'stop/waiting' in output:
                 return False
 
-    def _is_process_running(self, client, process):
+    def _is_process_running(self, process):
         """Checks if a process is running"""
 
         process_check = '[%s]' % process[0] + process[1:]
         command = 'ps aux | grep %s' % process_check
-        output = self._run_cmd(client, command).strip('\n')
+        output = self._run_cmd(self.client, command).strip('\n')
         if process in output:
             return True
         return False
@@ -97,14 +97,14 @@ class HavocManager(object):
 
         return path
 
-    def service_action(self, client, service, action, **kwargs):
+    def service_action(self, service, action, config_file=None):
         """Perform the requested action on a service on remote host"""
 
-        run_status = self._is_service_running(client, service)
+        run_status = self._is_service_running(service)
 
         # Configure call to action for a local devstack setup
         if self.deploy_mode == 'devstack-local':
-            if kwargs.get('config_file'):
+            if config_file:
                 config_file = os.path.join(self.env.devstack_root,
                                           config_file)
             self.service_root = self._get_service_root(service)
@@ -119,8 +119,8 @@ class HavocManager(object):
                                                    config_file)
                         command = 'sudo python %s --config-file=%s' % (
                                                 self.service_root, config_file)
-                    else:                                               
-                        command = 'sudo python %s' % self.service_root 
+                    else:
+                        command = 'sudo python %s' % self.service_root
                     self._run_cmd(command=command)
 
             elif action == 'stop':
@@ -144,9 +144,8 @@ class HavocManager(object):
             elif action == 'status':
                     return run_status
 
-            else:
-                command = 'service %s %s' % (service, action)
-                return self._run_cmd(client, command)
+            command = 'service %s %s' % (service, action)
+            return self._run_cmd(self.client, command)
 
         # Configure call to action for a remote devstack setup
         elif self.deploy_mode == 'devstack-remote':
@@ -168,95 +167,91 @@ class HavocManager(object):
 class ControllerHavoc(HavocManager):
     """Class that performs Havoc actions on Controller Node"""
 
-    def __init__(self, host, username=None, password=None, timeout=None):
-        super(ControllerHavoc, self).__init__()
+    def __init__(self, host, username=None, password=None, config_file=None):
+        super(ControllerHavoc, self).__init__(host, username, password)
         self.api_service = 'nova-api'
         self.scheduler_service = 'nova-scheduler'
         self.rabbit_service = 'rabbitmq-server'
         self.mysql_service = 'mysql'
-        self.host = self.connect(host, username, password,
-                                 timeout)
-
-    def stop_nova_api(self):
-        return self.service_action(self.host, self.api_service, 'stop', **kwargs)
+        self.config_file = config_file
 
     def start_nova_api(self):
-        return self.service_action(self.host, self.api_service, 'start')
+        return self.service_action(self.api_service, 'start',
+                                    self.config_file)
+
+    def stop_nova_api(self):
+        return self.service_action(self.api_service, 'stop')
 
     def restart_nova_api(self):
-        return self.service_action(self.host, self.api_service, 'restart' **kwargs)
+        return self.service_action(self.api_service, 'restart',
+                                    self.config_file)
 
     def stop_nova_scheduler(self):
-        return self.service_action(self.host, self.scheduler_service, 'stop')
+        return self.service_action(self.scheduler_service, 'stop')
 
     def start_nova_scheduler(self):
-        return self.service_action(self.host, self.scheduler_service, 'start')
+        return self.service_action(self.scheduler_service,
+                                    'start')
 
     def restart_nova_scheduler(self):
-        return self.service_action(self.host, self.scheduler_service,
+        return self.service_action(self.scheduler_service,
                                     'restart')
 
     def stop_rabbitmq(self):
-        return self.service_action(self.host, self.rabbit_service, 'stop')
+        return self.service_action(self.rabbit_service, 'stop')
 
     def start_rabbitmq(self):
-        return self.service_action(self.host, self.rabbit_service, 'start')
+        return self.service_action(self.rabbit_service, 'start')
 
     def restart_rabbitmq(self):
-        return self.service_action(self.host, self.rabbit_service, 'restart')
+        return self.service_action(self.rabbit_service, 'restart')
 
     def stop_mysql(self):
-        return self.service_action(self.host, self.mysql_service, 'stop')
+        return self.service_action(self.mysql_service, 'stop')
 
     def start_mysql(self):
-        return self.service_action(self.host, self.mysql_service, 'start')
+        return self.service_action(self.mysql_service, 'start')
 
     def restart_mysql(self):
-        return self.service_action(self.host, self.mysql_service, 'restart')
+        return self.service_action(self.mysql_service, 'restart')
 
 
 class NetworkHavoc(HavocManager):
     """Class that performs Network node specific Havoc actions"""
 
-    def __init__(self, host, username=None, passwordi=None, timeout=None):
-        super(NetworkHavoc, self).__init__()
-        self.username = username
-        self.password = password
+    def __init__(self, host, username=None, password=None, config_file=None):
+        super(NetworkHavoc, self).__init__(host, username, password)
         self.network_service = 'nova-network'
-        self.host = self.connect(host, self.username, self.password,
-                                      self.timeout)
 
     def stop_nova_network(self):
-        return self.service_action(self.host, self.network_service, 'stop')
+        return self.service_action(self.network_service, 'stop')
 
     def start_nova_network(self):
-        return self.service_action(self.host, self.network_service, 'start')
+        return self.service_action(self.network_service, 'start')
 
     def restart_nova_network(self):
-        return self.service_action(self.host, self.network_service, 'restart')
+        return self.service_action(self.network_service,
+                                    'restart')
 
     def kill_dnsmasq(self):
-        return self.process_action(self.host, 'dnsmasq', 'killall')
+        return self.process_action('dnsmasq', 'killall')
 
     def start_dnsmasq(self):
         """Restarting nova-network would restart dnsmasq process"""
 
-        self.service_action(self.host, self.network_service, 'restart')
+        self.service_action(self.network_service, 'restart')
         sleep(1)
-        return self.process_action(self.host, 'dnsmasq', 'verify')
+        return self.process_action('dnsmasq', 'verify')
 
 
 class ComputeHavoc(HavocManager):
     """Class that performs Compute node specific Havoc actions"""
 
-    def __init__(self, host, username=None, password=None, timeout=None):
-        super(ComputeHavoc, self).__init__()
-        self.username = username
-        self.password = password
+    def __init__(self, host, username=None, password=None, config_file=None):
+        super(ComputeHavoc, self).__init__(host, username, password)
         self.compute_service = 'nova-compute'
-        self.host = self.connect(host, self.username, self.password,
-                                      self.timeout)
         self.terminated_instances = []
+        self.config_file = config_file
 
     def _get_instances(self, client, status):
         """Uses kvm virsh to get a list of running or shutoff instances"""
@@ -271,28 +266,30 @@ class ComputeHavoc(HavocManager):
         return instances
 
     def stop_nova_compute(self):
-        return self.service_action(self.host, self.compute_service, 'stop')
+        return self.service_action(self.compute_service, 'stop')
 
     def start_nova_compute(self):
-        return self.service_action(self.host, self.compute_service, 'start')
+        return self.service_action(self.compute_service, 'start',
+                                    self.config_file)
 
     def restart_nova_compute(self):
-        return self.service_action(self.host, self.compute_service, 'restart')
+        return self.service_action(self.compute_service, 'restart',
+                                self.config_file)
 
     def stop_libvirt(self):
-        return self.service_action(self.host, 'libvirt-bin', 'stop')
+        return self.service_action('libvirt-bin', 'stop')
 
     def start_libvirt(self):
-        return self.service_action(self.host, 'libvirt-bin', 'start')
+        return self.service_action('libvirt-bin', 'start')
 
     def restart_libvirt(self):
-        return self.service_action(self.host, 'libvirt-bin', 'restart')
+        return self.service_action('libvirt-bin', 'restart')
 
     def get_running_instances(self):
-        return self._get_instances(self.host, 'running')
+        return self._get_instances(self.client, 'running')
 
     def get_stopped_instances(self):
-        return self._get_instances(self.host, 'shut off')
+        return self._get_instances(self.client, 'shut off')
 
     def terminate_instances(self, random=False, count=0):
         """Terminates instances randomly based on parameters passed"""
@@ -307,18 +304,18 @@ class ComputeHavoc(HavocManager):
             else:
                 for instance in instances[0:count]:
                     command = 'virsh destroy %s' % instance
-                    self._run_cmd(self.host, command)
+                    self._run_cmd(self.client, command)
         elif random:
             if count and len(instances) >= count:
                 for i in range(count):
                     command = 'virsh destroy %s' % choice(instances)
-                    self._run_cmd(self.host, command)
+                    self._run_cmd(self.client, command)
             else:
                 command = 'virsh destroy %s' % choice(instances)
-                self._run_cmd(self.host, command)
+                self._run_cmd(self.client, command)
         else:
             command = 'virsh destroy %s' % instances[0]
-            self._run_command(self.host, command)
+            self._run_command(self.client, command)
 
         self.terminated_instances = self.get_stopped_instances()
 
@@ -328,67 +325,68 @@ class ComputeHavoc(HavocManager):
 
         for instance in self.terminated_instances:
             command = 'virsh start %s' % instance
-            self._run_cmd(self.host, command)
+            self._run_cmd(self.client, command)
 
 
 class GlanceHavoc(HavocManager):
-    def __init__(self, host, username=None, password=None, timeout=None):
-        super(GlanceHavoc, self).__init__()
-        self.username = username
-        self.password = password
+    def __init__(self, host, username=None, password=None,
+                        api_config_file=None, registry_config_file=None):
+        super(GlanceHavoc, self).__init__(host, username, password)
         self.api_service = 'glance-api'
         self.registry_service = 'glance-registry'
-        self.host = self.connect(host, self.username, self.password,
-                                      self.timeout)
+        self.api_config_file = api_config_file
+        self.registry_config_file = registry_config_file
 
     def start_glance_api(self):
-        return self.service_action(self.host, self.api_service, 'start', **kwargs)
+        return self.service_action(self.api_service, 'start',
+                                    self.api_config_file)
 
     def restart_glance_api(self):
-        return self.service_action(self.host, self.api_service, 'restart', **kwargs)
+        return self.service_action(self.api_service, 'restart',
+                                    self.api_config_file)
 
     def stop_glance_api(self):
-        return self.service_action(self.host, self.api_service, 'stop')
+        return self.service_action(self.api_service, 'stop')
 
     def start_glance_registry(self):
-        return self.service_action(self.host, self.registry_service, 'start', **kwargs)
+        return self.service_action(self.registry_service, 'start',
+                                    self.registry_config_file)
 
     def restart_glance_registry(self):
-        return self.service_action(self.host, self.registry_service, 'restart', **kwargs)
+        return self.service_action(self.registry_service,
+                                'restart', self.registry_config_file)
 
     def stop_glance_registry(self):
-        return self.service_action(self.host, self.registry_service, 'stop')
+        return self.service_action(self.registry_service, 'stop')
 
 
 class KeystoneHavoc(HavocManager):
-    def __init__(self, host, username=None, password=None, timeout=None):
+    def __init__(self, host, username=None, password=None, config_file=None):
         super(KeystoneHavoc, self).__init__()
-        self.username = username
-        self.password = password
         self.keystone_service = 'keystone'
-        self.host = self.connect(self.host, self.username, self.password,
-                                      self.timeout)
+        self.config_file = config_file
 
     def start_keystone(self):
-        return self.service_action(self.host, self.keystone_service, 'start', **kwargs)
+        return self.service_action(self.keystone_service, 'start',
+                                    self.config_file)
 
-    def restart_restart(self):
-        return self.service_action(self.host, self.keystone_service, 'restart', **kwargs)
+    def restart_keystone(self):
+        return self.service_action(self.keystone_service,
+                                'restart', self.config_file)
 
     def stop_keystone(self):
-        return self.service_action(self.host, self.keystone_service, 'stop')
+        return self.service_action(self.keystone_service, 'stop')
 
 
 class PowerHavoc(HavocManager):
     """Class that performs Power Management Havoc actions"""
 
-    def __init__(self, host, username=None, password=None, timeout=None):
+    def __init__(self, host, username=None, password=None):
         super(PowerHavoc, self).__init__()
         self.ipmi_host = host
         self.ipmi_user = username
         self.ipmi_password = password
         self.power_cmd = None
-        self.timeout = timeout
 
     def power_on(self):
         power_cmd = 'power on'
