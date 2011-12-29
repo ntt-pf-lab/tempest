@@ -222,16 +222,18 @@ class NetworkHavoc(HavocManager):
     def __init__(self, host, username=None, password=None, config_file=None):
         super(NetworkHavoc, self).__init__(host, username, password)
         self.network_service = 'nova-network'
+        self.config_file = config_file
 
     def stop_nova_network(self):
         return self.service_action(self.network_service, 'stop')
 
     def start_nova_network(self):
-        return self.service_action(self.network_service, 'start')
+        return self.service_action(self.network_service, 'start',
+                                    self.config_file)
 
     def restart_nova_network(self):
         return self.service_action(self.network_service,
-                                    'restart')
+                                  'restart', self.config_file)
 
     def kill_dnsmasq(self):
         return self.process_action('dnsmasq', 'killall')
@@ -253,11 +255,11 @@ class ComputeHavoc(HavocManager):
         self.terminated_instances = []
         self.config_file = config_file
 
-    def _get_instances(self, client, status):
+    def _get_instances(self, status):
         """Uses kvm virsh to get a list of running or shutoff instances"""
         command = 'virsh list --all'
         instances = []
-        output = self._run_cmd(client, command)
+        output = self._run_cmd(self.client, command)
         dom_list = output.split('\n')
         for item in dom_list:
             if status in item:
@@ -286,10 +288,10 @@ class ComputeHavoc(HavocManager):
         return self.service_action('libvirt-bin', 'restart')
 
     def get_running_instances(self):
-        return self._get_instances(self.client, 'running')
+        return self._get_instances('running')
 
     def get_stopped_instances(self):
-        return self._get_instances(self.client, 'shut off')
+        return self._get_instances('shut off')
 
     def terminate_instances(self, random=False, count=0):
         """Terminates instances randomly based on parameters passed"""
