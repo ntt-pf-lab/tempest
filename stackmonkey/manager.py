@@ -12,7 +12,7 @@ from time import sleep
 class HavocManager(object):
     """Manager Base Class for Havoc actions"""
 
-    def __init__(self, host, username, password):
+    def __init__(self, host, username='root', password='root'):
         self.config = config.HavocConfig()
         self.nodes = self.config.nodes
         self.services = self.config.services
@@ -167,7 +167,7 @@ class HavocManager(object):
 class ControllerHavoc(HavocManager):
     """Class that performs Havoc actions on Controller Node"""
 
-    def __init__(self, host, username=None, password=None, config_file=None):
+    def __init__(self, host, username='root', password='root', config_file=None):
         super(ControllerHavoc, self).__init__(host, username, password)
         self.api_service = 'nova-api'
         self.scheduler_service = 'nova-scheduler'
@@ -219,7 +219,7 @@ class ControllerHavoc(HavocManager):
 class NetworkHavoc(HavocManager):
     """Class that performs Network node specific Havoc actions"""
 
-    def __init__(self, host, username=None, password=None, config_file=None):
+    def __init__(self, host, username='root', password='root', config_file=None):
         super(NetworkHavoc, self).__init__(host, username, password)
         self.network_service = 'nova-network'
         self.config_file = config_file
@@ -249,7 +249,7 @@ class NetworkHavoc(HavocManager):
 class ComputeHavoc(HavocManager):
     """Class that performs Compute node specific Havoc actions"""
 
-    def __init__(self, host, username=None, password=None, config_file=None):
+    def __init__(self, host, username='root', password='root', config_file=None):
         super(ComputeHavoc, self).__init__(host, username, password)
         self.compute_service = 'nova-compute'
         self.terminated_instances = []
@@ -331,7 +331,7 @@ class ComputeHavoc(HavocManager):
 
 
 class GlanceHavoc(HavocManager):
-    def __init__(self, host, username=None, password=None,
+    def __init__(self, host, username='root', password='root',
                         api_config_file=None, registry_config_file=None):
         super(GlanceHavoc, self).__init__(host, username, password)
         self.api_service = 'glance-api'
@@ -363,7 +363,7 @@ class GlanceHavoc(HavocManager):
 
 
 class KeystoneHavoc(HavocManager):
-    def __init__(self, host, username=None, password=None, config_file=None):
+    def __init__(self, host, username='root', password='root', config_file=None):
         super(KeystoneHavoc, self).__init__()
         self.keystone_service = 'keystone'
         self.config_file = config_file
@@ -383,7 +383,7 @@ class KeystoneHavoc(HavocManager):
 class PowerHavoc(HavocManager):
     """Class that performs Power Management Havoc actions"""
 
-    def __init__(self, host, username=None, password=None):
+    def __init__(self, host, username='root', password='root'):
         super(PowerHavoc, self).__init__()
         self.ipmi_host = host
         self.ipmi_user = username

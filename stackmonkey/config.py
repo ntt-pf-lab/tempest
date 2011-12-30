@@ -153,7 +153,6 @@ class HavocConfig(object):
 
         path = os.path.join(conf_dir, conf_file)
 
-        path = 'havoc.conf'
         if not os.path.exists(path):
             msg = "Config file %(path)s not found" % locals()
             raise RuntimeError(msg)
