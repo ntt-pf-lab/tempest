@@ -71,7 +71,7 @@ class HavocManager(object):
                                 stderr=subprocess.PIPE)
 
             proc3 = subprocess.Popen(shlex.split('awk \'{print $2}\''),
-                                stdin=proc2.stdout, stodout=subprocess.PIPE,
+                                stdin=proc2.stdout, stdout=subprocess.PIPE,
                                 stderr=subprocess.PIPE)
 
             proc1.stdout.close()
