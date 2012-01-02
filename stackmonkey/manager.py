@@ -435,6 +435,8 @@ class QuantumHavoc(HavocManager):
         self.config_file = config_file
         self.agent_config_file = agent_config_file
         self.fake_quantum_service = kwargs.get('fake_quantum_path')
+        self.fake_args = kwargs.get('fake_quantum_args')
+
 
 
     def start_quantum(self):
