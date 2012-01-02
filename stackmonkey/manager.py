@@ -43,7 +43,8 @@ class HavocManager(object):
         print command
         try:
             if self.deploy_mode == 'devstack-local':
-                return subprocess.check_call(command.split())
+#                return subprocess.check_call(command.split())
+	         return subprocess.check_call(command, shell=True)
 
             elif self.deploy_mode in ('pkg-multi', 'devstack-remote'):
                 output = self.client.exec_command(command)
@@ -148,7 +149,7 @@ class HavocManager(object):
                     config_file = os.path.join(self.env.devstack_root,
                                                config_file)
 
-                    command = '%s --config-file=%s %s' % (
+                    command = '%s --config-file=%s %s &' % (
                                                 self.service_root, config_file,
                                                 self.monkey_args)
                     if service == 'nova-compute':
@@ -160,7 +161,7 @@ class HavocManager(object):
                     if service == 'nova-compute':
                         command = 'sg libvirtd %s &' % self.service_root
                     else:
-                        command = '%s' % self.service_root
+                        command = '%s &' % self.service_root
                 self._run_cmd(command=command)
 
             elif action == 'stop':
