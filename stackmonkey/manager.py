@@ -43,8 +43,7 @@ class HavocManager(object):
         print command
         try:
             if self.deploy_mode == 'devstack-local':
-#                return subprocess.check_call(command.split())
-	         return subprocess.check_call(command, shell=True)
+                return subprocess.check_call(command, shell=True)
 
             elif self.deploy_mode in ('pkg-multi', 'devstack-remote'):
                 output = self.client.exec_command(command)
@@ -134,6 +133,10 @@ class HavocManager(object):
         """Perform the requested action on a service on remote host"""
 
         run_status = self._is_service_running(service)
+	if config_file and 'nova' in service:
+            config_label = '--flagfile'
+        else:
+            config_label = '--config_file'
 
         # Configure call to action for a local devstack setup
         if self.deploy_mode in ('devstack-local', 'devstack-remote'):
@@ -149,11 +152,12 @@ class HavocManager(object):
                     config_file = os.path.join(self.env.devstack_root,
                                                config_file)
 
-                    command = '%s --config-file=%s %s &' % (
-                                                self.service_root, config_file,
+                    command = '%s %s=%s %s &' % (
+                                                self.service_root, config_label,
+                                                config_file,
                                                 self.monkey_args)
                     if service == 'nova-compute':
-                        command = 'sg libvirtd %s --config-file=%s %s &' % (
+                        command = 'sg libvirtd %s --flagfile=%s %s &' % (
                                         self.service_root, config_file,
                                         self.monkey_args)
 
@@ -175,7 +179,7 @@ class HavocManager(object):
 
         # Configure call to action for a multi-node remote setup
         elif self.deploy_mode == 'pkg-multi':
-            if action == 'start':
+            f action == 'start':
                 if run_status:
                     return
 
