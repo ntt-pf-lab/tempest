@@ -2,6 +2,7 @@ from storm import exceptions
 import httplib2
 import json
 import storm.config
+import time
 
 
 class RestClient(object):
@@ -96,10 +97,21 @@ class RestClient(object):
         headers['X-Auth-Token'] = self.token
 
         req_url = "%s/%s" % (self.base_url, url)
+        start_time = time.time()
         resp, body = self.http_obj.request(req_url, method,
                                            headers=headers, body=body)
+        self._response_time = "%.6f" % (time.time() - start_time)
 #        if resp.status == 400:
 #            body = json.loads(body)
 #            raise exceptions.BadRequest(body['badRequest']['message'])
 
         return resp, body
+
+    def get_response_time(self):
+        """Response time for the API. Defaults to 0."""
+        return self._response_time
+
+    def set_response_time(self, response_time):
+        """Response time for the API. Defaults to 0."""
+        self._response_time = response_time
+    response_time = property(get_response_time, set_response_time)
