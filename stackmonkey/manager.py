@@ -437,8 +437,6 @@ class QuantumHavoc(HavocManager):
         self.fake_quantum_service = kwargs.get('fake_quantum_path')
         self.fake_args = kwargs.get('fake_quantum_args')
 
-
-
     def start_quantum(self):
         return self.service_action(self.quantum_service, 'start',
                                     self.config_file)
@@ -457,7 +455,7 @@ class QuantumHavoc(HavocManager):
                 self.fake_args)
 
     def stop_fake_quantum(self):
-        return
+        return self.service_action(self.fake_quantum_service, 'stop')
 
 class PowerHavoc(HavocManager):
     """Class that performs Power Management Havoc actions"""
