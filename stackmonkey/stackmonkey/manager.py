@@ -12,22 +12,18 @@ from time import sleep
 class HavocManager(object):
     """Manager Base Class for Havoc actions"""
 
-    def __init__(self, host=None, username='root', password='root', **kwargs):
+    def __init__(self, host=None, username='root', password='root'):
         self.config = config.HavocConfig()
         self.nodes = self.config.nodes
         self.services = self.config.services
         self.env = self.config.env
         self.deploy_mode = self.env.deploy_mode
-        patches = kwargs.get('patches')
-        self.monkey_args = ''
         timeout = self.config.nodes.ssh_timeout
         if self.deploy_mode == 'devstack-remote':
             host = self.env.devstack_host
         if host:
             self.client = self.connect(host, username, password,
                                  timeout)
-        if patches:
-            self._set_monkey_patch_args(patches)
 
     def connect(self, host, username, password, timeout):
         """Create Connection object"""
@@ -118,16 +114,9 @@ class HavocManager(object):
         elif 'glance' in service:
             path = os.path.join(devstack_root, 'glance/bin', service)
         else:
-            path = os.path.join(devstack_root, service, 'bin', service)
+            path = os.path.join(devstack_root, service)
 
         return path
-
-    def _set_monkey_patch_args(self, patches):
-        self.monkey_args = ' --monkey_patch=true'
-        self.monkey_args += ' --monkey_patch_modules=%s' % ','.join([
-                       module + ':' + patch
-                       for module, patch in patches
-        ])
 
     def service_action(self, service, action, config_file=None):
         """Perform the requested action on a service on remote host"""
@@ -136,9 +125,10 @@ class HavocManager(object):
 
         # Configure call to action for a local devstack setup
         if self.deploy_mode in ('devstack-local', 'devstack-remote'):
-            self.service_root = self._get_service_root(service)
             if config_file:
-                config_file = os.path.join(self.service_root, config_file)
+                config_file = os.path.join(self.env.devstack_root,
+                                          config_file)
+            self.service_root = self._get_service_root(service)
 
             if action == 'start':
                 if run_status:
@@ -148,13 +138,11 @@ class HavocManager(object):
                     config_file = os.path.join(self.env.devstack_root,
                                                config_file)
 
-                    command = '%s --config-file=%s %s' % (
-                                                self.service_root, config_file,
-                                                self.monkey_args)
+                    command = '%s --config-file=%s' % (
+                                                self.service_root, config_file)
                     if service == 'nova-compute':
-                        command = 'sg libvirtd %s --config-file=%s %s &' % (
-                                        self.service_root, config_file,
-                                        self.monkey_args)
+                        command = 'sg libvirtd %s --config-file=%s &' % (
+                                        self.service_root, config_file)
 
                 else:
                     if service == 'nova-compute':
@@ -293,8 +281,8 @@ class ComputeHavoc(HavocManager):
     """Class that performs Compute node specific Havoc actions"""
 
     def __init__(self, host=None, username='root', password='root',
-                    config_file=None, **kwargs):
-        super(ComputeHavoc, self).__init__(host, username, password, **kwargs)
+                    config_file=None):
+        super(ComputeHavoc, self).__init__(host, username, password)
         self.compute_service = 'nova-compute'
         self.terminated_instances = []
         self.config_file = config_file
@@ -424,38 +412,6 @@ class KeystoneHavoc(HavocManager):
     def stop_keystone(self):
         return self.service_action(self.keystone_service, 'stop')
 
-
-class QuantumHavoc(HavocManager):
-    def __init__(self, host=None, username='root', password='root',
-                    config_file=None, agent_config_file=None, **kwargs):
-        super(QuantumHavoc, self).__init__(host, username, password, **kwargs)
-        self.quantum_service = 'quantum'
-        self.quantum_plugin = "quantum/plugins/openvswitch/agent/" \
-                                "ovs_quantum_agent.py -v"
-        self.config_file = config_file
-        self.agent_config_file = agent_config_file
-        self.fake_quantum_service = kwargs.get('fake_quantum_path')
-
-
-    def start_quantum(self):
-        return self.service_action(self.quantum_service, 'start',
-                                    self.config_file)
-
-    def stop_quantum(self):
-        return self.service_action(self.quantum_service, 'stop')
-
-    def start_quantum_plugin(self):
-        return self.service_action(self.quantum_plugin_service, 'start')
-
-    def stop_quantum_plugin(self):
-        return self.service_action(self.quantum_plugin_service, 'stop')
-
-    def start_fake_quantum(self):
-        return self.service_action(self.fake_quantum_service, 'start',
-                self.fake_args)
-
-    def stop_fake_quantum(self):
-        return
 
 class PowerHavoc(HavocManager):
     """Class that performs Power Management Havoc actions"""
