@@ -179,7 +179,7 @@ class HavocManager(object):
 
         # Configure call to action for a multi-node remote setup
         elif self.deploy_mode == 'pkg-multi':
-            f action == 'start':
+            if action == 'start':
                 if run_status:
                     return
 
