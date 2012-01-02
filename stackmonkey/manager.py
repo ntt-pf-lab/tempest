@@ -136,7 +136,7 @@ class HavocManager(object):
 	if config_file and 'nova' in service:
             config_label = '--flagfile'
         else:
-            config_label = '--config_file'
+            config_label = '--config-file'
 
         # Configure call to action for a local devstack setup
         if self.deploy_mode in ('devstack-local', 'devstack-remote'):
