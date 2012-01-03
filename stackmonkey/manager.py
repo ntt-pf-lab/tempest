@@ -449,8 +449,6 @@ class QuantumHavoc(HavocManager):
                                 "ovs_quantum_agent.py -v"
         self.config_file = config_file
         self.agent_config_file = agent_config_file
-        self.fake_quantum_service = kwargs.get('fake_quantum_path')
-        self.fake_args = kwargs.get('fake_quantum_args')
 
     def start_quantum(self):
         return self.service_action(self.quantum_service, 'start',
@@ -466,12 +464,6 @@ class QuantumHavoc(HavocManager):
     def stop_quantum_plugin(self):
         return self.service_action(self.quantum_plugin_service, 'stop')
 
-    def start_fake_quantum(self):
-        return self.service_action(self.fake_quantum_service, 'start',
-                self.fake_args)
-
-    def stop_fake_quantum(self):
-        return self.service_action(self.fake_quantum_service, 'stop')
 
 class PowerHavoc(HavocManager):
     """Class that performs Power Management Havoc actions"""
