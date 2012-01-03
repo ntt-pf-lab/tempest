@@ -19,6 +19,7 @@ class HavocManager(object):
         self.env = self.config.env
         self.deploy_mode = self.env.deploy_mode
         self.shell_env = kwargs.get('env')
+        self.python_path = None
         self.monkey_args = ''
         patches = kwargs.get('patches')
         timeout = self.config.nodes.ssh_timeout
@@ -43,7 +44,6 @@ class HavocManager(object):
 
     def _run_cmd(self, command=None):
         """Execute remote shell command, return output if successful"""
-        print command
         try:
             if self.deploy_mode == 'devstack-local':
                 p = subprocess.Popen(command, shell=True, env=self.shell_env)
@@ -87,7 +87,6 @@ class HavocManager(object):
             out = out.split()
             if out:
                 return out
-                #return out[1]
             return False
 
         elif self.deploy_mode == 'pkg-multi':
@@ -120,11 +119,11 @@ class HavocManager(object):
         devstack_root = self.env.devstack_root
 
         if 'nova' in service:
-            path = os.path.join(devstack_root, 'nova/bin', service)
+            path = os.path.join(devstack_root, 'nova')
         elif 'glance' in service:
-            path = os.path.join(devstack_root, 'glance/bin', service)
+            path = os.path.join(devstack_root, 'glance')
         else:
-            path = os.path.join(devstack_root, service, 'bin', service)
+            path = os.path.join(devstack_root, service)
 
         return path
 
@@ -158,23 +157,26 @@ class HavocManager(object):
                     return
 
                 elif config_file:
-                    config_file = os.path.join(self.env.devstack_root,
-                                               config_file)
-
-                    command = export + '%s %s=%s %s &' % (
-                                                self.service_root, config_label,
+                    config_file = os.path.join(self.service_root, config_file)
+                    command = export + '%s/bin/%s %s=%s %s &' % (
+                                                self.service_root, service,
+                                                config_label,
                                                 config_file,
                                                 self.monkey_args)
                     if service == 'nova-compute':
-                        command = export + 'sg libvirtd %s --flagfile=%s %s &' % (
-                                        self.service_root, config_file,
+                        command = export + 'sg libvirtd %s/bin/%s --flagfile=%s %s &' % (
+                                        self.service_root, service,
+                                        config_file,
                                         self.monkey_args)
 
                 else:
                     if service == 'nova-compute':
-                        command = export + 'sg libvirtd %s &' % self.service_root
+                        command = export + 'sg libvirtd %s/bin/%s &' % (
+                                self.service_root, service)
                     else:
-                        command = export + '%s &' % self.service_root
+                        command = export + '%s/bin/%s &' % (self.service_root,
+                        service)
+                command = command + ' > /dev/null'
                 self._run_cmd(command=command)
 
             elif action == 'stop':
