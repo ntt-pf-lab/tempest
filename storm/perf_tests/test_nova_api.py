@@ -33,7 +33,8 @@ class NovaPerfTests(unittest.TestCase):
         cls.flavor_ref = cls.config.env.flavor_ref
         cls.ssh_timeout = cls.config.nova.ssh_timeout
         #remove the results of the last run.
-        os.remove(PERF_LOG_FILE)
+        if os.path.exists(PERF_LOG_FILE):
+            os.remove(PERF_LOG_FILE)
 
     def _perf_result_logger(self, result_dict):
         """Log the results to the perf log file."""
