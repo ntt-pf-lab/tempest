@@ -19,6 +19,7 @@ class HavocManager(object):
         self.env = self.config.env
         self.deploy_mode = self.env.deploy_mode
         patches = kwargs.get('patches')
+        shell_env = kwargs.get('env')
         self.monkey_args = ''
         timeout = self.config.nodes.ssh_timeout
         if self.deploy_mode == 'devstack-remote':
@@ -28,6 +29,8 @@ class HavocManager(object):
                                  timeout)
         if patches:
             self._set_monkey_patch_args(patches)
+        if shell_env and shell_env.get('PYTHONPATH'):
+            self.python_path = shell_env['PYTHONPATH']
 
     def connect(self, host, username, password, timeout):
         """Create Connection object"""
@@ -132,7 +135,8 @@ class HavocManager(object):
     def service_action(self, service, action, config_file=None):
         """Perform the requested action on a service on remote host"""
 
-        run_status = self._is_service_running(service)
+        is_running = self._is_service_running(service)
+        export = ''
 	if config_file and 'nova' in service:
             config_label = '--flagfile'
         else:
@@ -143,52 +147,54 @@ class HavocManager(object):
             self.service_root = self._get_service_root(service)
             if config_file:
                 config_file = os.path.join(self.service_root, config_file)
+            if self.python_path:
+                export = 'export PYTHONPATH=$PYTHONPATH:%s;' % self.python_path
 
             if action == 'start':
-                if run_status:
+                if is_running:
                     return
 
                 elif config_file:
                     config_file = os.path.join(self.env.devstack_root,
                                                config_file)
 
-                    command = '%s %s=%s %s &' % (
+                    command = export + '%s %s=%s %s &' % (
                                                 self.service_root, config_label,
                                                 config_file,
                                                 self.monkey_args)
                     if service == 'nova-compute':
-                        command = 'sg libvirtd %s --flagfile=%s %s &' % (
+                        command = export + 'sg libvirtd %s --flagfile=%s %s &' % (
                                         self.service_root, config_file,
                                         self.monkey_args)
 
                 else:
                     if service == 'nova-compute':
-                        command = 'sg libvirtd %s &' % self.service_root
+                        command = export + 'sg libvirtd %s &' % self.service_root
                     else:
-                        command = '%s &' % self.service_root
+                        command = export + '%s &' % self.service_root
                 self._run_cmd(command=command)
 
             elif action == 'stop':
-                if not run_status:
+                if not is_running:
                     return
 
                 else:
-                    for pid in run_status:
+                    for pid in is_running:
                         command = 'sudo kill -9 %s' % pid
                         self._run_cmd(command=command)
 
         # Configure call to action for a multi-node remote setup
         elif self.deploy_mode == 'pkg-multi':
             if action == 'start':
-                if run_status:
+                if is_running:
                     return
 
             elif action in ('stop', 'restart', 'reload', 'force-reload'):
-                if not run_status:
+                if not is_running:
                     return
 
             elif action == 'status':
-                    return run_status
+                    return is_running
 
             command = 'service %s %s' % (service, action)
             return self._run_cmd(command)
@@ -214,8 +220,9 @@ class ControllerHavoc(HavocManager):
     """Class that performs Havoc actions on Controller Node"""
 
     def __init__(self, host=None, username='root', password='root',
-                    config_file=None):
-        super(ControllerHavoc, self).__init__(host, username, password)
+                    config_file=None, **kwargs):
+        super(ControllerHavoc, self).__init__(host, username, password,
+                **kwargs)
         self.api_service = 'nova-api'
         self.scheduler_service = 'nova-scheduler'
         self.rabbit_service = 'rabbitmq-server'
@@ -267,8 +274,8 @@ class NetworkHavoc(HavocManager):
     """Class that performs Network node specific Havoc actions"""
 
     def __init__(self, host=None, username='root', password='root',
-                    config_file=None):
-        super(NetworkHavoc, self).__init__(host, username, password)
+                    config_file=None, **kwargs):
+        super(NetworkHavoc, self).__init__(host, username, password, **kwargs)
         self.network_service = 'nova-network'
         self.config_file = config_file
 
@@ -450,7 +457,8 @@ class QuantumHavoc(HavocManager):
         return self.service_action(self.quantum_service, 'stop')
 
     def start_quantum_plugin(self):
-        return self.service_action(self.quantum_plugin_service, 'start')
+        return self.service_action(self.quantum_plugin_service, 'start',
+                self.agent_config_file)
 
     def stop_quantum_plugin(self):
         return self.service_action(self.quantum_plugin_service, 'stop')

@@ -4,6 +4,7 @@ import time
 import urllib
 from stackmonkey import manager
 
+
 def wait_to_launch(host, port):
     while True:
         try:
@@ -38,7 +39,6 @@ class Process(object):
         self.cwd = cwd
         self.command = command
         self.env = env
-        self.deploy_mode == 'devstack-local'
 
     def start(self):
         self._process = subprocess.Popen(self.command,
@@ -115,15 +115,10 @@ class NovaProcess(Process):
 
 class NovaApiProcess(NovaProcess):
     def __init__(self, directory, host, port, **kwargs):
-        super(NovaApiProcess, self)\
-                .__init__(directory, "bin/nova-api", **kwargs)
-        self.host = host
-        self.port = port
         self.havoc = manager.ControllerHavoc(host, **kwargs)
 
     def start(self):
         self.havoc.start_nova_api()
-        #wait_to_launch(self.host, self.port)
 
     def stop(self):
         self.havoc.stop_nova_api()
@@ -131,28 +126,17 @@ class NovaApiProcess(NovaProcess):
 
 class NovaComputeProcess(NovaProcess):
     def __init__(self, directory, **kwargs):
-        super(NovaComputeProcess, self)\
-                .__init__(directory, "bin/nova-compute", **kwargs)
         self.havoc = manager.ComputeHavoc(**kwargs)
 
     def start(self):
-        if getattr(self, '_wrapped_command', None) is None:
-            self._original_command = self.command
-            self._wrapped_command = "sg libvirtd '%s'" % self.command
-        self.command = self._wrapped_command
         self.havoc.start_nova_compute()
-        #super(NovaComputeProcess, self).start()
-        time.sleep(5)
 
     def stop(self):
         self.havoc.stop_nova_compute()
-        #kill_children_process(self._process.pid)
 
 
 class NovaNetworkProcess(NovaProcess):
     def __init__(self, directory, **kwargs):
-        super(NovaNetworkProcess, self)\
-                .__init__(directory, "bin/nova-network", **kwargs)
         self.havoc = manager.NetworkHavoc(**kwargs)
 
     def start(self):
@@ -164,8 +148,6 @@ class NovaNetworkProcess(NovaProcess):
 
 class NovaSchedulerProcess(NovaProcess):
     def __init__(self, directory, **kwargs):
-        super(NovaSchedulerProcess, self)\
-                .__init__(directory, "bin/nova-scheduler", **kwargs)
         self.havoc = manager.ControllerHavoc(**kwargs)
 
     def start(self):
@@ -177,19 +159,24 @@ class NovaSchedulerProcess(NovaProcess):
 
 class QuantumProcess(Process):
     def __init__(self, directory, config, **kwargs):
-        super(QuantumProcess, self)\
-                .__init__(directory, "bin/quantum " + config, **kwargs)
+        self.havoc = manager.QuantumHavoc(config_file=config, **kwargs)
+
+    def start(self):
+        self.havoc.start_quantum()
+
+    def stop(self):
+        self.havoc.stop_quantum()
 
 
 class QuantumPluginOvsAgentProcess(Process):
     def __init__(self, directory, config, **kwargs):
-        super(QuantumPluginOvsAgentProcess, self)\
-                .__init__(directory, "sudo python "
-                                     "quantum/plugins/"
-                                         "openvswitch/agent/"
-                                         "ovs_quantum_agent.py "
-                                     "-v " + config,
-                          **kwargs)
+        self.havoc = manager.QuantumHavoc(agent_config_file=config, **kwargs)
+
+    def start(self):
+        self.havoc.start_quantum_plugin()
+
+    def stop(self):
+        self.havoc.stop_quantum_plugin()
 
 
 # Fakes
@@ -197,8 +184,8 @@ class FakeQuantumProcess(Process):
     def __init__(self, tenant_id, **status_code):
         cwd = os.path.join(os.path.dirname(__file__),
                            'quantum-service-fake')
-        fake_quantum_path = os.path.join(cwd, 'fake_server.py')
-        command = ' --debug'
+        command = os.path.join(cwd, 'fake_server.py')
+        command += ' --debug'
         command += ' --tenant=%s' % tenant_id
         command += ' --tenant=default'
         for pair in status_code.items():
