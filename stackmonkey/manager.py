@@ -18,9 +18,9 @@ class HavocManager(object):
         self.services = self.config.services
         self.env = self.config.env
         self.deploy_mode = self.env.deploy_mode
-        patches = kwargs.get('patches')
-        shell_env = kwargs.get('env')
+        self.shell_env = kwargs.get('env')
         self.monkey_args = ''
+        patches = kwargs.get('patches')
         timeout = self.config.nodes.ssh_timeout
         if self.deploy_mode == 'devstack-remote':
             host = self.env.devstack_host
@@ -29,8 +29,8 @@ class HavocManager(object):
                                  timeout)
         if patches:
             self._set_monkey_patch_args(patches)
-        if shell_env and shell_env.get('PYTHONPATH'):
-            self.python_path = shell_env['PYTHONPATH']
+        if self.shell_env and self.shell_env.get('PYTHONPATH'):
+            self.python_path = self.shell_env['PYTHONPATH']
 
     def connect(self, host, username, password, timeout):
         """Create Connection object"""
@@ -46,7 +46,10 @@ class HavocManager(object):
         print command
         try:
             if self.deploy_mode == 'devstack-local':
-                return subprocess.check_call(command, shell=True)
+                p = subprocess.Popen(command, shell=True, env=self.shell_env)
+                if p.returncode is None:
+                    return True
+                return False
 
             elif self.deploy_mode in ('pkg-multi', 'devstack-remote'):
                 output = self.client.exec_command(command)
