@@ -7,7 +7,7 @@ import time
 
 class ServersClient(object):
 
-    def __init__(self, username, key, auth_url, tenant_name, config=None):
+    def __init__(self, username, key, auth_url, tenant_name=None, config=None):
         if config is None:
             config = storm.config.StormConfig()
         self.config = config

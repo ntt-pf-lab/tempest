@@ -2,10 +2,12 @@ from nose.plugins.attrib import attr
 import os
 import shutil
 from stackmonkey import manager
+from stackmonkey import config
 from storm import openstack
 from storm import exceptions
 import storm.config
 from storm.common.utils.data_utils import rand_name
+from storm.common import sftp
 import sys
 import time
 import unittest2 as unittest
@@ -28,12 +30,13 @@ class NovaPerfTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        cls.config = storm.config.StormConfig()
+        cls.havoc_config = config.HavocConfig()
         #start all the services required by tests.
         cls._start_services()
 
         cls.os = openstack.Manager()
         cls.client = cls.os.servers_client
-        cls.config = storm.config.StormConfig()
         cls.image_ref = cls.config.env.image_ref
         cls.flavor_ref = cls.config.env.flavor_ref
         cls.ssh_timeout = cls.config.nova.ssh_timeout
@@ -68,29 +71,76 @@ class NovaPerfTests(unittest.TestCase):
     def _start_services(cls):
         run_tests = True
 
+        #fetch the config parameters and verify deploy mode.
+        if cls.havoc_config.env.deploy_mode == 'pkg-multi':
+            nodes = cls.havoc_config.nodes
+            api_mgr = manager.ControllerHavoc(nodes.api.ip, nodes.api.user,
+                                                nodes.api.password)
+            compute_mgr = manager.ComputeHavoc(nodes.compute.ip,
+                                                nodes.compute.user,
+                                                nodes.compute.password)
+            glance_mgr = manager.GlanceHavoc(nodes.glance.ip,
+                                                nodes.glance.user,
+                                                nodes.glance.password)
+            scheduler_mgr = manager.ControllerHavoc(nodes.scheduler.ip,
+                                                nodes.scheduler.user,
+                                                nodes.scheduler.password)
+            mysql_mgr = manager.ControllerHavoc(nodes.mysql.ip,
+                                                nodes.mysql.user,
+                                                nodes.mysql.password)
+            rabbitmq_mgr = manager.ControllerHavoc(nodes.rabbitmq.ip,
+                                                nodes.rabbitmq.user,
+                                                nodes.rabbitmq.password)
+            if nodes.keystone:
+                keystone_mgr = manager.KeystoneHavoc(nodes.keystone.ip,
+                                                nodes.keystone.user,
+                                                nodes.keystone.password)
+            if nodes.quantum:
+                quantum_mgr = manager.QuantumHavoc(nodes.quantum.ip,
+                                                nodes.quantum.user,
+                                                nodes.quantum.password)
+            if nodes.network:
+                network_mgr = manager.NetworkHavoc(nodes.network.ip,
+                                                nodes.network.user,
+                                                nodes.network.password)
+        else:
+            mgr = manager.ControllerHavoc()
+            api_mgr = scheduler_mgr = mysql_mgr = rabbitmq_mgr = mgr
+
+            compute_mgr = manager.ComputeHavoc()
+            glance_mgr = manager.GlanceHavoc()
+            network_mgr = manager.NetworkHavoc()
+            keystone_mgr = manager.KeystoneHavoc()
+            quantum_mgr = manager.QuantumHavoc()
+
         #start all the Nova services.
-        mgr = manager.ControllerHavoc()
-        mgr.start_mysql()
-        mgr.start_rabbitmq()
-        mgr.start_nova_scheduler()
-        mgr.start_nova_api()
+        mysql_mgr.start_mysql()
+        rabbitmq_mgr.start_rabbitmq()
+        scheduler_mgr.start_nova_scheduler()
+        api_mgr.start_nova_api()
 
         #start all the Compute services.
-        compute_mgr = manager.ComputeHavoc()
         compute_mgr.start_nova_compute()
 
         #start all the Glance services.
-        glance_mgr = manager.GlanceHavoc()
         glance_mgr.start_glance_api()
         glance_mgr.start_glance_registry()
 
-        #start all the Network services.
-        network_mgr = manager.NetworkHavoc()
-        network_mgr.start_nova_network()
+        #determine whether to start Quantum or Network services from nova.conf
+        #in the perf_tests directory.
+        conf_fp = open(os.path.join(CONFIG_PATH, DEFAULT_NOVA_CONF))
+        for line in conf_fp.readlines():
+            if line.startswith("--network_manager"):
+                if line.find("QuantumManager") != -1:
+                    quantum_mgr.start_quantum()
+                else:
+                    network_mgr.start_nova_network()
+                break
+        conf_fp.close()
 
-        #start all the Keystone services.
-        keystone_mgr = manager.KeystoneHavoc()
-        keystone_mgr.start_keystone()
+        #determine if Keystone service should be started.
+        if cls.config.env.authentication.find("keystone") != -1:
+            keystone_mgr.start_keystone()
 
         if not run_tests:
             print "Failed to start the services required for executing tests."
@@ -136,38 +186,84 @@ class NovaPerfTests(unittest.TestCase):
         fp.write(log_str)
         fp.close()
 
+    def _copy_file_to_api_server(self, localpath, remotepath):
+        """Copy the specified file to the Nova API server in specified path."""
+        if self.havoc_config.env.deploy_mode in ('pkg-multi',
+                                                'devstack-remote'):
+            #do remote copy.
+            api = self.havoc_config.nodes.api
+            sftp_session = sftp.Client(api.ip, api.user, api.password)
+            return sftp_session.put(localpath, remotepath)
+        else:
+            #do a local copy.
+            try:
+                shutil.copy(localpath, remotepath)
+                return True
+            except IOError:
+                return False
+
     def _create_nova_api_conf(self, log_level=DEBUG, debuglog_enabled=False):
         """Update log level and api-paste config path in nova.conf"""
+        #copy the nova.conf file to the API server.
         src = os.path.join(CONFIG_PATH, DEFAULT_NOVA_CONF)
         config_name = "/tmp/nova_perf_test.conf"
-        shutil.copy(src, config_name)
+        try:
+            shutil.copy(src, config_name)
+        except IOError:
+            self.fail("Failed to copy copy %s to %s" % (src, config_name))
 
         append_conf = ""
         if log_level == DEBUG:
             append_conf += "--verbose"
         if debuglog_enabled:
-            api_paste_config = os.path.join(CONFIG_PATH,
-                                            API_PASTE_WITH_DEBUGLOG)
+            paste_path = os.path.join(CONFIG_PATH, API_PASTE_WITH_DEBUGLOG)
+            api_paste_config = os.path.join("/tmp", API_PASTE_WITH_DEBUGLOG)
         else:
-            api_paste_config = os.path.join(CONFIG_PATH,
-                                            API_PASTE)
+            paste_path = os.path.join(CONFIG_PATH, API_PASTE)
+            api_paste_config = os.path.join("/tmp", API_PASTE)
+        #copy the paste.ini file to the API server.
+        status = self._copy_file_to_api_server(paste_path, api_paste_config)
+        self.assertTrue(status, "Failure copying configuration file %s to "\
+                                    "API server." % src)
+
         append_conf += "\n--api_paste_config=%s" % api_paste_config
         fp = open(config_name, "a")
         fp.write(append_conf)
         fp.close()
-        return config_name
+
+        #copy updated (log level and api-paste config) nova.conf to API server.
+        if self.havoc_config.env.deploy_mode in ('pkg-multi',
+                                                'devstack-remote'):
+            dest_config_name = "/etc/nova/nova.conf"
+            status = self._copy_file_to_api_server(config_name,
+                                                    dest_config_name)
+            self.assertTrue(status, "Failure copying configuration file %s to"\
+                                    " API server." % config_name)
+        else:
+            dest_config_name = config_name
+        return dest_config_name
+
+    def _get_api_havoc_mgr(self, config_file=None):
+        """Create a ControllerHavoc instance based on the deployment mode."""
+        if self.havoc_config.env.deploy_mode == 'pkg-multi':
+            nodes = self.havoc_config.nodes
+            mgr = manager.ControllerHavoc(nodes.api.ip, nodes.api.user,
+                        nodes.api.password, config_file=config_file)
+        else:
+            mgr = manager.ControllerHavoc()
+        return mgr
 
     def _verify_list_servers_api(self, log_level):
         """Verified list servers API for the specified log level."""
         results = []
 
-        mgr = manager.ControllerHavoc()
+        mgr = self._get_api_havoc_mgr()
         mgr.stop_nova_api()
 
         #start the Nova API server in specified log level, with debuglog=True
         config_file = self._create_nova_api_conf(log_level=log_level,
                                                  debuglog_enabled=True)
-        mgr = manager.ControllerHavoc(config_file=config_file)
+        mgr = self._get_api_havoc_mgr(config_file)
         mgr.start_nova_api()
         #wait for service to get started
         time.sleep(WAIT_TIME)
@@ -186,7 +282,7 @@ class NovaPerfTests(unittest.TestCase):
         #start the Nova API server in specified log level, debuglog=False
         config_file = self._create_nova_api_conf(log_level=log_level,
                                                  debuglog_enabled=False)
-        mgr = manager.ControllerHavoc(config_file=config_file)
+        mgr = self._get_api_havoc_mgr(config_file)
         mgr.start_nova_api()
         #wait for service to get started
         time.sleep(WAIT_TIME)
@@ -226,13 +322,13 @@ class NovaPerfTests(unittest.TestCase):
         create_api_results = []
         delete_api_results = []
 
-        mgr = manager.ControllerHavoc()
+        mgr = self._get_api_havoc_mgr()
         mgr.stop_nova_api()
 
         #start the Nova API server in specified log level, with debuglog=True
         config_file = self._create_nova_api_conf(log_level=log_level,
                                                  debuglog_enabled=True)
-        mgr = manager.ControllerHavoc(config_file=config_file)
+        mgr = self._get_api_havoc_mgr(config_file)
         mgr.start_nova_api()
         #wait for service to get started
         time.sleep(WAIT_TIME)
@@ -263,7 +359,7 @@ class NovaPerfTests(unittest.TestCase):
         #start the Nova API server in specified log level, debuglog=False
         config_file = self._create_nova_api_conf(log_level=log_level,
                                                  debuglog_enabled=False)
-        mgr = manager.ControllerHavoc(config_file=config_file)
+        mgr = self._get_api_havoc_mgr(config_file)
         mgr.start_nova_api()
         time.sleep(WAIT_TIME)
         for i in range(self.perf_api_hit_count):

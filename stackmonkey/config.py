@@ -27,17 +27,20 @@ class NodesConfig(object):
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
             return default_value
 
-    def get_node_list(self, service):
+    def get_node_list(self, service, default_value=None):
         """Returns a list of node objects"""
 
         nodes = []
-        node_val_list = self.get(service).split(',')
-        for value in node_val_list:
-            nodes.append(NodeObject(value))
+        value_str = self.get(service, default_value)
+        if value_str:
+            node_val_list = value_str.split(',')
+            for value in node_val_list:
+                nodes.append(NodeObject(value))
 
-        if len(nodes) <= 1:
-            return nodes[0]
-        return nodes
+            if len(nodes) <= 1:
+                return nodes[0]
+            return nodes
+        return None
 
     @property
     def api(self):
@@ -62,6 +65,18 @@ class NodesConfig(object):
     @property
     def swift(self):
         return self.get_node_list("swift")
+
+    @property
+    def scheduler(self):
+        return self.get_node_list("scheduler")
+
+    @property
+    def keystone(self):
+        return self.get_node_list("keystone")
+
+    @property
+    def quantum(self):
+        return self.get_node_list("quantum")
 
     @property
     def mysql(self):
@@ -124,7 +139,7 @@ class EnvironmentConfig(object):
 
     @property
     def devstack_root(self):
-	return self.get("devstack_root", "/opt/stack")
+        return self.get("devstack_root", "/opt/stack")
 
     @property
     def devstack_host(self):
@@ -156,7 +171,6 @@ class HavocConfig(object):
         if not os.path.exists(path):
             msg = "Config file %(path)s not found" % locals()
             raise RuntimeError(msg)
-
 
         self._conf = self.load_config(path)
         self.nodes = NodesConfig(self._conf)
