@@ -122,6 +122,8 @@ class HavocManager(object):
             path = os.path.join(devstack_root, 'nova')
         elif 'glance' in service:
             path = os.path.join(devstack_root, 'glance')
+        elif 'quantum' in service:
+            path = os.path.join(devstack_root, 'quantum')
         else:
             path = os.path.join(devstack_root, service)
 
@@ -147,8 +149,7 @@ class HavocManager(object):
         # Configure call to action for a local devstack setup
         if self.deploy_mode in ('devstack-local', 'devstack-remote'):
             self.service_root = self._get_service_root(service)
-            if config_file:
-                config_file = os.path.join(self.service_root, config_file)
+
             if self.python_path:
                 export = 'export PYTHONPATH=$PYTHONPATH:%s;' % self.python_path
 
@@ -158,25 +159,29 @@ class HavocManager(object):
 
                 elif config_file:
                     config_file = os.path.join(self.service_root, config_file)
-                    command = export + '%s/bin/%s %s=%s %s &' % (
+                    command = export + '%s/bin/%s %s=%s %s' % (
                                                 self.service_root, service,
                                                 config_label,
                                                 config_file,
                                                 self.monkey_args)
                     if service == 'nova-compute':
-                        command = export + 'sg libvirtd %s/bin/%s --flagfile=%s %s &' % (
-                                        self.service_root, service,
+                        command = export + 'sg libvirtd %s/bin/%s --flagfile=\
+                                %s %s' % (self.service_root, service,
                                         config_file,
                                         self.monkey_args)
+                    elif 'quantum_agent' in service:
+                        command = export + 'sudo python %s/%s -v %s' % (
+                        self.service_root, service, config_file)
 
                 else:
                     if service == 'nova-compute':
-                        command = export + 'sg libvirtd %s/bin/%s &' % (
+                        command = export + 'sg libvirtd %s/bin/%s' % (
                                 self.service_root, service)
                     else:
-                        command = export + '%s/bin/%s &' % (self.service_root,
+                        command = export + '%s/bin/%s' % (self.service_root,
                         service)
-                command = command + ' > /dev/null'
+
+                command = command + ' 2> /dev/null &'
                 self._run_cmd(command=command)
 
             elif action == 'stop':
@@ -448,7 +453,7 @@ class QuantumHavoc(HavocManager):
         super(QuantumHavoc, self).__init__(host, username, password, **kwargs)
         self.quantum_service = 'quantum'
         self.quantum_plugin = "quantum/plugins/openvswitch/agent/" \
-                                "ovs_quantum_agent.py -v"
+                                "ovs_quantum_agent.py"
         self.config_file = config_file
         self.agent_config_file = agent_config_file
 
@@ -460,11 +465,11 @@ class QuantumHavoc(HavocManager):
         return self.service_action(self.quantum_service, 'stop')
 
     def start_quantum_plugin(self):
-        return self.service_action(self.quantum_plugin_service, 'start',
+        return self.service_action(self.quantum_plugin, 'start',
                 self.agent_config_file)
 
     def stop_quantum_plugin(self):
-        return self.service_action(self.quantum_plugin_service, 'stop')
+        return self.service_action(self.quantum_plugin, 'stop')
 
 
 class PowerHavoc(HavocManager):
