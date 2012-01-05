@@ -80,8 +80,10 @@ class NovaPerfTests(unittest.TestCase):
                                                 nodes.compute.user,
                                                 nodes.compute.password)
             glance_mgr = manager.GlanceHavoc(nodes.glance.ip,
-                                                nodes.glance.user,
-                                                nodes.glance.password)
+                            nodes.glance.user,
+                            nodes.glance.password,
+                            api_config_file="etc/glance-api.conf",
+                            registry_config_file="etc/glance-registry.conf")
             scheduler_mgr = manager.ControllerHavoc(nodes.scheduler.ip,
                                                 nodes.scheduler.user,
                                                 nodes.scheduler.password)
@@ -108,7 +110,9 @@ class NovaPerfTests(unittest.TestCase):
             api_mgr = scheduler_mgr = mysql_mgr = rabbitmq_mgr = mgr
 
             compute_mgr = manager.ComputeHavoc()
-            glance_mgr = manager.GlanceHavoc()
+            glance_mgr = manager.GlanceHavoc(
+                            api_config_file="etc/glance-api.conf",
+                            registry_config_file="etc/glance-registry.conf")
             network_mgr = manager.NetworkHavoc()
             keystone_mgr = manager.KeystoneHavoc()
             quantum_mgr = manager.QuantumHavoc()
