@@ -23,6 +23,7 @@ from nose.plugins.attrib import attr
 
 from storm import openstack
 import storm.config
+from storm.services.nova.json.keypairs_client import KeypairsClient
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -43,45 +44,53 @@ environ_processes = []
 def setUpModule(module):
 #    environ_processes = module.environ_processes
     config = module.config
+
     try:
-        subprocess.check_call('bin/nova-manage network create '
-                               '--label=private_1-1 '
-                               '--project_id=1 '
-                               '--fixed_range_v4=10.0.0.0/24 '
-                               '--bridge_interface=br-int '
-                               '--num_networks=1 '
-                               '--network_size=32 ',
-                               cwd=config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
-                              '--label=private_1-2 '
-                              '--project_id=1 '
-                              '--fixed_range_v4=10.0.1.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
-                              '--label=private_1-3 '
-                              '--project_id=1 '
-                              '--fixed_range_v4=10.0.2.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
-                              '--label=private_2-1 '
-                              '--project_id=2 '
-                              '--fixed_range_v4=10.0.3.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=config.nova.directory, shell=True)
+        # reset db
+        subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
+                              'DELETE FROM users WHERE name = \'user1\';'
+                              'DELETE FROM tenants WHERE name = \'tenant1\';'
+                              'DELETE FROM user_roles WHERE NOT EXISTS '
+                              '(SELECT * FROM users WHERE id = user_id);'
+                              '"' % (
+                                  config.mysql.user,
+                                  config.mysql.password),
+                              shell=True)
+
+        # create tenants.
+        subprocess.check_call('bin/keystone-manage tenant add tenant1',
+                              cwd=config.keystone.directory, shell=True)
+
+        # create users.
+        subprocess.check_call('bin/keystone-manage user add '
+                              'user1 user1 tenant1',
+                              cwd=config.keystone.directory, shell=True)
+
+        # grant role
+        subprocess.check_call('bin/keystone-manage role grant '
+                              'Member user1 tenant1',
+                              cwd=config.keystone.directory, shell=True)
+
     except Exception:
         pass
 
 
 def tearDownModule(module):
-    pass
+    config = module.config
+
+    # reset db
+    try:
+        subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
+                              'DELETE FROM users WHERE name = \'user1\';'
+                              'DELETE FROM tenants WHERE name = \'tenant1\';'
+                              'DELETE FROM user_roles WHERE NOT EXISTS '
+                              '(SELECT * FROM users WHERE id = user_id);'
+                              '"' % (
+                                  config.mysql.user,
+                                  config.mysql.password),
+                              shell=True)
+    except Exception:
+        pass
 
 
 class FunctionalTest(unittest.TestCase):
@@ -105,10 +114,9 @@ class FunctionalTest(unittest.TestCase):
                 try:
                     print "Find existing instance %s" % s['id']
                     resp, body = self.os.servers_client.delete_server(s['id'])
-                    if resp['status'] == '200' or resp['status'] == '202':
+                    if resp['status'] == '204' or resp['status'] == '202':
                         self.os.servers_client.wait_for_server_not_exists(
                                                                     s['id'])
-                        time.sleep(5)
                 except Exception as e:
                     print e
         except Exception:
@@ -127,6 +135,20 @@ class KeypairsTest(FunctionalTest):
         super(KeypairsTest, self).setUp()
         self.kp_client = self.os.keypairs_client
         self.ss_client = self.os.servers_client
+
+        class config(object):
+            class env(object):
+                authentication = "keystone_v2"
+
+            class nova(object):
+                build_interval = self.config.nova.build_interval
+                build_timeout = self.config.nova.build_timeout
+
+        # user1
+        user1 = {'username': 'user1', 'key': 'user1', 'tenant_name': 'tenant1',
+                 'auth_url': self.config.nova.auth_url, 'config': config}
+        self.kp_client_for_user1 = KeypairsClient(**user1)
+
         # Please wait, it will fail otherwise.
         time.sleep(5)
 
@@ -394,6 +416,23 @@ class KeypairsTest(FunctionalTest):
         keyname = 'key_' + self._testMethodName
         resp, body = self.kp_client.delete_keypair('')
         self.assertEqual('404', resp['status'])
+
+        # reset db
+        subprocess.check_call('mysql -u%s -p%s -D nova -e "'
+                              'DELETE FROM key_pairs;'
+                              '"' % (
+                                  self.config.mysql.user,
+                                  self.config.mysql.password),
+                              shell=True)
+
+    def test_delete_keypair_when_user_does_not_have_admin_role(self):
+        # create a keypair for test
+        keyname = 'key_' + self._testMethodName
+        self.kp_client_for_user1.create_keypair(keyname)
+
+        # execute and assert
+        resp, body = self.kp_client_for_user1.delete_keypair(keyname)
+        self.assertEqual('202', resp['status'])
 
         # reset db
         subprocess.check_call('mysql -u%s -p%s -D nova -e "'

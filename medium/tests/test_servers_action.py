@@ -195,11 +195,11 @@ class ServersActionTest(FunctionalTest):
         print "res=", res
         print "server=", server
         # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         sql = ("UPDATE instances SET "
                "deleted = %s, "
-               "vm_state = '%s', "
+               "vm_state = '%s'"
                "WHERE id = %s;") % (
                             deleted, vm_state, server['id'])
         self.exec_sql(sql)
@@ -221,9 +221,10 @@ class ServersActionTest(FunctionalTest):
     def _test_reboot_403_base2(self, vm_state, deleted=0):
         server_id = self.create_dummy_instance2(vm_state, deleted)
         resp, _ = self.ss_client.reboot(server_id, 'HARD')
+        print "RESCODE=", resp
         self.assertEquals('403', resp['status'])
         sql = ("UPDATE instances SET "
-               "vm_state = 'active',"
+               "vm_state = 'active'"
                "WHERE id = %s;") % server_id
         self.exec_sql(sql)
 
@@ -1484,6 +1485,19 @@ class ServersActionTest(FunctionalTest):
                "WHERE id = %s;") % server_id
         self.exec_sql(sql)
 
+
+
+    @attr(kind='medium')
+    def _test_create_image_403_base2(self, vm_state, deleted=0):
+        server_id = self.create_dummy_instance2(vm_state, deleted)
+        name = rand_name('server')
+        resp, _ = self.ss_client.create_image(server_id, name)
+        self.assertEquals('403', resp['status'])
+        sql = ("UPDATE instances SET "
+               "vm_state = 'active'"
+               "WHERE id = %s;") % server_id
+        self.exec_sql(sql)
+
     @attr(kind='medium')
     def test_create_image_when_vm_eq_building_and_task_eq_scheduling(self):
         self._test_create_image_403_base("building", "scheduling")
@@ -1531,3 +1545,15 @@ class ServersActionTest(FunctionalTest):
     @attr(kind='medium')
     def test_create_image_when_vm_eq_error_and_task_eq_error(self):
         self._test_create_image_403_base("error", "error")
+
+
+
+
+
+
+
+
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_is_creating_image(self):
+        self._test_create_image_403_base2("migrating")
