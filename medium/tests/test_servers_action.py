@@ -175,7 +175,7 @@ class ServersActionTest(FunctionalTest):
 
         return server['id']
 
-    def create_dummy_instance2(self, vm_state, deleted=0):
+    def create_dummy_instance_for_block_migrate(self, vm_state, deleted=0):
 
         meta = {'hello': 'opst'}
         accessIPv4 = '2.2.2.2'
@@ -218,8 +218,9 @@ class ServersActionTest(FunctionalTest):
         self.exec_sql(sql)
 
     @attr(kind='medium')
-    def _test_reboot_403_base2(self, vm_state, deleted=0):
-        server_id = self.create_dummy_instance2(vm_state, deleted)
+    def _test_reboot_403_base_for_block_migrate(self, vm_state, deleted=0):
+        server_id = self.create_dummy_instance_for_block_migrate(vm_state,
+                                                                 deleted)
         resp, _ = self.ss_client.reboot(server_id, 'HARD')
         print "RESCODE=", resp
         self.assertEquals('403', resp['status'])
@@ -230,12 +231,7 @@ class ServersActionTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_reboot_when_vm_is_block_migrating(self):
-        self._test_reboot_403_base2("migrating")
-
-
-
-
-
+        self._test_reboot_403_base_for_block_migrate("migrating")
 
     @attr(kind='medium')
     def test_reboot_when_vm_eq_building_and_task_eq_scheduling(self):
@@ -1129,7 +1125,6 @@ class ServersActionTest(FunctionalTest):
         self.assertEqual(str(self.image_ref), server['image']['id'])
         self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
 
-        
         print """
 
         creating snapshot.
@@ -1149,7 +1144,9 @@ class ServersActionTest(FunctionalTest):
         # if task_state became none, can accept next api.
         db_result = 'server_state'
         while db_result != 'NULL':
-            sql = ("SELECT task_state FROM instances WHERE id = %s;") % (test_server_id)
+            sql = ("SELECT task_state "
+                   "FROM instances "
+                   "WHERE id = %s;") % (test_server_id)
             db_result = (self.get_data_from_mysql(sql))[:-1]
             if db_result == 'NULL':
                 break
@@ -1485,13 +1482,15 @@ class ServersActionTest(FunctionalTest):
                "WHERE id = %s;") % server_id
         self.exec_sql(sql)
 
-
-
     @attr(kind='medium')
-    def _test_create_image_403_base2(self, vm_state, deleted=0):
-        server_id = self.create_dummy_instance2(vm_state, deleted)
+    def _test_create_image_403_base_for_block_migrate(self,
+                                                      vm_state,
+                                                      deleted=0):
+        server_id = self.create_dummy_instance_for_block_migrate(vm_state,
+                                                                 deleted)
         name = rand_name('server')
         resp, _ = self.ss_client.create_image(server_id, name)
+        print "RESCODE=", resp
         self.assertEquals('403', resp['status'])
         sql = ("UPDATE instances SET "
                "vm_state = 'active'"
@@ -1546,14 +1545,6 @@ class ServersActionTest(FunctionalTest):
     def test_create_image_when_vm_eq_error_and_task_eq_error(self):
         self._test_create_image_403_base("error", "error")
 
-
-
-
-
-
-
-
-
     @attr(kind='medium')
     def test_create_image_when_vm_is_creating_image(self):
-        self._test_create_image_403_base2("migrating")
+        self._test_create_image_403_base_for_block_migrate("migrating")
