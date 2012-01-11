@@ -165,8 +165,7 @@ class HavocManager(object):
                                                 config_file,
                                                 self.monkey_args)
                     if service == 'nova-compute':
-                        command = export + 'sg libvirtd %s/bin/%s --flagfile=\
-                                %s %s' % (self.service_root, service,
+                        command = export + 'sg libvirtd "%s/bin/%s --flagfile=%s %s"' % (self.service_root, service,
                                         config_file,
                                         self.monkey_args)
                     elif 'quantum_agent' in service:
