@@ -114,6 +114,18 @@ class ServersTest(FunctionalTest):
                "WHERE id = %s;") % (deleted, vm_state, task_state, server_id)
         self.exec_sql(sql)
 
+
+
+    def update_status2(self, server_id, vm_state, deleted=0):
+        sql = ("UPDATE instances SET "
+               "deleted = %s, "
+               "vm_state = '%s'"
+               "WHERE id = %s;") % (deleted, vm_state, server_id)
+        self.exec_sql(sql)
+
+
+
+
     @attr(kind='medium')
     def test_list_servers_when_no_server_created(self):
         print """
@@ -3544,7 +3556,7 @@ class ServersTest(FunctionalTest):
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # status update
-        self.update_status(server['id'], vm_state)
+        self.update_status2(server['id'], vm_state)
 
         # test for delete server
         resp, _ = self.ss_client.delete_server(server['id'])
