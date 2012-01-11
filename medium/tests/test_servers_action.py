@@ -192,8 +192,6 @@ class ServersActionTest(FunctionalTest):
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
 
-        print "res=", res
-        print "server=", server
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
@@ -222,7 +220,6 @@ class ServersActionTest(FunctionalTest):
         server_id = self.create_dummy_instance_for_block_migrate(vm_state,
                                                                  deleted)
         resp, _ = self.ss_client.reboot(server_id, 'HARD')
-        print "RESCODE=", resp
         self.assertEquals('403', resp['status'])
         sql = ("UPDATE instances SET "
                "vm_state = 'active'"
@@ -290,8 +287,6 @@ class ServersActionTest(FunctionalTest):
          """
         test_id = sys.maxint
         resp, server = self.ss_client.reboot(test_id, 'HARD')
-        print "resp= ", resp
-        print "server= ", server
         self.assertEqual('404', resp['status'])
 
     @attr(kind='medium')
@@ -897,7 +892,6 @@ class ServersActionTest(FunctionalTest):
         """
         alt_name = rand_name('opst')
         resp, _ = self.ss_client.create_image(test_id, alt_name)
-        print "resp=", resp
         self.assertEquals('403', resp['status'])
 
     @attr(kind='medium')
@@ -1490,7 +1484,6 @@ class ServersActionTest(FunctionalTest):
                                                                  deleted)
         name = rand_name('server')
         resp, _ = self.ss_client.create_image(server_id, name)
-        print "RESCODE=", resp
         self.assertEquals('403', resp['status'])
         sql = ("UPDATE instances SET "
                "vm_state = 'active'"
