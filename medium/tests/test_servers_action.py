@@ -175,6 +175,37 @@ class ServersActionTest(FunctionalTest):
 
         return server['id']
 
+    def create_dummy_instance2(self, vm_state, deleted=0):
+
+        meta = {'hello': 'opst'}
+        accessIPv4 = '2.2.2.2'
+        accessIPv6 = '::babe:330.23.33.3'
+        name = rand_name('dummy')
+        file_contents = 'This is a test_file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        res, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        print "res=", res
+        print "server=", server
+        # Wait for the server to become active
+#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        sql = ("UPDATE instances SET "
+               "deleted = %s, "
+               "vm_state = '%s', "
+               "WHERE id = %s;") % (
+                            deleted, vm_state, server['id'])
+        self.exec_sql(sql)
+
+        return server['id']
+
     @attr(kind='medium')
     def _test_reboot_403_base(self, vm_state, task_state, deleted=0):
         server_id = self.create_dummy_instance(vm_state, task_state, deleted)
@@ -185,6 +216,25 @@ class ServersActionTest(FunctionalTest):
                "task_state = null "
                "WHERE id = %s;") % server_id
         self.exec_sql(sql)
+
+    @attr(kind='medium')
+    def _test_reboot_403_base2(self, vm_state, deleted=0):
+        server_id = self.create_dummy_instance2(vm_state, deleted)
+        resp, _ = self.ss_client.reboot(server_id, 'HARD')
+        self.assertEquals('403', resp['status'])
+        sql = ("UPDATE instances SET "
+               "vm_state = 'active',"
+               "WHERE id = %s;") % server_id
+        self.exec_sql(sql)
+
+    @attr(kind='medium')
+    def test_reboot_when_vm_is_block_migrating(self):
+        self._test_reboot_403_base2("migrating")
+
+
+
+
+
 
     @attr(kind='medium')
     def test_reboot_when_vm_eq_building_and_task_eq_scheduling(self):
