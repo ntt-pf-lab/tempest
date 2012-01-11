@@ -587,6 +587,79 @@ class ServersActionTest(FunctionalTest):
         resp, server = self.ss_client.get_server(test_id)
         self.assertEquals('ACTIVE', server['status'])
 
+    @test.skip_test('ignore this case')
+    @attr(kind='medium')
+    def test_create_image_fat_snapshot(self):
+
+        print """
+
+        creating server.
+
+        """
+        SMALL_FLAVOR_REF = '2'  # ref to m1.small
+        LARGE_FLAVOR_REF = '4'  # ref to m1.large
+
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    LARGE_FLAVOR_REF,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(server['id'])
+        self.assertEqual('1.1.1.1', server['accessIPv4'])
+        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
+        self.assertEqual(name, server['name'])
+        self.assertEqual(str(self.image_ref), server['image']['id'])
+        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
+
+        print """
+
+        creating snapshot.
+
+        """
+        # Make snapshot of the instance.
+        alt_name = rand_name('server')
+        test_id = server['id']
+        resp, _ = self.ss_client.create_image(test_id, alt_name)
+        resp, body = self.ss_client.create_image(test_id, alt_name)
+        print "respresp=", resp
+        alt_img_url = resp['location']
+        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
+        self.assertIsNotNone(match)
+        alt_img_id = match.groupdict()['image_id']
+        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
+        resp, body = self.ss_client.list_servers_with_detail()
+
+        print """
+
+        creating server from snapshot.
+
+        """
+        resp, server = self.ss_client.create_server(name,
+                                                    alt_img_id,
+                                                    SMALL_FLAVOR_REF,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+        # Wait for the server to become ERROR.BUILD
+        self.assertRaises(exceptions.BuildErrorException,
+                          self.ss_client.wait_for_server_status,
+                          server['id'], 'ERROR')
+
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_create_image_when_specify_server_by_uuid(self):
 
@@ -1447,3 +1520,90 @@ class ServersActionTest(FunctionalTest):
     @attr(kind='medium')
     def test_create_image_when_vm_eq_error_and_task_eq_error(self):
         self._test_create_image_403_base("error", "error")
+
+
+class CreateImageFatTest(FunctionalTest):
+    def setUp(self):
+        super(CreateImageFatTest, self).setUp()
+        self.image_ref = self.config.env.image_ref
+        self.ss_client = self.os.servers_client
+        self.img_client = self.os.images_client
+
+        self.small_flavor_ref = 998
+        subprocess.check_call('/opt/stack/nova/bin/nova-manage flavor create '
+            '--name=small --memory=1024 --cpu=1 --local_gb=1 '
+            '--flavor=%d --swap=0' % self.small_flavor_ref, shell=True)
+
+        self.fat_flavor_ref = 999
+        subprocess.check_call('/opt/stack/nova/bin/nova-manage flavor create '
+            '--name=fat --memory=1024 --cpu=1 --local_gb=2 '
+            '--flavor=%d --swap=0' % self.fat_flavor_ref, shell=True)
+
+        def flush_flavors():
+            subprocess.call('/opt/stack/nova/bin/nova-manage flavor delete small --purge', shell=True)
+            subprocess.call('/opt/stack/nova/bin/nova-manage flavor delete fat --purge', shell=True)
+
+        self.addCleanup(flush_flavors)
+
+    @attr(kind='medium')
+    def test_create_image_fat_snapshot(self):
+
+        print """
+
+        creating server.
+
+        """
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.fat_flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(server['id'])
+
+        print """
+
+        creating snapshot.
+
+        """
+        # Make snapshot of the instance.
+        alt_name = rand_name('server')
+        test_id = server['id']
+        resp, _ = self.ss_client.create_image(test_id, alt_name)
+        resp, body = self.ss_client.create_image(test_id, alt_name)
+        print "respresp=", resp
+        alt_img_url = resp['location']
+        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
+        self.assertIsNotNone(match)
+        alt_img_id = match.groupdict()['image_id']
+        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
+        resp, body = self.ss_client.list_servers_with_detail()
+
+        print """
+
+        creating server from snapshot.
+
+        """
+        resp, server = self.ss_client.create_server(name,
+                                                    alt_img_id,
+                                                    self.small_flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+        # Wait for the server to become ERROR.BUILD
+        self.assertRaises(exceptions.BuildErrorException,
+                          self.ss_client.wait_for_server_status,
+                          server['id'], 'ERROR')
