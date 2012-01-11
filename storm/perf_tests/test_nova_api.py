@@ -9,6 +9,7 @@ import storm.config
 from storm.common.utils.data_utils import rand_name
 from storm.common import sftp
 import sys
+import threading
 import time
 import unittest2 as unittest
 
@@ -24,6 +25,55 @@ API_PASTE_WITH_DEBUGLOG = "nova-api-paste-with-debuglog.ini"
 API_PASTE = "nova-api-paste-without-debuglog.ini"
 #service start up wait period (in seconds)
 WAIT_TIME = 2
+
+
+class RequestThread(threading.Thread):
+    def __init__(self, count, api_client, api_method, expected_status,
+                kwargs=None):
+        self.count = count
+        self.api_client = api_client
+        self.api = api_method
+        self.expected_status = expected_status
+        self.kwargs = kwargs
+        self._response_times = []
+        self._response_ids = []
+        self._successful = True
+        threading.Thread.__init__(self)
+
+    def run(self):
+        """Make the API call and record the response time."""
+        if self.kwargs and 'server_id' in self.kwargs:
+            server_ids = self.kwargs['server_id']
+
+        for i in range(self.count):
+            try:
+                if self.kwargs:
+                    if 'name' in self.kwargs:
+                        self.kwargs['name'] = rand_name('server')
+                    if 'server_id' in self.kwargs:
+                        self.kwargs['server_id'] = server_ids[i]
+                    resp, body = self.api(**self.kwargs)
+                else:
+                    resp, body = self.api()
+            except:
+                self._successful = False
+                break
+            else:
+                if resp.status not in self.expected_status:
+                    self._successful = False
+                    break
+            self._response_times.append(self.api_client.response_time)
+            if isinstance(body, dict) and 'id' in body:
+                self._response_ids.append(body['id'])
+
+    def get_result(self):
+        return self._response_times
+
+    def get_status(self):
+        return self._successful
+
+    def get_response_ids(self):
+        return self._response_ids
 
 
 class NovaPerfTests(unittest.TestCase):
@@ -47,6 +97,14 @@ class NovaPerfTests(unittest.TestCase):
         except ValueError:
             print "Invalid 'perf_api_hit_count=%s' specified!" % \
                   cls.config.env.get('perf_api_hit_count', '10')
+            sys.exit()
+        #fetch the thread count.
+        try:
+            cls.perf_thread_count = int(cls.config.env.get(
+                'perf_thread_count', 1))
+        except ValueError:
+            print "Invalid 'perf_thread_count=%s' specified!" % \
+                  cls.config.env.get('perf_thread_count', '1')
             sys.exit()
         #remove the results of the last run.
         if os.path.exists(PERF_LOG_FILE):
@@ -249,12 +307,13 @@ class NovaPerfTests(unittest.TestCase):
 
     def _get_api_havoc_mgr(self, config_file=None):
         """Create a ControllerHavoc instance based on the deployment mode."""
-        if self.havoc_config.env.deploy_mode == 'pkg-multi':
+        if self.havoc_config.env.deploy_mode in ('pkg-multi',
+                                                'devstack-remote'):
             nodes = self.havoc_config.nodes
             mgr = manager.ControllerHavoc(nodes.api.ip, nodes.api.user,
                         nodes.api.password, config_file=config_file)
         else:
-            mgr = manager.ControllerHavoc()
+            mgr = manager.ControllerHavoc(config_file=config_file)
         return mgr
 
     def _verify_list_servers_api(self, log_level):
@@ -272,14 +331,21 @@ class NovaPerfTests(unittest.TestCase):
         #wait for service to get started
         time.sleep(WAIT_TIME)
         #hit the API
-        for i in range(self.perf_api_hit_count):
-            try:
-                resp, body = self.client.list_servers()
-            except exceptions.BadRequest:
+        request_threads = []
+        expected_status = (200, 203)
+        for i in range(self.perf_thread_count):
+            request_threads.append(RequestThread(self.perf_api_hit_count,
+                                                self.client.client,
+                                                self.client.list_servers,
+                                                expected_status))
+            request_threads[i].start()  # start making the API requests
+
+        #wait for all the threads to finish requesting.
+        for a_thread in request_threads:
+            a_thread.join()
+            if not a_thread.get_status():
                 self.fail("List servers API call failed")
-            self.assertTrue(resp.status in (200, 203),
-                            "List servers API call failed")
-            results.append([self.client.client.response_time])
+            results.extend(a_thread.get_result())
 
         mgr.stop_nova_api()
 
@@ -291,14 +357,24 @@ class NovaPerfTests(unittest.TestCase):
         #wait for service to get started
         time.sleep(WAIT_TIME)
         #hit the API
-        for i in range(self.perf_api_hit_count):
-            try:
-                resp, body = self.client.list_servers()
-            except exceptions.BadRequest:
+        request_threads = []
+        expected_status = (200, 203)
+        for i in range(self.perf_thread_count):
+            request_threads.append(RequestThread(self.perf_api_hit_count,
+                                                self.client.client,
+                                                self.client.list_servers,
+                                                expected_status))
+            request_threads[i].start()  # start making the API requests
+
+        #wait for all the threads to finish requesting.
+        wo_debuglog_results = []
+        for a_thread in request_threads:
+            a_thread.join()
+            if not a_thread.get_status():
                 self.fail("List servers API call failed")
-            self.assertTrue(resp.status in (200, 203),
-                            "List servers API call failed")
-            results[i].append(self.client.client.response_time)
+            wo_debuglog_results.extend(a_thread.get_result())
+        for i in range(len(results)):
+            results[i] = (results[i], wo_debuglog_results[i])
         return results
 
     @attr(type='smoke')
@@ -338,25 +414,46 @@ class NovaPerfTests(unittest.TestCase):
         time.sleep(WAIT_TIME)
 
         #hit the API
-        for i in range(self.perf_api_hit_count):
-            name = rand_name('server')
-            try:
-                resp, body = self.client.create_server(name,
-                                                       self.image_ref,
-                                                       self.flavor_ref)
-            except exceptions.BadRequest:
-                self.fail("Failed to create a new instance")
-            self.assertEqual(resp.status, 202, "Failed to create a new "\
-                                               "instance")
-            create_api_results.append([self.client.client.response_time])
-            server_id = body['id']
-            try:
-                resp, body = self.client.delete_server(server_id)
-            except exceptions.BadRequest:
-                self.fail("Failed to delete instance %s" % server_id)
-            self.assertEqual(resp.status, 204, "Failed to delete instance %s"\
-                                               % server_id)
-            delete_api_results.append([self.client.client.response_time])
+        request_threads = []
+        create_api_expected_status = (202, )
+        kwargs = {'name': 'name',
+                    'image_ref': self.image_ref,
+                    'flavor_ref': self.flavor_ref}
+        for i in range(self.perf_thread_count):
+            request_threads.append(RequestThread(self.perf_api_hit_count,
+                                                self.client.client,
+                                                self.client.create_server,
+                                                create_api_expected_status,
+                                                kwargs))
+            request_threads[i].start()  # start making the API requests
+
+        #wait for all the threads to finish requesting.
+        server_ids = []
+        for a_thread in request_threads:
+            a_thread.join()
+            if not a_thread.get_status():
+                self.fail("Create servers API call failed")
+            create_api_results.extend(a_thread.get_result())
+            server_ids.append(a_thread.get_response_ids())
+
+        #make the delete API calls now.
+        request_threads = []
+        delete_api_expected_status = (204, )
+        for i in range(self.perf_thread_count):
+            kwargs = {'server_id': server_ids[i]}
+            request_threads.append(RequestThread(self.perf_api_hit_count,
+                                                self.client.client,
+                                                self.client.delete_server,
+                                                delete_api_expected_status,
+                                                kwargs))
+            request_threads[i].start()  # start making the API requests
+
+        #wait for all the threads to finish requesting.
+        for a_thread in request_threads:
+            a_thread.join()
+            if not a_thread.get_status():
+                self.fail("Delete servers API call failed")
+            delete_api_results.extend(a_thread.get_result())
 
         mgr.stop_nova_api()
 
@@ -366,25 +463,58 @@ class NovaPerfTests(unittest.TestCase):
         mgr = self._get_api_havoc_mgr(config_file)
         mgr.start_nova_api()
         time.sleep(WAIT_TIME)
-        for i in range(self.perf_api_hit_count):
-            name = rand_name('server')
-            try:
-                resp, body = self.client.create_server(name,
-                                                       self.image_ref,
-                                                       self.flavor_ref)
-            except exceptions.BadRequest:
-                self.fail("Failed to create a new instance")
-            self.assertEqual(resp.status, 202, "Failed to create a new "\
-                                               "instance")
-            create_api_results[i].append(self.client.client.response_time)
-            server_id = body['id']
-            try:
-                resp, body = self.client.delete_server(server_id)
-            except exceptions.BadRequest:
-                self.fail("Failed to delete instance %s" % server_id)
-            self.assertEqual(resp.status, 204, "Failed to delete instance %s"\
-                                               % server_id)
-            delete_api_results[i].append(self.client.client.response_time)
+        request_threads = []
+        kwargs = {'name': 'name',
+                    'image_ref': self.image_ref,
+                    'flavor_ref': self.flavor_ref}
+        for i in range(self.perf_thread_count):
+            request_threads.append(RequestThread(self.perf_api_hit_count,
+                                                self.client.client,
+                                                self.client.create_server,
+                                                create_api_expected_status,
+                                                kwargs))
+            request_threads[i].start()  # start making the API requests
+
+        #wait for all the threads to finish requesting.
+        server_ids = []
+        create_api_results_wo_debuglog = []
+        for a_thread in request_threads:
+            a_thread.join()
+            if not a_thread.get_status():
+                self.fail("Create servers API call failed")
+            create_api_results_wo_debuglog.extend(a_thread.get_result())
+            server_ids.append(a_thread.get_response_ids())
+
+        #store the results for create server API.
+        for i in range(len(create_api_results)):
+            create_api_results[i] = (create_api_results[i],
+                                        create_api_results_wo_debuglog[i])
+
+        #make the delete API calls now.
+        request_threads = []
+        delete_api_expected_status = (204, )
+        for i in range(self.perf_thread_count):
+            kwargs = {'server_id': server_ids[i]}
+            request_threads.append(RequestThread(self.perf_api_hit_count,
+                                                self.client.client,
+                                                self.client.delete_server,
+                                                delete_api_expected_status,
+                                                kwargs))
+            request_threads[i].start()  # start making the API requests
+
+        #wait for all the threads to finish requesting.
+        delete_api_results_wo_debuglog = []
+        for a_thread in request_threads:
+            a_thread.join()
+            if not a_thread.get_status():
+                self.fail("Delete servers API call failed")
+            delete_api_results_wo_debuglog.extend(a_thread.get_result())
+
+        #store the results for delete server API.
+        for i in range(len(delete_api_results)):
+            delete_api_results[i] = (delete_api_results[i],
+                                        delete_api_results_wo_debuglog[i])
+
         return create_api_results, delete_api_results
 
     @attr(type='smoke')
