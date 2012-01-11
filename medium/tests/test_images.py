@@ -26,7 +26,6 @@ import unittest2 as unittest
 from nose.plugins.attrib import attr
 
 from kong import tests
-from storm import exceptions
 from storm import openstack
 import storm.config
 from storm.services.nova.json.images_client import ImagesClient
@@ -52,21 +51,21 @@ def setUpModule(module):
 #    environ_processes = module.environ_processes
     config = module.config
 
-    # reset db
-    subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
-                          'DELETE FROM users WHERE name = \'user1\';'
-                          'DELETE FROM users WHERE name = \'user2\';'
-                          'DELETE FROM users WHERE name = \'user3\';'
-                          'DELETE FROM tenants WHERE name = \'tenant1\';'
-                          'DELETE FROM tenants WHERE name = \'tenant2\';'
-                          'DELETE FROM user_roles WHERE NOT EXISTS '
-                          '(SELECT * FROM users WHERE id = user_id);'
-                          '"' % (
-                              config.mysql.user,
-                              config.mysql.password),
-                          shell=True)
-
     try:
+        # reset db
+        subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
+                              'DELETE FROM users WHERE name = \'user1\';'
+                              'DELETE FROM users WHERE name = \'user2\';'
+                              'DELETE FROM users WHERE name = \'user3\';'
+                              'DELETE FROM tenants WHERE name = \'tenant1\';'
+                              'DELETE FROM tenants WHERE name = \'tenant2\';'
+                              'DELETE FROM user_roles WHERE NOT EXISTS '
+                              '(SELECT * FROM users WHERE id = user_id);'
+                              '"' % (
+                                  config.mysql.user,
+                                  config.mysql.password),
+                              shell=True)
+
         # create tenants.
         subprocess.check_call('bin/keystone-manage tenant add tenant1',
                               cwd=config.keystone.directory, shell=True)
@@ -95,66 +94,37 @@ def setUpModule(module):
                               'Member user3 tenant2',
                               cwd=config.keystone.directory, shell=True)
 
-        # allocate networks.
-        subprocess.check_call('bin/nova-manage network create '
-                               '--label=private_1-1 '
-                               '--project_id=1 '
-                               '--fixed_range_v4=10.0.0.0/24 '
-                               '--bridge_interface=br-int '
-                               '--num_networks=1 '
-                               '--network_size=32 ',
-                               cwd=config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
-                              '--label=private_1-2 '
-                              '--project_id=1 '
-                              '--fixed_range_v4=10.0.1.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
-                              '--label=private_1-3 '
-                              '--project_id=1 '
-                              '--fixed_range_v4=10.0.2.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
-                              '--label=private_2-1 '
-                              '--project_id=2 '
-                              '--fixed_range_v4=10.0.3.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=config.nova.directory, shell=True)
     except Exception:
         pass
 
 
 def tearDownModule(module):
     config = module.config
+
     # reset db
-    subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
-                          'SELECT * FROM tenants;'
-                          'SELECT users.id AS user_id, users.name AS '
-                          'user_name, password, tenants.name AS '
-                          'tenant_name, roles.name AS role_name FROM '
-                          'user_roles, users, tenants, roles WHERE '
-                          'user_roles.user_id = users.id AND '
-                          'user_roles.tenant_id = tenants.id AND '
-                          'user_roles.role_id = roles.id;'
-                          'DELETE FROM users WHERE name = \'user1\';'
-                          'DELETE FROM users WHERE name = \'user2\';'
-                          'DELETE FROM users WHERE name = \'user3\';'
-                          'DELETE FROM tenants WHERE name = \'tenant1\';'
-                          'DELETE FROM tenants WHERE name = \'tenant2\';'
-                          'DELETE FROM user_roles WHERE NOT EXISTS '
-                          '(SELECT * FROM users WHERE id = user_id);'
-                          '"' % (
-                              config.mysql.user,
-                              config.mysql.password),
-                          shell=True)
+    try:
+        subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
+                              'SELECT * FROM tenants;'
+                              'SELECT users.id AS user_id, users.name AS '
+                              'user_name, password, tenants.name AS '
+                              'tenant_name, roles.name AS role_name FROM '
+                              'user_roles, users, tenants, roles WHERE '
+                              'user_roles.user_id = users.id AND '
+                              'user_roles.tenant_id = tenants.id AND '
+                              'user_roles.role_id = roles.id;'
+                              'DELETE FROM users WHERE name = \'user1\';'
+                              'DELETE FROM users WHERE name = \'user2\';'
+                              'DELETE FROM users WHERE name = \'user3\';'
+                              'DELETE FROM tenants WHERE name = \'tenant1\';'
+                              'DELETE FROM tenants WHERE name = \'tenant2\';'
+                              'DELETE FROM user_roles WHERE NOT EXISTS '
+                              '(SELECT * FROM users WHERE id = user_id);'
+                              '"' % (
+                                  config.mysql.user,
+                                  config.mysql.password),
+                              shell=True)
+    except Exception:
+        pass
 
 
 class FunctionalTest(unittest.TestCase):
@@ -179,10 +149,9 @@ class FunctionalTest(unittest.TestCase):
                 try:
                     print "Find existing instance %s" % s['id']
                     resp, body = self.os.servers_client.delete_server(s['id'])
-                    if resp['status'] == '200' or resp['status'] == '202':
+                    if resp['status'] in ('200', '202', '204'):
                         self.os.servers_client.wait_for_server_not_exists(
                                                                     s['id'])
-                        time.sleep(5)
                 except Exception as e:
                     print e
         except Exception:
@@ -383,8 +352,19 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_when_disk_format_is_aki(self):
         """ List of all images should contain the aki image """
+        # create an image for test
+        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        name = 'server_' + self._testMethodName
+        out = subprocess.check_output('bin/glance add -A nova name=%s '
+                                      'disk_format=aki container_format=aki '
+                                      '< %s' % (name, tmp_file),
+                                      cwd=self.config.glance.directory,
+                                      shell=True)
+        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
+        self.assertIsNotNone(match)
+        aki_image_id = match.groupdict()['image_id']
+
         # execute and assert
-        aki_image_id = 1
         resp, images = self.img_client.list_images()
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(aki_image_id) in [x['id'] for x in images])
@@ -392,8 +372,19 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_when_disk_format_is_ari(self):
         """ List of all images should contain the ari image """
+        # create an image for test
+        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        name = 'server_' + self._testMethodName
+        out = subprocess.check_output('bin/glance add -A nova name=%s '
+                                      'disk_format=ari container_format=ari '
+                                      '< %s' % (name, tmp_file),
+                                      cwd=self.config.glance.directory,
+                                      shell=True)
+        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
+        self.assertIsNotNone(match)
+        ari_image_id = match.groupdict()['image_id']
+
         # execute and assert
-        ari_image_id = 2
         resp, images = self.img_client.list_images()
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(ari_image_id) in [x['id'] for x in images])
@@ -401,8 +392,20 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_when_disk_format_is_ami(self):
         """ List of all images should contain the ami image """
+
+        # create an image for test
+        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        name = 'server_' + self._testMethodName
+        out = subprocess.check_output('bin/glance add -A nova name=%s '
+                                      'disk_format=ami container_format=ami '
+                                      '< %s' % (name, tmp_file),
+                                      cwd=self.config.glance.directory,
+                                      shell=True)
+        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
+        self.assertIsNotNone(match)
+        ami_image_id = match.groupdict()['image_id']
+
         # execute and assert
-        ami_image_id = 3
         resp, images = self.img_client.list_images()
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(ami_image_id) in [x['id'] for x in images])
@@ -874,8 +877,19 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_list_images_with_detail_when_disk_format_is_ami(self):
         """ Detailed list of images should contain the ami image """
+        # create an image for test
+        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        name = 'server_' + self._testMethodName
+        out = subprocess.check_output('bin/glance add -A nova name=%s '
+                                      'disk_format=ami container_format=ami '
+                                      '< %s' % (name, tmp_file),
+                                      cwd=self.config.glance.directory,
+                                      shell=True)
+        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
+        self.assertIsNotNone(match)
+        ami_image_id = match.groupdict()['image_id']
+
         # execute and assert
-        ami_image_id = 3
         resp, images = self.img_client.list_images_with_detail()
         self.assertEqual('200', resp['status'])
         self.assertTrue(str(ami_image_id) in [x['id'] for x in images])
@@ -1304,8 +1318,20 @@ class ImagesTest(FunctionalTest):
     @attr(kind='medium')
     def test_get_image_when_disk_format_is_ami(self):
         """ Detail of the image should be returned """
+        # make an image file
+        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        # create an image for test
+        name = 'server_' + self._testMethodName
+        out = subprocess.check_output('bin/glance add -A nova name=%s '
+                                      'disk_format=ami container_format=ami '
+                                      '< %s' % (name, tmp_file),
+                                      cwd=self.config.glance.directory,
+                                      shell=True)
+        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
+        self.assertIsNotNone(match)
+        ami_image_id = match.groupdict()['image_id']
+
         # execute and assert
-        ami_image_id = 3
         resp, image = self.img_client.get_image(ami_image_id)
         self.assertEqual('200', resp['status'])
         self.assertTrue(image)

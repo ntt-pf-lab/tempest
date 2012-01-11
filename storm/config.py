@@ -166,6 +166,11 @@ class KeystoneConfig(object):
             return default_value
 
     @property
+    def auth_url(self):
+        """URL used to authenticate. Defaults to 127.0.0.1."""
+        return self.get("auth_url", "127.0.0.1")
+
+    @property
     def host(self):
         """IP address of keystone daemon running. Defaults to 127.0.0.1"""
         return self.get("host", "127.0.0.1")
@@ -184,6 +189,21 @@ class KeystoneConfig(object):
     def config(self):
         """Path to keystone registry config. Defaults to etc/keystone.conf"""
         return self.get("config", "etc/keystone.conf")
+
+    @property
+    def user(self):
+        """Username to use for Keystone API requests. Defaults to 'admin'."""
+        return self.get("user", "admin")
+
+    @property
+    def tenant_name(self):
+        """Tenant name to use for Keystone API requests. Defaults to 'admin'."""
+        return self.get("tenant_name", "admin")
+
+    @property
+    def password(self):
+        """API key to use when authenticating. Defaults to 'admin_key'."""
+        return self.get("password", "admin_key")
 
 
 class QuantumConfig(object):
@@ -236,6 +256,9 @@ class MySQLConfig(object):
     def password(self):
         return self.get('password', 'password')
 
+    @property
+    def host(self):
+        return self.get('host', 'localhost')
 
 class StormConfig(object):
     """Provides OpenStack configuration information."""

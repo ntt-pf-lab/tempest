@@ -42,16 +42,7 @@ def setUpModule(module):
         subprocess.check_call('bin/nova-manage project create '
                           '--project=1 --user=admin',
                           cwd=config.nova.directory, shell=True)
-    
-        # allocate networks.
-        subprocess.check_call('bin/nova-manage network create '
-                          '--label=private_1-1 '
-                          '--project_id=1 '
-                          '--fixed_range_v4=10.0.0.0/24 '
-                          '--bridge_interface=br-int '
-                          '--num_networks=1 '
-                          '--network_size=32 ',
-                          cwd=config.nova.directory, shell=True)
+
     except Exception:
         pass
 
@@ -145,7 +136,8 @@ class ServersTest(FunctionalTest):
 
 
 class FlavorsTest(FunctionalTest):
-    # Almost same as storm.tests.test_flavors, but extends MT environment behavior.
+    # Almost same as storm.tests.test_flavors,
+    # but extends MT environment behavior.
 
     def setUp(self):
         super(FlavorsTest, self).setUp()

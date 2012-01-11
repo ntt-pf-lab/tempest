@@ -216,6 +216,26 @@ class ServersClient(object):
 
             time.sleep(self.build_interval)
 
+    def wait_for_server_not_exists_ignore_error(self, server_id):
+        """Waits for a server to reach not existing"""
+        start = int(time.time())
+
+        while True:
+#            try:
+#                resp, body = self.get_server(server_id)
+#            except exceptions.ItemNotFoundException:
+#                return
+            resp, body = self.get_server(server_id)
+            if resp['status'] == '404':
+                return
+
+            server_status = body['status']
+
+            if (int(time.time()) - start >= self.build_timeout):
+                raise exceptions.BuildErrorException
+
+            time.sleep(self.build_interval)
+
     def list_addresses(self, server_id):
         """Lists all addresses for a server"""
         resp, body = self.client.get("servers/%s/ips" % str(server_id))

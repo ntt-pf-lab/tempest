@@ -22,17 +22,11 @@ import sys
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
+from nova import test
 
 from storm import openstack
 import storm.config
 from storm.common.utils.data_utils import rand_name
-
-from medium.tests.processes import (
-        GlanceRegistryProcess, GlanceApiProcess,
-        KeystoneProcess,
-        QuantumProcess, QuantumPluginOvsAgentProcess,
-        NovaApiProcess, NovaComputeProcess,
-        NovaNetworkProcess, NovaSchedulerProcess)
 
 """
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
@@ -45,43 +39,8 @@ environ_processes = []
 
 
 def setUpModule(module):
-    environ_processes = module.environ_processes
+#    environ_processes = module.environ_processes
     config = module.config
-
-    # glance.
-    environ_processes.append(GlanceRegistryProcess(
-            config.glance.directory,
-            config.glance.registry_config))
-    environ_processes.append(GlanceApiProcess(
-            config.glance.directory,
-            config.glance.api_config,
-            config.glance.host,
-            config.glance.port))
-
-    # keystone.
-    environ_processes.append(KeystoneProcess(
-            config.keystone.directory,
-            config.keystone.config,
-            config.keystone.host,
-            config.keystone.port))
-
-    # quantum.
-    environ_processes.append(QuantumProcess(
-        config.quantum.directory,
-        config.quantum.config))
-    environ_processes.append(QuantumPluginOvsAgentProcess(
-        config.quantum.directory,
-        config.quantum.agent_config))
-
-    for process in environ_processes:
-        process.start()
-    time.sleep(10)
-
-
-def tearDownModule(module):
-    for process in module.environ_processes:
-        process.stop()
-    del module.environ_processes[:]
 
 
 class FunctionalTest(unittest.TestCase):
@@ -94,97 +53,31 @@ class FunctionalTest(unittest.TestCase):
         self.os2 = openstack.Manager(config=self.config2)
         self.testing_processes = []
 
-        # nova.
-        self.testing_processes.append(NovaApiProcess(
-                self.config.nova.directory,
-                self.config.nova.host,
-                self.config.nova.port))
-        self.testing_processes.append(NovaComputeProcess(
-                self.config.nova.directory))
-        self.testing_processes.append(NovaNetworkProcess(
-                self.config.nova.directory))
-        self.testing_processes.append(NovaSchedulerProcess(
-                self.config.nova.directory))
-
-        # reset db.
-        subprocess.check_call('mysql -u%s -p%s -e "'
-                              'DROP DATABASE IF EXISTS nova;'
-                              'CREATE DATABASE nova;'
-                              '"' % (
-                                  self.config.mysql.user,
-                                  self.config.mysql.password),
-                              shell=True)
-        subprocess.check_call('bin/nova-manage db sync',
-                              cwd=self.config.nova.directory, shell=True)
-
-        for process in self.testing_processes:
-            process.start()
-        time.sleep(10)
-
-        # create users.
-        subprocess.check_call('bin/nova-manage user create '
-                              '--name=admin --access=secrete --secret=secrete',
-                              cwd=self.config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage user create '
-                              '--name=demo --access=secrete --secret=secrete',
-                              cwd=self.config.nova.directory, shell=True)
-
-        # create projects.
-        subprocess.check_call('bin/nova-manage project create '
-                              '--project=1 --user=admin',
-                              cwd=self.config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage project create '
-                              '--project=2 --user=demo',
-                              cwd=self.config.nova.directory, shell=True)
-
-        # allocate networks.
-        subprocess.check_call('bin/nova-manage network create '
-                              '--label=private_1-1 '
-                              '--project_id=1 '
-                              '--fixed_range_v4=10.0.0.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=self.config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
-                              '--label=private_1-2 '
-                              '--project_id=1 '
-                              '--fixed_range_v4=10.0.1.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=self.config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
-                              '--label=private_1-3 '
-                              '--project_id=1 '
-                              '--fixed_range_v4=10.0.2.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=self.config.nova.directory, shell=True)
-        subprocess.check_call('bin/nova-manage network create '
-                              '--label=private_2-1 '
-                              '--project_id=2 '
-                              '--fixed_range_v4=10.0.3.0/24 '
-                              '--bridge_interface=br-int '
-                              '--num_networks=1 '
-                              '--network_size=32 ',
-                              cwd=self.config.nova.directory, shell=True)
-
     def tearDown(self):
-        # kill still existing virtual instances.
-        for line in subprocess.check_output('virsh list --all',
-                                            shell=True).split('\n')[2:-2]:
-            (id, name, state) = line.split()
-            if state == 'running':
-                subprocess.check_call('virsh destroy %s' % id, shell=True)
-            subprocess.check_call('virsh undefine %s' % name, shell=True)
+        print """
 
-        for process in self.testing_processes:
-            process.stop()
-        del self.testing_processes[:]
+        Terminate All Instances
 
-#        self.output_eventlog()
+        """
+        try:
+            _, servers = self.os.servers_client.list_servers()
+            print "Servers : %s" % servers
+            for s in servers['servers']:
+                try:
+                    print "Find existing instance %s" % s['id']
+                    resp, _ = self.os.servers_client.delete_server(s['id'])
+                    if resp['status'] == '204' or resp['status'] == '202':
+                        self.os.servers_client.wait_for_server_not_exists(
+                                                                    s['id'])
+                except Exception as e:
+                    print e
+        except Exception:
+            pass
+        print """
+
+        Cleanup DB
+
+        """
 
     def exec_sql(self, sql, db='nova'):
         exec_sql = 'mysql -u %s -p%s ' + db + ' -e "' + sql + '"'
@@ -202,15 +95,6 @@ class FunctionalTest(unittest.TestCase):
 
         return result
 
-    def output_eventlog(self):
-        logfile_name = self._testMethodName + ".log"
-        sql = "select * from eventlog;"
-        rs = self.get_data_from_mysql(sql)
-        if rs:
-            with open(logfile_name, 'w') as logfile:
-                for eventlog in rs.split('\n'):
-                        logfile.write(eventlog)
-
 
 class ServersTest(FunctionalTest):
     def setUp(self):
@@ -227,10 +111,8 @@ class ServersTest(FunctionalTest):
                "deleted = %s, "
                "vm_state = '%s', "
                "task_state = '%s' "
-               "WHERE id = %s;"
-               ) % (deleted, vm_state, task_state, server_id)
+               "WHERE id = %s;") % (deleted, vm_state, task_state, server_id)
         self.exec_sql(sql)
-
 
     @attr(kind='medium')
     def test_list_servers_when_no_server_created(self):
@@ -252,7 +134,6 @@ class ServersTest(FunctionalTest):
         test_list_servers_when_one_server_created
 
         """
-
         print """
 
         creating server.
@@ -261,7 +142,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -303,13 +184,13 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         for i in range(0, 3):
             resp, server = self.ss_client.create_server(
-                                                name,
+                                                name + str(i),
                                                 self.image_ref,
                                                 self.flavor_ref,
                                                 meta=meta,
@@ -347,7 +228,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -410,7 +291,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -453,13 +334,13 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         for i in range(0, 3):
             resp, server = self.ss_client.create_server(
-                                                name,
+                                                name + str(i),
                                                 self.image_ref,
                                                 self.flavor_ref,
                                                 meta=meta,
@@ -481,7 +362,7 @@ class ServersTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         self.assertEqual(3, len(body['servers']))
         for i in range(0, 3):
-            self.assertEqual('ACTIVE', body['status'][i]['accessIPv4'])
+            self.assertEqual('ACTIVE', body['servers'][i]['status'])
 
     @attr(kind='medium')
     def test_list_servers_detail_status_is_building(self):
@@ -499,7 +380,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -538,7 +419,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -580,7 +461,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -601,10 +482,11 @@ class ServersTest(FunctionalTest):
 
         """
         self.ss_client.delete_server(server['id'])
+        print "delete:resp=", resp
 
         print """
 
-        list servers with detail. not wait for server status is deleted.
+        list servers with detail. not wait for server's status is deleted.
 
         """
         resp, body = self.ss_client.list_servers_with_detail()
@@ -631,7 +513,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -656,7 +538,7 @@ class ServersTest(FunctionalTest):
 
         print """
 
-        list servers with detail. wait for server status is deleted.
+        list servers with detail. wait for server's status is deleted.
 
         """
         resp, body = self.ss_client.list_servers_with_detail()
@@ -681,7 +563,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -701,7 +583,7 @@ class ServersTest(FunctionalTest):
         make snapshot of instance.
 
         """
-        alt_name = rand_name('server')
+        alt_name = self._testMethodName + '_snapshot'
         resp, _ = self.ss_client.create_image(server['id'], alt_name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
@@ -715,13 +597,14 @@ class ServersTest(FunctionalTest):
         creating server from created image.
 
         """
-        resp, server = self.ss_client.create_server(name,
-                                                    alt_img_id,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
+        resp, server = self.ss_client.create_server(
+                                            name + '_from_created_image',
+                                            alt_img_id,
+                                            self.flavor_ref,
+                                            meta=meta,
+                                            accessIPv4=accessIPv4,
+                                            accessIPv6=accessIPv6,
+                                            personality=personality)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -743,11 +626,6 @@ class ServersTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         self.assertEqual(1, len(body['servers']))
 
-        sql = ("delete from images where id = " + alt_img_id + ";"
-               "delete from image_properties where image_id = " + \
-               alt_img_id + ";")
-        self.exec_sql(sql, db='glance')
-
     @attr(kind='medium')
     def test_list_servers_specify_not_exists_image(self):
         print """
@@ -764,7 +642,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -784,12 +662,13 @@ class ServersTest(FunctionalTest):
         list servers.
 
         """
-        resp, body = self.ss_client.list_servers({'image': 99})
+        resp, body = self.ss_client.list_servers({'image': sys.maxint})
         print "resp=", resp
         print "body=", body
         self.assertEqual('200', resp['status'])
         self.assertEqual([], body['servers'])
 
+    @test.skip_test('ignore this case for bug.605')
     @attr(kind='medium')
     def test_list_servers_specify_string_to_image(self):
         print """
@@ -806,7 +685,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -829,10 +708,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'image': 'image'})
         print "resp=", resp
         print "body=", body
-        # Bug.605
-        self.assertEqual('200', resp['status'])
-#        self.assertEqual('400', resp['status'])
+        self.assertEqual('400', resp['status'])
 
+    @test.skip_test('ignore this case for bug.605')
     @attr(kind='medium')
     def test_list_servers_specify_overlimits_to_image(self):
         print """
@@ -849,7 +727,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -872,10 +750,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'image': sys.maxint + 1})
         print "resp=", resp
         print "body=", body
-        # Bug.605
-        self.assertEqual('200', resp['status'])
-#        self.assertEqual('413', resp['status'])
+        self.assertEqual('413', resp['status'])
 
+    @test.skip_test('ignore this case for bug.605')
     @attr(kind='medium')
     def test_list_servers_specify_negative_to_image(self):
         print """
@@ -886,7 +763,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -904,9 +781,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'image': -1})
         print "resp=", resp
         print "body=", body
-        # Bug.605
-        self.assertEqual('200', resp['status'])
-#        self.assertEqual('413', resp['status'])
+        self.assertEqual('413', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_exists_flavor(self):
@@ -918,7 +793,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -939,6 +814,7 @@ class ServersTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         self.assertEqual(1, len(body['servers']))
 
+    @test.skip_test('ignore this case for bug.605')
     @attr(kind='medium')
     def test_list_servers_specify_not_exists_flavor(self):
         print """
@@ -949,7 +825,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -964,13 +840,12 @@ class ServersTest(FunctionalTest):
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
-        resp, body = self.ss_client.list_servers({'flavor': 99})
+        resp, body = self.ss_client.list_servers({'flavor': sys.maxint})
         print "resp=", resp
         print "body=", body
-        # Bug.605
-        self.assertEqual('404', resp['status'])
-#        self.assertEqual('200', resp['status'])
+        self.assertEqual('200', resp['status'])
 
+    @test.skip_test('ignore this case for bug.605')
     @attr(kind='medium')
     def test_list_servers_specify_string_to_flavor(self):
         print """
@@ -981,7 +856,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -999,10 +874,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'flavor': 'flavor'})
         print "resp=", resp
         print "body=", body
-        # Bug.605
-        self.assertEqual('404', resp['status'])
-#        self.assertEqual('400', resp['status'])
+        self.assertEqual('400', resp['status'])
 
+    @test.skip_test('ignore this case for bug.605')
     @attr(kind='medium')
     def test_list_servers_specify_overlimits_to_flavor(self):
         print """
@@ -1013,7 +887,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1031,10 +905,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'flavor': sys.maxint + 1})
         print "resp=", resp
         print "body=", body
-        # Bug.605
-        self.assertEqual('404', resp['status'])
-#        self.assertEqual('400', resp['status'])
+        self.assertEqual('400', resp['status'])
 
+    @test.skip_test('ignore this case for bug.605')
     @attr(kind='medium')
     def test_list_servers_specify_negative_to_flavor(self):
         print """
@@ -1045,7 +918,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1063,9 +936,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'flavor': -1})
         print "resp=", resp
         print "body=", body
-        # Bug.605
-        self.assertEqual('404', resp['status'])
-#        self.assertEqual('400', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_exists_server_name(self):
@@ -1077,7 +948,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName + '1'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1092,7 +963,7 @@ class ServersTest(FunctionalTest):
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
-        name2 = rand_name('server')
+        name2 = self._testMethodName + '2'
         resp, server = self.ss_client.create_server(name2,
                                                     self.image_ref,
                                                     self.flavor_ref,
@@ -1121,7 +992,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1142,6 +1013,7 @@ class ServersTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         self.assertEqual([], body['servers'])
 
+    @test.skip_test('ignore this case for bug.606')
     @attr(kind='medium')
     def test_list_servers_specify_empty_to_server_name(self):
         print """
@@ -1152,7 +1024,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1170,10 +1042,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'name': ''})
         print "resp=", resp
         print "body=", body
-        # Bug.606
-        self.assertEqual('200', resp['status'])
-#        self.assertEqual('400', resp['status'])
+        self.assertEqual('400', resp['status'])
 
+    @test.skip_test('ignore this case for bug.605')
     @attr(kind='medium')
     def test_list_servers_specify_overlimits_to_server_name(self):
         print """
@@ -1184,7 +1055,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1202,10 +1073,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'name': 'a' * 256})
         print "resp=", resp
         print "body=", body
-        # Bug.605
-        self.assertEqual('200', resp['status'])
-#        self.assertEqual('413', resp['status'])
+        self.assertEqual('413', resp['status'])
 
+    @test.skip_test('ignore this case for bug.605')
     @attr(kind='medium')
     def test_list_servers_specify_num_to_server_name(self):
         print """
@@ -1216,7 +1086,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1234,9 +1104,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'name': 99})
         print "resp=", resp
         print "body=", body
-        # Bug.605
-        self.assertEqual('200', resp['status'])
-#        self.assertEqual('400', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_status_active(self):
@@ -1248,7 +1116,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName + '1'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1267,7 +1135,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.2'
         accessIPv6 = '::babe:220.12.22.3'
-        name = rand_name('server')
+        name = self._testMethodName + '2'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1299,7 +1167,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName + '1'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1317,7 +1185,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.2'
         accessIPv6 = '::babe:220.12.22.3'
-        name = rand_name('server')
+        name = self._testMethodName + '2'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1349,7 +1217,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1380,7 +1248,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1398,7 +1266,6 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'status': 'DEAD'})
         print "resp=", resp
         print "body=", body
-        # Bug.605
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
@@ -1411,7 +1278,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1441,7 +1308,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName + '1'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1459,7 +1326,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.2'
         accessIPv6 = '::babe:220.12.22.3'
-        name = rand_name('server')
+        name = self._testMethodName + '2'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1490,7 +1357,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName + '1'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1508,7 +1375,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.2'
         accessIPv6 = '::babe:220.12.22.3'
-        name = rand_name('server')
+        name = self._testMethodName + '2'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1529,6 +1396,7 @@ class ServersTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         self.assertEqual(2, len(body['servers']))
 
+    @test.skip_test('ignore this case for bug.605')
     @attr(kind='medium')
     def test_list_servers_specify_string_to_limits(self):
         print """
@@ -1539,7 +1407,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName + '1'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1557,7 +1425,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.2'
         accessIPv6 = '::babe:220.12.22.3'
-        name = rand_name('server')
+        name = self._testMethodName + '2'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1575,9 +1443,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'limit': 'limit'})
         print "resp=", resp
         print "body=", body
-        # Bug.605
-        self.assertEqual('400', resp['status'])
-#        self.assertEqual('413', resp['status'])
+        self.assertEqual('413', resp['status'])
 
     @attr(kind='medium')
     def test_list_servers_specify_negative_to_limits(self):
@@ -1589,7 +1455,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName + '1'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1607,7 +1473,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.2'
         accessIPv6 = '::babe:220.12.22.3'
-        name = rand_name('server')
+        name = self._testMethodName + '2'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1627,6 +1493,7 @@ class ServersTest(FunctionalTest):
         print "body=", body
         self.assertEqual('400', resp['status'])
 
+    @test.skip_test('ignore this case for bug.605')
     @attr(kind='medium')
     def test_list_servers_specify_overlimits_to_limits(self):
         print """
@@ -1637,7 +1504,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName + '1'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1655,7 +1522,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.2'
         accessIPv6 = '::babe:220.12.22.3'
-        name = rand_name('server')
+        name = self._testMethodName + '2'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1673,10 +1540,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.list_servers({'limit': sys.maxint + 1})
         print "resp=", resp
         print "body=", body
-        # Bug.605
-        self.assertEqual('200', resp['status'])
-#        self.assertEqual('413', resp['status'])
+        self.assertEqual('413', resp['status'])
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_list_servers_specify_change_since(self):
         print """
@@ -1684,51 +1550,51 @@ class ServersTest(FunctionalTest):
         test_list_servers_specify_change_since(Bug605)
 
         """
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        meta = {'hello': 'world'}
-#        accessIPv4 = '1.1.1.2'
-#        accessIPv6 = '::babe:220.12.22.3'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        resp, _ = self.ss_client.delete_server(server['id'])
-#        self.ss_client.wait_for_server_not_exists(server['id'])
-#
-#        resp, body = self.ss_client.list_servers(
-#                                    {'changes-since': '2011-01-01T12:34Z'})
-#        print "resp=", resp
-#        print "body=", body
-#        self.assertEqual('200', resp['status'])
-#        self.assertEqual(2, len(body['servers']))
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = self._testMethodName + '1'
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.2'
+        accessIPv6 = '::babe:220.12.22.3'
+        name = self._testMethodName + '2'
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, _ = self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_not_exists(server['id'])
+
+        resp, body = self.ss_client.list_servers(
+                                    {'changes-since': '2011-01-01T12:34Z'})
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('200', resp['status'])
+        self.assertEqual(2, len(body['servers']))
 
     @attr(kind='medium')
     def test_list_servers_specify_invalid_change_since(self):
@@ -1753,7 +1619,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1772,9 +1638,9 @@ class ServersTest(FunctionalTest):
                                     {'changes-since': '2999-12-31T12:34Z'})
         print "resp=", resp
         print "body=", body
-        # Bug.605
         self.assertEqual('400', resp['status'])
 
+    @test.skip_test('ignore this case for bug.605')
     @attr(kind='medium')
     def test_list_server_specify_other_tenant_server(self):
         print """
@@ -1791,7 +1657,7 @@ class ServersTest(FunctionalTest):
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
 
-        name_demo = rand_name('server')
+        name_demo = self._testMethodName_demo
         resp, server = self.s2_client.create_server(name_demo,
                                                     self.image_ref,
                                                     self.flavor_ref,
@@ -1806,7 +1672,7 @@ class ServersTest(FunctionalTest):
         self.s2_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # server2 => tenant:admin
-        name_admin = rand_name('server')
+        name_admin = self._testMethodName & '_admin'
         resp, server = self.ss_client.create_server(name_admin,
                                                     self.image_ref,
                                                     self.flavor_ref,
@@ -1821,9 +1687,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.s2_client.list_servers({'name': name_admin})
         print "resp=", resp
         print "body=", body
-        # bug.605
-        self.assertEqual('200', resp['status'])
-#        self.assertEqual('401', resp['status'])
+        self.assertEqual('401', resp['status'])
 
     @attr(kind='medium')
     def test_create_server_when_snapshot_is_during_saving_process(self):
@@ -1841,7 +1705,7 @@ class ServersTest(FunctionalTest):
         meta = {'aaa': 'bbb'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -1865,7 +1729,7 @@ class ServersTest(FunctionalTest):
 
         """
         # Make snapshot of the instance.
-        alt_name = rand_name('server')
+        alt_name = self._testMethodName + '_snapshot'
         resp, body = self.ss_client.create_image(test_id, alt_name)
         self.assertEquals('202', resp['status'])
 
@@ -1879,19 +1743,15 @@ class ServersTest(FunctionalTest):
         creating server from snapshot.
 
         """
-        resp, server = self.ss_client.create_server(name,
-                                                    alt_img_id,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
+        resp, server = self.ss_client.create_server(
+                                            name + '_from_created_image',
+                                            alt_img_id,
+                                            self.flavor_ref,
+                                            meta=meta,
+                                            accessIPv4=accessIPv4,
+                                            accessIPv6=accessIPv6,
+                                            personality=personality)
         self.assertEquals('400', resp['status'])
-
-        sql = ("delete from images where id = " + alt_img_id + ";"
-               "delete from image_properties where image_id = " + \
-               alt_img_id + ";")
-        self.exec_sql(sql, db='glance')
 
     @attr(kind='medium')
     def test_create_server_any_name(self):
@@ -1903,7 +1763,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2015,7 +1875,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2059,7 +1919,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2092,11 +1952,11 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        image_ref = 99
+        image_ref = sys.maxint
         resp, body = self.ss_client.create_server(name,
                                                   image_ref,
                                                   self.flavor_ref,
@@ -2111,7 +1971,6 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_create_servers_not_specify_image(self):
-        """Ensure return error code 400 when not specify image"""
         print """
 
         test_list_servers_not_specify_image
@@ -2120,7 +1979,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2147,7 +2006,7 @@ class ServersTest(FunctionalTest):
         uuid = uuid[:-1]
 
         meta = {'hello': 'world'}
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2173,7 +2032,7 @@ class ServersTest(FunctionalTest):
         """
 
         meta = {'hello': 'world'}
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2200,7 +2059,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2232,11 +2091,11 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        flavor_ref = 99
+        flavor_ref = sys.maxint
         resp, body = self.ss_client.create_server(name,
                                                   self.image_ref,
                                                   flavor_ref,
@@ -2259,7 +2118,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2287,7 +2146,7 @@ class ServersTest(FunctionalTest):
         self.assertEqual(0, len(rs))
 
         meta = {'hello': 'world'}
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2318,7 +2177,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.os.keypairs_client.list_keypairs()
 
         meta = {'hello': 'world'}
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2349,11 +2208,8 @@ class ServersTest(FunctionalTest):
 
         # create keypair
         keyname = rand_name('key')
-#        resp, keypair = self.kp_client.create_keypair(keyname)
-#        resp, body = self.os.keypairs_client.list_keypairs()
-
         meta = {'hello': 'world'}
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2367,6 +2223,7 @@ class ServersTest(FunctionalTest):
         print "body=", body
         self.assertEqual('400', resp['status'])
 
+    @test.skip_test('ignore this case for bug.649')
     @attr(kind='medium')
     def test_create_server_specify_other_tenant_image(self):
         print """
@@ -2376,7 +2233,7 @@ class ServersTest(FunctionalTest):
         """
 
         # create server => tenant:admin
-        name = rand_name('server')
+        name = self._testMethodName + '_admin'
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -2395,7 +2252,7 @@ class ServersTest(FunctionalTest):
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # snapshot => tenant:admin
-        alt_name = rand_name('server')
+        alt_name = self._testMethodName + '_snapshot'
         resp, _ = self.ss_client.create_image(server['id'], alt_name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
@@ -2404,7 +2261,7 @@ class ServersTest(FunctionalTest):
         self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
 
         # create server => tenant:demo
-        demo_name = rand_name('server')
+        demo_name = self._testMethodName + '_demo'
         resp, server = self.s2_client.create_server(name,
                                                     alt_img_id,
                                                     self.flavor_ref,
@@ -2414,14 +2271,7 @@ class ServersTest(FunctionalTest):
                                                     personality=personality)
         print "resp=", resp
         print "body=", server
-        # Bug.649
-        self.assertEqual('404', resp['status'])
-#        self.assertEqual('403', resp['status'])
-
-        sql = ("delete from images where id = " + alt_img_id + ";"
-               "delete from image_properties where image_id = " + \
-               alt_img_id + ";")
-        self.exec_sql(sql, db='glance')
+        self.assertEqual('403', resp['status'])
 
     @attr(kind='medium')
     def test_create_servers_specify_networks(self):
@@ -2436,7 +2286,7 @@ class ServersTest(FunctionalTest):
         uuid = uuid[:-1]
 
         meta = {'hello': 'world'}
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2461,13 +2311,13 @@ class ServersTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
 
     @attr(kind='medium')
-    def test_create_servers_specify_three_networks(self):
+    def test_create_servers_specify_two_networks(self):
         print """
 
-        test_create_servers_specify_three_networks
+        test_create_servers_specify_two_networks
         """
 
-        sql = 'select uuid from networks where project_id = 1 limit 3;'
+        sql = 'select uuid from networks where project_id = 1 limit 2;'
         uuids = self.get_data_from_mysql(sql)
         uuid = []
         for id in uuids.split('\n'):
@@ -2476,13 +2326,12 @@ class ServersTest(FunctionalTest):
                 uuid.append(id)
 
         meta = {'hello': 'world'}
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        networks = [{'fixed_ip': '10.0.0.2', 'uuid': uuid[0]},
-                    {'fixed_ip': '10.0.1.2', 'uuid': uuid[1]},
-                    {'fixed_ip': '10.0.2.2', 'uuid': uuid[2]}]
+        networks = [{'fixed_ip': '10.0.0.100', 'uuid': uuid[0]},
+                    {'fixed_ip': '10.0.1.100', 'uuid': uuid[1]}]
         resp, server = self.ss_client.create_server_kw(
                                                    name=name,
                                                    imageRef=self.image_ref,
@@ -2501,6 +2350,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.get_server(server['id'])
         self.assertEqual('200', resp['status'])
 
+    @test.skip_test('ignore this case')
     @attr(kind='medium')
     def test_create_servers_specify_already_used_uuid(self):
         print """
@@ -2513,7 +2363,7 @@ class ServersTest(FunctionalTest):
         uuid = uuid[:-1]
 
         meta = {'hello': 'world'}
-        name = rand_name('server')
+        name = self._testMethodName + '1'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2528,14 +2378,14 @@ class ServersTest(FunctionalTest):
                                                 personality=personality)
 
         self.assertEqual('202', resp['status'])
-        print "resp=", resp
-        print "server=", server
+        print "resp1=", resp
+        print "body1=", server
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         meta = {'hello': 'world'}
-        name = rand_name('server')
+        name = self._testMethodName + '2'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2550,9 +2400,10 @@ class ServersTest(FunctionalTest):
                                                 personality=personality)
 
         self.assertEqual('400', resp['status'])
-        print "resp=", resp
-        print "server=", server
+        print "resp2=", resp
+        print "body2=", server
 
+    @test.skip_test('ignore this case for bug.651')
     @attr(kind='medium')
     def test_create_servers_specify_not_exists_ip_in_networks(self):
         print """
@@ -2561,27 +2412,27 @@ class ServersTest(FunctionalTest):
 
         """
 
-#        sql = 'select uuid from networks limit 1;'
-#        uuid = self.get_data_from_mysql(sql)
-#        uuid = uuid[:-1]
-#
-#        meta = {'hello': 'world'}
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        networks = [{'fixed_ip': '192.168.0.1',
-#                     'uuid':uuid}]
-#        resp, body = self.ss_client.create_server_kw(name=name,
-#                                                     imageRef=self.image_ref,
-#                                                     flavorRef=self.flavor_ref,
-#                                                     metadata=meta,
-#                                                     networks=networks,
-#                                                     personality=personality)
-#
-#        print "resp=", resp
-#        print "body=", body
-#        self.assertEqual('400', resp['status'])
+        sql = 'select uuid from networks limit 1;'
+        uuid = self.get_data_from_mysql(sql)
+        uuid = uuid[:-1]
+
+        meta = {'hello': 'world'}
+        name = self._testMethodName
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        networks = [{'fixed_ip': '192.168.0.1',
+                     'uuid':uuid}]
+        resp, body = self.ss_client.create_server_kw(name=name,
+                                                     imageRef=self.image_ref,
+                                                     flavorRef=self.flavor_ref,
+                                                     metadata=meta,
+                                                     networks=networks,
+                                                     personality=personality)
+
+        print "resp=", resp
+        print "body=", body
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_create_servers_specify_not_exists_zone(self):
@@ -2594,7 +2445,7 @@ class ServersTest(FunctionalTest):
         zone = rand_name('zone:')
 
         meta = {'hello': 'world'}
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2606,7 +2457,7 @@ class ServersTest(FunctionalTest):
                                                      personality=personality)
         print "resp=", resp
         print "body=", body
-        self.assertEqual('404', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_create_servers_specify_exists_zone(self):
@@ -2616,21 +2467,23 @@ class ServersTest(FunctionalTest):
 
         """
 
-        sql = "insert into zones (deleted, api_url) values(0, 'zone');"
-        self.exec_sql(sql)
-        zone = 'zone'
+        sql = ("select availability_zone, host from services "
+               "where services.binary = 'nova-compute';")
+        zone, host = (self.get_data_from_mysql(sql))[:-1].split('\t')
+        availability_zone = zone + ':' + host
 
         meta = {'hello': 'world'}
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        resp, body = self.ss_client.create_server_kw(name=name,
-                                                     imageRef=self.image_ref,
-                                                     flavorRef=self.flavor_ref,
-                                                     metadata=meta,
-                                                     availability_zone=zone,
-                                                     personality=personality)
+        resp, body = self.ss_client.create_server_kw(
+                                         name=name,
+                                         imageRef=self.image_ref,
+                                         flavorRef=self.flavor_ref,
+                                         metadata=meta,
+                                         availability_zone=availability_zone,
+                                         personality=personality)
         print "resp=", resp
         print "body=", body
         self.assertEqual('202', resp['status'])
@@ -2641,9 +2494,7 @@ class ServersTest(FunctionalTest):
         print "body=", body
         self.assertEqual('200', resp['status'])
 
-        sql = "delete from zones;"
-        self.exec_sql(sql)
-
+    @test.skip_test('ignore this case for bug.621')
     @attr(kind='medium')
     def test_ceate_server_specify_overlimit_to_meta(self):
         print """
@@ -2660,7 +2511,7 @@ class ServersTest(FunctionalTest):
         meta = {'a': 'b' * 260}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2695,11 +2546,11 @@ class ServersTest(FunctionalTest):
         """
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
+        resp, server = self.ss_client.create_server(name + '1',
                                                     self.image_ref,
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
@@ -2713,7 +2564,7 @@ class ServersTest(FunctionalTest):
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
-        resp, server = self.ss_client.create_server(name,
+        resp, server = self.ss_client.create_server(name + '2',
                                                     self.image_ref,
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
@@ -2727,7 +2578,7 @@ class ServersTest(FunctionalTest):
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
-        resp, server = self.ss_client.create_server(name,
+        resp, server = self.ss_client.create_server(name + '3',
                                                     self.image_ref,
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
@@ -2738,6 +2589,9 @@ class ServersTest(FunctionalTest):
         print "server=", server
         self.assertEqual('413', resp['status'])
 
+        sql = "delete from quotas;"
+        self.exec_sql(sql)
+
     @attr(kind='medium')
     def test_create_server_quota_memory(self):
         print """
@@ -2746,60 +2600,61 @@ class ServersTest(FunctionalTest):
 
         """
 
-#        sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
-#               "VALUES(0, '1', 'ram', 1)")
-#        self.exec_sql(sql)
-#
-#        print """
-#
-#        creating server.
-#
-#        """
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.s2_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        print "resp=", resp
-#        print "server=", server
-#        self.assertEqual('202', resp['status'])
-#
-#        # Wait for the server to become active
-#        self.s2_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        resp, server = self.s2_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        print "resp=", resp
-#        print "server=", server
-#        self.assertEqual('202', resp['status'])
-#
-#        # Wait for the server to become active
-#        self.s2_client.wait_for_server_status(server['id'], 'ACTIVE')
-#
-#        resp, server = self.s2_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    self.flavor_ref,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        print "resp=", resp
-#        print "server=", server
-#        self.assertEqual('413', resp['status'])
+        sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
+               "VALUES(0, '2', 'ram', 1024)")
+        self.exec_sql(sql)
 
+        print """
+
+        creating server.
+
+        """
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = self._testMethodName
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.s2_client.create_server(name + '1',
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        print "resp=", resp
+        print "server=", server
+        self.assertEqual('202', resp['status'])
+
+        # Wait for the server to become active
+        self.s2_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, server = self.s2_client.create_server(name + '2',
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        print "resp=", resp
+        print "server=", server
+        self.assertEqual('202', resp['status'])
+
+        # Wait for the server to become active
+        self.s2_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        resp, server = self.s2_client.create_server(name + '3',
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        print "resp=", resp
+        print "server=", server
+        self.assertEqual('413', resp['status'])
+
+    @test.skip_test('ignore this case for bug.619')
     @attr(kind='medium')
     def test_create_server_quota_disk(self):
         print """
@@ -2808,31 +2663,31 @@ class ServersTest(FunctionalTest):
 
         """
 
-#        sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
-#               "VALUES(0, 'admin', 'gigabyte', 1)")
-#        self.exec_sql(sql)
-#
-#        print """
-#
-#        creating server.
-#
-#        """
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        name = rand_name('server')
-#        file_contents = 'This is a test file.'
-#        personality = [{'path': '/etc/test.txt',
-#                       'contents': base64.b64encode(file_contents)}]
-#        resp, server = self.ss_client.create_server(name,
-#                                                    self.image_ref,
-#                                                    2,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#
-#        print "resp=", resp
-#        print "server=", server
-#        self.assertEqual('413', resp['status'])
+        sql = ('INSERT INTO quotas(deleted, project_id, resource, hard_limit)'
+               "VALUES(0, 'admin', 'gigabyte', 1)")
+        self.exec_sql(sql)
+
+        print """
+
+        creating server.
+
+        """
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = self._testMethodName
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    2,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        print "resp=", resp
+        print "server=", server
+        self.assertEqual('413', resp['status'])
 
     @attr(kind='medium')
     def test_get_server_details_by_id(self):
@@ -2844,7 +2699,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2876,7 +2731,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2912,7 +2767,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -2927,13 +2782,13 @@ class ServersTest(FunctionalTest):
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
-        self.assertNotEqual(99, server['id'])
-        resp, body = self.ss_client.get_server(99)
+        resp, body = self.ss_client.get_server(sys.maxint)
         print "resp=", resp
         print "body=", body
 
         self.assertEqual('404', resp['status'])
 
+    @test.skip_test('ignore this case for bug.622')
     @attr(kind='medium')
     def test_get_server_details_specify_other_tenant_server(self):
         print """
@@ -2943,7 +2798,7 @@ class ServersTest(FunctionalTest):
         """
 
         # create server => tenant:admin
-        name = rand_name('server')
+        name = self._testMethodName
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -2965,10 +2820,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.s2_client.get_server(server['id'])
         print "resp=", resp
         print "body=", body
-        # Bug.622
-        self.assertEqual('404', resp['status'])
-#        self.assertEqual('403', resp['status'])
+        self.assertEqual('403', resp['status'])
 
+    @test.skip_test('ignore this case for bug.623')
     @attr(kind='medium')
     def test_get_server_details_specify_string_to_id(self):
         print """
@@ -2980,10 +2834,9 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", body
 
-        # Bug.623
-        self.assertEqual('404', resp['status'])
-#        self.assertEqual('400', resp['status'])
+        self.assertEqual('400', resp['status'])
 
+    @test.skip_test('ignore this case for bug.624')
     @attr(kind='medium')
     def test_get_server_details_specify_negative_to_id(self):
         print """
@@ -2994,10 +2847,9 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.get_server(-1)
         print "resp=", resp
         print "body=", body
-        # Bug.624
-        self.assertEqual('404', resp['status'])
-#        self.assertEqual('400', resp['status'])
+        self.assertEqual('400', resp['status'])
 
+    @test.skip_test('ignore this case for bug.625')
     @attr(kind='medium')
     def test_get_server_details_specify_overlimits_to_id(self):
         print """
@@ -3009,9 +2861,7 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", body
 
-        # Bug.625
-        self.assertEqual('404', resp['status'])
-#        self.assertEqual('413', resp['status'])
+        self.assertEqual('413', resp['status'])
 
     @attr(kind='medium')
     def test_update_server(self):
@@ -3023,7 +2873,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -3041,8 +2891,7 @@ class ServersTest(FunctionalTest):
         resp, body = self.ss_client.get_server(server['id'])
         self.assertEqual(name, body['name'])
 
-        alt_name = rand_name('server')
-        self.assertNotEqual(name, alt_name)
+        alt_name = self._testMethodName + '_rename'
 
         resp, body = self.ss_client.update_server(server['id'], name=alt_name)
         self.assertEqual('200', resp['status'])
@@ -3062,7 +2911,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -3077,10 +2926,8 @@ class ServersTest(FunctionalTest):
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
-        alt_name = rand_name('server')
-        self.assertNotEqual(name, alt_name)
-        self.assertNotEqual(99, server['id'])
-        resp, body = self.ss_client.update_server(99, name=alt_name)
+        alt_name = self._testMethodName + '_rename'
+        resp, body = self.ss_client.update_server(sys.maxint, name=alt_name)
         print "resp=", resp
         print "body=", body
 
@@ -3096,7 +2943,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name1 = rand_name('server')
+        name1 = self._testMethodName + '1'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -3111,7 +2958,7 @@ class ServersTest(FunctionalTest):
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
-        name2 = rand_name('server')
+        name2 = self._testMethodName + '2'
         resp, server = self.ss_client.create_server(name2,
                                                     self.image_ref,
                                                     self.flavor_ref,
@@ -3145,7 +2992,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -3170,6 +3017,7 @@ class ServersTest(FunctionalTest):
 
         self.assertEqual('400', resp['status'])
 
+    @test.skip_test('ignore this case for bug.656')
     @attr(kind='medium')
     def test_update_server_specify_other_tenant_server(self):
         print """
@@ -3179,7 +3027,7 @@ class ServersTest(FunctionalTest):
         """
 
         # create server => tenant:admin
-        name = rand_name('server')
+        name = self._testMethodName
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -3198,15 +3046,13 @@ class ServersTest(FunctionalTest):
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # update server => tenant:demo
-        alt_name = rand_name('server')
+        alt_name = self._testMethodName + '_rename'
         self.assertNotEqual(name, alt_name)
         resp, body = self.s2_client.update_server(server['id'], name=alt_name)
         print "resp=", resp
         print "body=", body
 
-        # Bug.656
-        self.assertEqual('404', resp['status'])
-#        self.assertEqual('403', resp['status'])
+        self.assertEqual('403', resp['status'])
 
     @attr(kind='medium')
     def test_update_server_specify_overlimits_to_name(self):
@@ -3218,7 +3064,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -3241,10 +3087,9 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", body
 
-        # Bug.657
-        self.assertEqual('200', resp['status'])
-#        self.assertEqual('400', resp['status'])
+        self.assertEqual('400', resp['status'])
 
+    @test.skip_test('ignore this case for bug.658')
     @attr(kind='medium')
     def test_update_server_when_create_image(self):
         print """
@@ -3255,7 +3100,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -3271,7 +3116,7 @@ class ServersTest(FunctionalTest):
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # snapshot.
-        img_name = rand_name('server')
+        img_name = self._testMethodName + '_image'
         resp, _ = self.ss_client.create_image(server['id'], img_name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
@@ -3279,23 +3124,14 @@ class ServersTest(FunctionalTest):
         alt_img_id = match.groupdict()['image_id']
 
         # update server
-        alt_name = rand_name('server')
+        alt_name = self._testMethodName + '_rename'
         resp, body = self.ss_client.update_server(server['id'], name=alt_name)
         print "resp=", resp
         print "body=", body
 
-        # Bug.658
-        self.assertEqual('200', resp['status'])
-        resp, body = self.ss_client.get_server(server['id'])
-        self.assertEqual(alt_name, body['name'])
-#        self.assertEqual('409', resp['status'])
+        self.assertEqual('409', resp['status'])
 
         self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
-
-        sql = ("delete from images where id = " + alt_img_id + ";"
-               "delete from image_properties where image_id = " + \
-               alt_img_id + ";")
-        self.exec_sql(sql, db='glance')
 
     @attr(kind='medium')
     def test_update_server_specify_uuid(self):
@@ -3307,7 +3143,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -3324,7 +3160,7 @@ class ServersTest(FunctionalTest):
 
         resp, body = self.ss_client.get_server(server['id'])
         uuid = body['uuid']
-        alt_name = rand_name('server')
+        alt_name = self._testMethodName + '_rename'
         resp, body = self.ss_client.update_server(uuid, name=alt_name)
         self.assertEqual('200', resp['status'])
         print "resp=", resp
@@ -3343,7 +3179,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -3372,7 +3208,7 @@ class ServersTest(FunctionalTest):
         test_delete_server_not_exists_id
 
         """
-        resp = self.ss_client.delete_server(99)
+        resp = self.ss_client.delete_server(sys.maxint)
         print "resp=", resp
         self.assertEqual('404', resp[0]['status'])
 
@@ -3386,7 +3222,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -3400,42 +3236,6 @@ class ServersTest(FunctionalTest):
 
         resp, _ = self.ss_client.delete_server(server['id'])
         print "resp=", resp
-        self.assertEqual('204', resp['status'])
-        self.ss_client.wait_for_server_not_exists(server['id'])
-        resp, _ = self.ss_client.get_server(server['id'])
-        self.assertEqual('404', resp['status'])
-
-    @attr(kind='medium')
-    def test_delete_server_when_server_is_deleting(self):
-        print """
-
-        test_delete_server_when_server_is_deleting
-
-        """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        resp, _ = self.ss_client.delete_server(server['id'])
-        print "resp=", resp
-
-        resp, _ = self.ss_client.delete_server(server['id'])
-        print "resp=", resp
-
         self.assertEqual('204', resp['status'])
         self.ss_client.wait_for_server_not_exists(server['id'])
         resp, _ = self.ss_client.get_server(server['id'])
@@ -3451,7 +3251,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -3472,10 +3272,9 @@ class ServersTest(FunctionalTest):
         resp, _ = self.ss_client.delete_server(server['id'])
         print "resp=", resp
 
-        # Bug.668
         self.assertEqual('404', resp['status'])
-#        self.assertEqual('403', resp['status'])
 
+    @test.skip_test('ignore this case for bug.662')
     @attr(kind='medium')
     def test_delete_server_specify_other_tenant_server(self):
         print """
@@ -3485,7 +3284,7 @@ class ServersTest(FunctionalTest):
         """
 
         # create server => tenant:admin
-        name = rand_name('server')
+        name = self._testMethodName
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -3506,10 +3305,9 @@ class ServersTest(FunctionalTest):
         # delete server => tenant:demo
         resp, _ = self.s2_client.delete_server(server['id'])
         print "resp=", resp
-        # Bug.662
-        self.assertEqual('404', resp['status'])
-#        self.assertEqual('403', resp['status'])
+        self.assertEqual('403', resp['status'])
 
+    @test.skip_test('ignore this case for bug.662')
     @attr(kind='medium')
     def test_delete_server_specify_string_to_server_id(self):
         print """
@@ -3519,10 +3317,9 @@ class ServersTest(FunctionalTest):
         """
         resp, _ = self.ss_client.delete_server('server_id')
         print "resp=", resp
-        # Bug.662
-        self.assertEqual('404', resp['status'])
-#        self.assertEqual('400', resp['status'])
+        self.assertEqual('400', resp['status'])
 
+    @test.skip_test('ignore this case for bug.662')
     @attr(kind='medium')
     def test_delete_server_specify_negative_to_server_id(self):
         print """
@@ -3532,10 +3329,9 @@ class ServersTest(FunctionalTest):
         """
         resp, _ = self.ss_client.delete_server(-1)
         print "resp=", resp
-        # Bug.662
-        self.assertEqual('404', resp['status'])
-#        self.assertEqual('400', resp['status'])
+        self.assertEqual('400', resp['status'])
 
+    @test.skip_test('ignore this case for bug.662')
     @attr(kind='medium')
     def test_delete_server_specify_overlimits_to_server_id(self):
         print """
@@ -3546,10 +3342,9 @@ class ServersTest(FunctionalTest):
         resp, _ = self.ss_client.delete_server(sys.maxint + 1)
         print "resp=", resp
 
-        # Bug.662
-        self.assertEqual('404', resp['status'])
-#        self.assertEqual('413', resp['status'])
+        self.assertEqual('413', resp['status'])
 
+    @test.skip_test('ignore this case for bug.666')
     @attr(kind='medium')
     def test_delete_server_when_create_image(self):
         print """
@@ -3560,7 +3355,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -3576,7 +3371,7 @@ class ServersTest(FunctionalTest):
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # snapshot.
-        img_name = rand_name('server')
+        img_name = self._testMethodName + '_image'
         resp, _ = self.ss_client.create_image(server['id'], img_name)
         alt_img_url = resp['location']
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
@@ -3586,15 +3381,9 @@ class ServersTest(FunctionalTest):
         # delete server
         resp, _ = self.ss_client.delete_server(server['id'])
         print "resp=", resp
-#        resp, body = self.ss_client.get_server(server['id'])
-#        self.assertEqual(name, body['name'])
+        self.assertEqual('409', resp['status'])
 
         self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
-
-        sql = ("delete from images where id = " + alt_img_id + ";"
-               "delete from image_properties where image_id = " + \
-               alt_img_id + ";")
-        self.exec_sql(sql, db='glance')
 
     @attr(kind='medium')
     def test_delete_server_specify_uuid(self):
@@ -3606,7 +3395,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -3636,7 +3425,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -3659,11 +3448,10 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         self.assertEqual('204', resp['status'])
 
-        self.ss_client.wait_for_server_not_exists(server['id'])
+        self.ss_client.wait_for_server_not_exists_ignore_error(server['id'])
 
         sql = ("SELECT deleted, vm_state, task_state "
-               "FROM instances WHERE id = %s;"
-               ) % (server['id'])
+               "FROM instances WHERE id = %s;") % (server['id'])
         rs = self.get_data_from_mysql(sql)
         (deleted, vm_state, task_state) = rs[:-1].split('\t')
         self.assertEqual('1', deleted)
@@ -3676,7 +3464,7 @@ class ServersTest(FunctionalTest):
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
+        name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
@@ -3698,8 +3486,28 @@ class ServersTest(FunctionalTest):
         resp, _ = self.ss_client.delete_server(server['id'])
         print "resp=", resp
 
-        # Bug.687
-#        self.assertEqual('403', resp['status'])
+        self.assertEqual('403', resp['status'])
+
+        # cleanup undeleted server
+        sql = ("UPDATE instances SET "
+               "deleted = 1, "
+               "vm_state = 'deleted', "
+               "task_state = NULL "
+               "WHERE id = %s;") % server['id']
+        self.exec_sql(sql)
+
+        # kill still existing virtual instances.
+        for line in subprocess.check_output('virsh list --all',
+                                            shell=True).split('\n')[2:-2]:
+            # if instance is shut off, line contains four element.
+            # so, ignore it.
+            try:
+                (id, name, state) = line.split()
+                if state == 'running':
+                    subprocess.check_call('virsh destroy %s' % id, shell=True)
+                subprocess.check_call('virsh undefine %s' % name, shell=True)
+            except Exception:
+               pass
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_building_task_networking(self):
@@ -3721,17 +3529,13 @@ class ServersTest(FunctionalTest):
     def test_delete_server_instance_vm_active_task_rebuilding(self):
         self._test_delete_server_base('active', 'rebuilding')
 
-#    @attr(kind='medium')
-#    def test_delete_server_instance_vm_error_task_building(self):
-#        self._test_delete_server_base('error', 'building')
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_error_task_building(self):
+        self._test_delete_server_base('error', 'building')
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_active_task_rebooting(self):
         self._test_delete_server_403_base('active', 'rebooting')
-
-    @attr(kind='medium')
-    def test_delete_server_instance_vm_reboot_task_rebooting(self):
-        self._test_delete_server_403_base('reboot', 'rebooting')
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_building_task_deleting(self):
@@ -3743,4 +3547,4 @@ class ServersTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_error_task_error(self):
-        self._test_delete_server_403_base('error', 'error')
+        self._test_delete_server_base('error', 'error')
