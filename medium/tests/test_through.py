@@ -43,15 +43,6 @@ def setUpModule(module):
                           '--project=1 --user=admin',
                           cwd=config.nova.directory, shell=True)
 
-        # allocate networks.
-        subprocess.check_call('bin/nova-manage network create '
-                          '--label=private_1-1 '
-                          '--project_id=1 '
-                          '--fixed_range_v4=10.0.0.0/24 '
-                          '--bridge_interface=br-int '
-                          '--num_networks=1 '
-                          '--network_size=32 ',
-                          cwd=config.nova.directory, shell=True)
     except Exception:
         pass
 
