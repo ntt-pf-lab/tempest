@@ -114,17 +114,12 @@ class ServersTest(FunctionalTest):
                "WHERE id = %s;") % (deleted, vm_state, task_state, server_id)
         self.exec_sql(sql)
 
-
-
-    def update_status2(self, server_id, vm_state, deleted=0):
+    def update_status_for_block_migrate(self, server_id, vm_state, deleted=0):
         sql = ("UPDATE instances SET "
                "deleted = %s, "
                "vm_state = '%s'"
                "WHERE id = %s;") % (deleted, vm_state, server_id)
         self.exec_sql(sql)
-
-
-
 
     @attr(kind='medium')
     def test_list_servers_when_no_server_created(self):
@@ -3519,23 +3514,10 @@ class ServersTest(FunctionalTest):
                     subprocess.check_call('virsh destroy %s' % id, shell=True)
                 subprocess.check_call('virsh undefine %s' % name, shell=True)
             except Exception:
-               pass
-
-
-
-
-
-
-
-
-
-
-
-
-
+                pass
 
     @attr(kind='medium')
-    def _test_delete_server_403_base2(self, vm_state):
+    def _test_delete_server_204_base_for_block_migrate(self, vm_state):
         # create server
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
@@ -3556,13 +3538,13 @@ class ServersTest(FunctionalTest):
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # status update
-        self.update_status2(server['id'], vm_state)
+        self.update_status_for_block_migrate(server['id'], vm_state)
 
         # test for delete server
         resp, _ = self.ss_client.delete_server(server['id'])
         print "resp=", resp
 
-        self.assertEqual('403', resp['status'])
+        self.assertEqual('204', resp['status'])
 
         # cleanup undeleted server
         sql = ("UPDATE instances SET "
@@ -3578,13 +3560,6 @@ class ServersTest(FunctionalTest):
             if state == 'running':
                 subprocess.check_call('virsh destroy %s' % id, shell=True)
             subprocess.check_call('virsh undefine %s' % name, shell=True)
-
-
-
-
-
-
-
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_building_task_networking(self):
@@ -3622,30 +3597,9 @@ class ServersTest(FunctionalTest):
     def test_delete_server_instance_vm_active_task_deleting(self):
         self._test_delete_server_403_base('active', 'deleting')
 
-
-
-
-
-
-
-
-
     @attr(kind='medium')
     def test_delete_server_while_server_is_block_migrating(self):
-        self._test_delete_server_403_base2('migrating')
-
-
-
-
-
-
-
-
-
-
-
-
-
+        self._test_delete_server_204_base_for_block_migrate('migrating')
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_error_task_error(self):
