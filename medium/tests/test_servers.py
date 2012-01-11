@@ -3540,6 +3540,71 @@ class ServersTest(FunctionalTest):
                 subprocess.check_call('virsh destroy %s' % id, shell=True)
             subprocess.check_call('virsh undefine %s' % name, shell=True)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+    @attr(kind='medium')
+    def _test_delete_server_403_base2(self, vm_state):
+        # create server
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = self._testMethodName
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        # status update
+        self.update_status(server['id'], vm_state)
+
+        # test for delete server
+        resp, _ = self.ss_client.delete_server(server['id'])
+        print "resp=", resp
+
+        self.assertEqual('403', resp['status'])
+
+        # cleanup undeleted server
+        sql = ("UPDATE instances SET "
+               "deleted = 1, "
+               "vm_state = 'deleted'"
+               "WHERE id = %s;") % server['id']
+        self.exec_sql(sql)
+
+        # kill still existing virtual instances.
+        for line in subprocess.check_output('virsh list --all',
+                                            shell=True).split('\n')[2:-2]:
+            (id, name, state) = line.split()
+            if state == 'running':
+                subprocess.check_call('virsh destroy %s' % id, shell=True)
+            subprocess.check_call('virsh undefine %s' % name, shell=True)
+
+
+
+
+
+
+
+
     @attr(kind='medium')
     def test_delete_server_instance_vm_building_task_networking(self):
         self._test_delete_server_base('building', 'networking')
@@ -3575,6 +3640,31 @@ class ServersTest(FunctionalTest):
     @attr(kind='medium')
     def test_delete_server_instance_vm_active_task_deleting(self):
         self._test_delete_server_403_base('active', 'deleting')
+
+
+
+
+
+
+
+
+
+    @attr(kind='medium')
+    def test_delete_server_while_server_is_block_migrating(self):
+        self._test_delete_server_403_base2('migrating')
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_error_task_error(self):
