@@ -40,9 +40,10 @@ class KeystoneClient(object):
         post_body = {
             'name': name,
             'password': password,
-            'tenantId': tenant_id,
             'email': email
         }
+        if tenant_id != None:
+            post_body['tenantId'] = tenant_id
         post_body = json.dumps({'user': post_body})
         resp, body = self.admin_client.post('users', post_body, self.headers)
         body = json.loads(body)

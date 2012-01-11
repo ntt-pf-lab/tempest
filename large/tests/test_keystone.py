@@ -424,6 +424,14 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('test_user2', body['user']['name'])
         messages.append(('test_create_user',body))
 
+    def test_create_user_with_no_tenant_id(self):
+        self.data.setup_one_user()
+        resp, body = self.client.create_user('test_user3', 'password', None, 'user3@test.com')
+        self.data.users.append(body['user'])
+        self.assertEqual('201', resp['status'])
+        self.assertEqual('test_user3', body['user']['name'])
+        messages.append(('test_create_user',body))
+
     def test_create_users_with_no_grant(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
@@ -444,6 +452,16 @@ class KeystoneTest(FunctionalTest):
         resp, body = self.client.create_user('test_user2', 'password', tenant['id'], 'user2@test.com')
         self.assertEqual('403', resp['status'])
         messages.append(('test_get_users_with_expired_user', body))
+
+    def test_create_users_with_disable_tenant(self):
+        # create a new token for test_user1.
+        _, body = self.client.create_tenant("test_tenant1", "tenant_for_test")
+        self.data.tenants.append(body['tenant'])
+        tenant = self.get_tenant_by_name('test_tenant1')
+        self.diable_tenant('test_tenant1')
+        resp, body = self.client.create_user('test_user2', 'password', tenant['id'], 'user2@test.com')
+        self.assertEqual('403', resp['status'])
+        messages.append(('test_create_users_with_disable_tenant', body))
 
     def test_create_users_with_no_token(self):
         self.data.setup_one_user()
