@@ -1458,18 +1458,18 @@ class CreateImageFatTest(FunctionalTest):
         self.img_client = self.os.images_client
 
         self.small_flavor_ref = 998
-        subprocess.check_call('/opt/stack/nova/bin/nova-manage flavor create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage flavor create '
             '--name=small --memory=1024 --cpu=1 --local_gb=1 '
             '--flavor=%d --swap=0' % self.small_flavor_ref, shell=True)
 
         self.fat_flavor_ref = 999
-        subprocess.check_call('/opt/stack/nova/bin/nova-manage flavor create '
+        subprocess.check_call('/opt/openstack/nova/bin/nova-manage flavor create '
             '--name=fat --memory=1024 --cpu=1 --local_gb=2 '
             '--flavor=%d --swap=0' % self.fat_flavor_ref, shell=True)
 
         def flush_flavors():
-            subprocess.call('/opt/stack/nova/bin/nova-manage flavor delete small --purge', shell=True)
-            subprocess.call('/opt/stack/nova/bin/nova-manage flavor delete fat --purge', shell=True)
+            subprocess.call('/opt/openstack/nova/bin/nova-manage flavor delete small --purge', shell=True)
+            subprocess.call('/opt/openstack/nova/bin/nova-manage flavor delete fat --purge', shell=True)
 
         self.addCleanup(flush_flavors)
 
