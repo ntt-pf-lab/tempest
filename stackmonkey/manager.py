@@ -180,7 +180,7 @@ class HavocManager(object):
                         command = export + '%s/bin/%s' % (self.service_root,
                         service)
 
-                command = command + ' 2> /dev/null &'
+#                command = command + ' 2> /dev/null &'
                 self._run_cmd(command=command)
 
             elif action == 'stop':
