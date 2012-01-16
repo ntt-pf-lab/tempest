@@ -537,158 +537,63 @@ class DBErrorTest(LibvirtFunctionalTest):
     @attr(kind='large')
     def test_d02_101(self):
         self.assertRaises(TypeError,
-            self._create_server_with_fake_db, 'nova.db.api', 'db-error',
+            self._create_server_with_fake_db, 'nova.db.api', 'create-error',
                            'fake_db.db_stop_patch', [])
 
     @attr(kind='large')
     def test_d02_102(self):
         self.assertRaises(exceptions.TimeoutException,
-            self._create_server_with_fake_db, 'nova.db.api', 'db-error',
+            self._create_server_with_fake_db, 'nova.db.api', 'create-error',
                            'fake_db.db_exception_patch', [])
 
     @attr(kind='large')
     def test_d02_103(self):
         self.assertRaises(exceptions.BuildErrorException,
-            self._create_server_with_down_glance, 'nova.db.api', 'db-error',
+            self._create_server_with_down_glance, 'nova.db.api', 'create-error',
                            'fake_db.stop_glance_patch', [], status='ERROR')
 
     @test.skip_test('TODO: no response condition')
     @attr(kind='large')
     def test_d02_104(self):
         self.assertRaises(exceptions.BuildErrorException,
-            self._create_server_with_down_glance, 'nova.image.glance', 'db-error',
+            self._create_server_with_down_glance, 'nova.image.glance', 'create-error',
                            'fake_db.wait_glance_patch', [], status='ERROR')
 
     @attr(kind='large')
     def test_d02_106(self):
         self.assertRaises(TypeError,
-            self._create_server_with_fake_db, 'nova.db.api', 'db-error',
+            self._create_server_with_fake_db, 'nova.db.api', 'create-error',
                            'fake_db.db_type_stop_patch', [])
 
     @attr(kind='large')
     def test_d02_107(self):
         self.assertRaises(exceptions.BuildErrorException,
-            self._create_server_with_fake_db, 'nova.db.api', 'db-error',
+            self._create_server_with_fake_db, 'nova.db.api', 'create-error',
                            'fake_db.db_type_exception_patch', [])
 
     @attr(kind='large')
     def test_d02_108(self):
         self.assertRaises(TypeError,
-            self._create_server_with_fake_db, 'nova.db.api', 'db-error',
+            self._create_server_with_fake_db, 'nova.db.api', 'create-error',
                            'fake_db.instance_update_stop_patch', [])
 
     @attr(kind='large')
     def test_d02_109(self):
         self.assertRaises(exceptions.TimeoutException,
-            self._create_server_with_fake_db, 'nova.db.api', 'db-error',
+            self._create_server_with_fake_db, 'nova.db.api', 'create-error',
                            'fake_db.instance_update_except_patch', [])
 
     @attr(kind='large')
     def test_d02_128(self):
         self.assertRaises(TypeError,
-            self._create_server_with_fake_db, 'nova.compute.manager', 'db-error',
+            self._create_server_with_fake_db, 'nova.compute.manager', 'create-error',
                            'fake_db.compute_instance_update_stop_patch', [])
 
     @attr(kind='large')
     def test_d02_129(self):
         self.assertRaises(exceptions.BuildErrorException,
-            self._create_server_with_fake_db, 'nova.compute.manager', 'db-error',
+            self._create_server_with_fake_db, 'nova.compute.manager', 'create-error',
                            'fake_db.compute_instance_update_except_patch', [])
 
 
 
-
-    @attr(kind='medium')
-    def test_d02_304(self):
-        self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
-                            'fake_libvirt.libvirt_patch_no_domain', 'ACTIVE')
-
-    @attr(kind='medium')
-    def test_d02_318(self):
-        self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
-                    'fake_libvirt.libvirt_patch_vir_error_rd', 'ERROR', True)
-
-    @attr(kind='medium')
-    def test_d02_319(self):
-        self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
-                    'fake_libvirt.libvirt_patch_no_domain_rd', 'ERROR', True)
-
-    @attr(kind='medium')
-    def test_d02_321(self):
-        self._reboot_server_with_fake_libvirt('libvirt', 'virdomain-error',
-                                'fake_libvirt.libvirt_patch')
-
-    @attr(kind='medium')
-    def test_d02_322(self):
-        self._reboot_server_with_fake_libvirt('libvirt', 'virdomain-error',
-                                'fake_libvirt.libvirt_patch_invalid_operation')
-
-    @attr(kind='medium')
-    def test_d02_324(self):
-        self._reboot_server_with_fake_libvirt('libvirt', 'virdomain-error',
-                            'fake_libvirt.libvirt_patch_undefine', 'ACTIVE')
-
-    @attr(kind='medium')
-    def test_d02_325(self):
-        self._reboot_server_with_fake_libvirt('libvirt', 'virdomain-error',
-            'fake_libvirt.libvirt_undefine_patch_invalid_operation', 'ACTIVE')
-
-    @attr(kind='medium')
-    def test_d02_327(self):
-        self._reboot_server_with_fake_libvirt('nova.virt.libvirt.vif',
-                        'vif-unplug-error', 'fake_libvirt_vif.vif_patch')
-
-    @attr(kind='medium')
-    def test_d02_329(self):
-        self._reboot_server_with_fake_libvirt('nova.virt.libvirt.vif',
-                        'vif-unplug-error', 'fake_libvirt_vif.vif_patch')
-
-    @attr(kind='medium')
-    def test_d02_331(self):
-        self._reboot_server_with_fake_libvirt('nova.virt.libvirt.firewall',
-                        'firewall-error', 'fake_iptables.unfilter_patch')
-
-    @attr(kind='medium')
-    def test_d02_332(self):
-        self._reboot_server_with_fake_libvirt('nova.virt.libvirt.vif',
-                        'vif-plug-error', 'fake_libvirt_vif.vif_patch')
-
-    @attr(kind='medium')
-    def test_d02_333(self):
-        self._reboot_server_with_fake_libvirt('nova.virt.libvirt.vif',
-                        'vif-plug-error', 'fake_libvirt_vif.vif_patch')
-
-    @attr(kind='medium')
-    def test_d02_334(self):
-        self._reboot_server_with_fake_libvirt('nova.virt.libvirt.vif',
-                        'vif-plug-error', 'fake_libvirt_vif.vif_patch')
-
-    @attr(kind='medium')
-    def test_d02_335(self):
-        self._reboot_server_with_fake_libvirt('nova.virt.libvirt.vif',
-                        'vif-plug-error', 'fake_libvirt_vif.vif_patch')
-
-    @attr(kind='medium')
-    def test_d02_337(self):
-        self._reboot_server_with_fake_libvirt('libvirt', 'virconn-error',
-                                'fake_libvirt.libvirt_definexml_patch')
-
-    @attr(kind='medium')
-    def test_d02_340(self):
-        self._reboot_server_with_fake_libvirt('libvirt', 'virdomain-error',
-                                'fake_libvirt.libvirt_create_patch')
-
-    @attr(kind='medium')
-    def test_d02_343(self):
-        self._reboot_server_with_fake_libvirt('nova.virt.libvirt.firewall',
-                        'firewall-error', 'fake_iptables.filter_patch')
-
-    @attr(kind='medium')
-    def test_d02_344(self):
-        self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
-                     'fake_libvirt.libvirt_patch_vir_error_rd_conf')
-
-    @attr(kind='medium')
-    def test_d02_345(self):
-        self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
-                    'fake_libvirt.libvirt_patch_no_domain_rd_conf')
