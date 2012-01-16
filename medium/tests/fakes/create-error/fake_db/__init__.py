@@ -5,6 +5,12 @@ from nova.db import api
 from nova.db.sqlalchemy import api as sql_api
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova.virt import disk
+from nova.virt import images
+import gflags
+import string
+from nova import flags
+import libvirt
 
 #from storm import openstack
 #import storm.config
@@ -15,9 +21,19 @@ import manager as ssh_manager
 
 def stopGlanceService():
     glance_havoc = ssh_manager.GlanceHavoc()
+    ssh_con = glance_havoc.connect('127.0.0.1', 'openstack',
+                        'openstack', glance_havoc.config.nodes.ssh_timeout)
+
     glance_havoc.stop_glance_api()
     time.sleep(10)
 
+def startLibvirtService():
+   havoc = ssh_manager.HavocManager()
+   havoc._run_cmd("sudo service libvirt-bin start")
+
+def stopLibvirtService():
+   havoc = ssh_manager.HavocManager()
+   havoc._run_cmd("sudo service libvirt-bin stop")
 
 def startDBService():
    havoc = ssh_manager.HavocManager()
@@ -162,6 +178,123 @@ def compute_instance_update_active_stop_patch(name, fn):
         return compute_instance_update_stop_active
     else:
         return fn
+
+
+
+def libvirt_create_image_ioerror(self, context, inst, libvirt_xml, suffix='',
+                      disk_images=None, network_info=None,
+                      block_device_info=None):
+    raise IOError
+
+
+def libvirt_create_image_ioerror_patch(name, fn):
+    if name == 'nova.virt.libvirt.connection.LibvirtConnection._create_image':
+        return libvirt_create_image_ioerror
+    else:
+        return fn
+
+
+def libvirt_create_image_console_ioerror_patch(name, fn):
+    if name == 'nova.virt.libvirt.connection.LibvirtConnection._create_image':
+        return libvirt_create_image_ioerror
+    else:
+        return fn
+
+
+def libvirt_fetch_image_stop_glance(self, context, target, image_id, user_id, project_id,
+                     size=None):
+
+#    if target.find('001') >= 0:
+    stopGlanceService()
+    images.fetch_to_raw(context, image_id, target, user_id, project_id)
+    if size:
+        disk.extend(target, size)
+
+
+def libvirt_fetch_image_stop_glance_patch(name, fn):
+    print 'uuuuuuuu'+name
+    if name == 'nova.virt.libvirt.connection.LibvirtConnection._fetch_image':
+        return libvirt_fetch_image_stop_glance
+    else:
+        return fn
+
+
+def libvirt_create_new_domain(self, xml, persistent=True, launch_flags=0):
+
+    stopLibvirtService()
+
+    if persistent:
+        # To create a persistent domain, first define it, then launch it.
+        domain = self._conn.defineXML(xml)
+
+        domain.createWithFlags(launch_flags)
+    else:
+        # createXML call creates a transient domain
+        domain = self._conn.createXML(xml, launch_flags)
+
+    return domain
+
+
+def create_domain_stop_libvirt_patch(name, fn):
+    print 'uuuuuuuu'+name
+    if name == 'nova.virt.libvirt.connection.LibvirtConnection._create_new_domain':
+        return libvirt_create_new_domain
+    else:
+        return fn
+
+
+def libvirt_create_withflags(self, xml, persistent=True, launch_flags=0):
+
+    if persistent:
+        # To create a persistent domain, first define it, then launch it.
+        domain = self._conn.defineXML(xml)
+
+        stopLibvirtService()
+
+        domain.createWithFlags(launch_flags)
+    else:
+        # createXML call creates a transient domain
+        domain = self._conn.createXML(xml, launch_flags)
+
+    return domain
+
+
+def create_domain_withflags_stop_libvirt_patch(name, fn):
+    print 'uuuuuuuu'+name
+    if name == 'nova.virt.libvirt.connection.LibvirtConnection._create_new_domain':
+        return libvirt_create_withflags
+    else:
+        return fn
+
+
+
+
+
+def libvirt_lookup_by_name(self, instance_name):
+
+    stopLibvirtService()
+    try:
+        return self._conn.lookupByName(instance_name)
+    except libvirt.libvirtError as ex:
+        error_code = ex.get_error_code()
+        if error_code == libvirt.VIR_ERR_NO_DOMAIN:
+            raise exception.InstanceNotFound(instance_id=instance_name)
+
+        msg = _("Error from libvirt while looking up %(instance_name)s: "
+                "[Error Code %(error_code)s] %(ex)s") % locals()
+        raise exception.Error(msg)
+
+
+def create_domain_lookup_stop_libvirt_patch(name, fn):
+    print 'uuuuuuuu'+name
+    if name == 'nova.virt.libvirt.connection.LibvirtConnection._create_new_domain':
+        return libvirt_lookup_by_name
+    else:
+        return fn
+
+
+
+
 
 
 def compute_instance_update_excpt_active(self, context, instance_id, **kwargs):

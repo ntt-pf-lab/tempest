@@ -67,7 +67,11 @@ class LibvirtFunctionalTest(unittest.TestCase):
     def tearDown(self):
         try:
             self.havoc._run_cmd("sudo service mysql start")
-            time.sleep(10)
+        except:
+            pass
+
+        try:
+            self.havoc._run_cmd("sudo service libvirt-bin start")
         except:
             pass
         self._dumpdb()
@@ -464,6 +468,8 @@ class DBErrorTest(LibvirtFunctionalTest):
     def _create_server_with_fake_db(self, monkey_module,
             fakepath, fake_patch_name, other_module_patchs):
 
+        base_dir = os.path.join(self.config.nova.directory, 'instances/*')
+        self.havoc._run_cmd('sudo rm -fr ' + base_dir)
         # start fake nova-compute for libvirt error
         patches = [(monkey_module, fake_patch_name)]
         if other_module_patchs:
@@ -606,6 +612,58 @@ class DBErrorTest(LibvirtFunctionalTest):
         self.assertRaises(exceptions.BuildErrorException,
             self._create_server_with_fake_db, 'nova.compute.manager', 'create-error',
                            'fake_db.compute_instance_update_spawn_except_patch', [])
+
+    @attr(kind='large')
+    def test_d02_138(self):
+        self.assertRaises(exceptions.BuildErrorException,
+            self._create_server_with_fake_db, 'nova.virt.libvirt.connection', 'create-error',
+                           'fake_db.libvirt_create_image_ioerror_patch', [])
+
+    @attr(kind='large')
+    def test_d02_139(self):
+        self.assertRaises(exceptions.BuildErrorException,
+            self._create_server_with_fake_db, 'nova.virt.libvirt.connection', 'create-error',
+                           'fake_db.libvirt_create_image_console_ioerror_patch', [])
+
+    @attr(kind='large')
+    def test_d02_140(self):
+        self.assertRaises(exceptions.BuildErrorException,
+            self._create_server_with_fake_db, 'nova.virt.libvirt.connection', 'create-error',
+                           'fake_db.libvirt_fetch_image_stop_glance_patch', [])
+    @attr(kind='large')
+    def test_d02_143(self):
+        self.assertRaises(exceptions.BuildErrorException,
+            self._create_server_with_fake_db, 'nova.virt.libvirt.connection', 'create-error',
+                           'fake_db.libvirt_fetch_image_stop_glance_patch', [])
+    @attr(kind='large')
+    def test_d02_146(self):
+        self.assertRaises(exceptions.BuildErrorException,
+            self._create_server_with_fake_db, 'nova.virt.libvirt.connection', 'create-error',
+                           'fake_db.libvirt_fetch_image_stop_glance_patch', [])
+    @attr(kind='large')
+    def test_d02_156(self):
+        self.assertRaises(exceptions.BuildErrorException,
+            self._create_server_with_fake_db, 'nova.virt.libvirt.connection', 'create-error',
+                           'fake_db.libvirt_create_image_ioerror_patch', [])
+
+    @attr(kind='large')
+    def test_d02_162(self):
+        self.assertRaises(exceptions.BuildErrorException,
+            self._create_server_with_fake_db, 'nova.virt.libvirt.connection', 'create-error',
+                           'fake_db.create_domain_stop_libvirt_patch', [])
+
+    @attr(kind='large')
+    def test_d02_165(self):
+        self.assertRaises(exceptions.BuildErrorException,
+            self._create_server_with_fake_db, 'nova.virt.libvirt.connection', 'create-error',
+                           'fake_db.create_domain_withflags_stop_libvirt_patch', [])
+
+    @attr(kind='large')
+    def test_d02_170(self):
+        self.assertRaises(exceptions.BuildErrorException,
+            self._create_server_with_fake_db, 'nova.virt.libvirt.connection', 'create-error',
+                           'fake_db.create_domain_lookup_stop_libvirt_patch', [])
+
 
     @attr(kind='large')
     def test_d02_172(self):
