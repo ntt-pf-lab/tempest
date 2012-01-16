@@ -11,12 +11,18 @@ import gflags
 import string
 from nova import flags
 import libvirt
+from nova import exception
+from nova import image
+from nova import log as logging
 
 #from storm import openstack
 #import storm.config
 #from storm import exceptions
 import manager as ssh_manager
 #import stackmonkey.manager as ssh_manager
+
+
+LOG = logging.getLogger('log-for-fake-db')
 
 
 def stopGlanceService():
@@ -212,9 +218,75 @@ def libvirt_fetch_image_stop_glance(self, context, target, image_id, user_id, pr
 
 
 def libvirt_fetch_image_stop_glance_patch(name, fn):
-    print 'uuuuuuuu'+name
     if name == 'nova.virt.libvirt.connection.LibvirtConnection._fetch_image':
         return libvirt_fetch_image_stop_glance
+    else:
+        return fn
+
+
+def virt_images_fetch_href1(context, image_href, path, _user_id, _project_id):
+    LOG.info('stop glance before get image_href:'+image_href)
+
+    if image_href == '1':
+        stopGlanceService()
+    (image_service, image_id) = image.get_image_service(context,
+                                                             image_href)
+    try:
+        with open(path, "wb") as image_file:
+            metadata = image_service.get(context, image_id, image_file)
+    except IOError:
+        raise exception.InvalidDevicePath(path=path)
+    return metadata
+
+
+def libvirt_fetch_image_kerneldisk_stop_glance_patch(name, fn):
+    if name == 'nova.virt.images.fetch':
+        return virt_images_fetch_href1
+    else:
+        return fn
+
+
+def virt_images_fetch(context, image_href, path, _user_id, _project_id):
+    LOG.info('stop glance before get image_href:'+image_href)
+
+    if image_href == '2':
+        stopGlanceService()
+    (image_service, image_id) = image.get_image_service(context,
+                                                             image_href)
+    try:
+        with open(path, "wb") as image_file:
+            metadata = image_service.get(context, image_id, image_file)
+    except IOError:
+        raise exception.InvalidDevicePath(path=path)
+    return metadata
+
+
+def libvirt_fetch_image_ramdisk_stop_glance_patch(name, fn):
+    if name == 'nova.virt.images.fetch':
+        return virt_images_fetch
+    else:
+        return fn
+
+
+def virt_images_fetch_href3(context, image_href, path, _user_id, _project_id):
+    LOG.info('stop glance before get image_href:'+image_href)
+
+    if image_href == '3':
+        stopGlanceService()
+    (image_service, image_id) = image.get_image_service(context,
+                                                             image_href)
+    try:
+        with open(path, "wb") as image_file:
+            metadata = image_service.get(context, image_id, image_file)
+    except IOError:
+        raise exception.InvalidDevicePath(path=path)
+    return metadata
+
+
+def libvirt_fetch_image_rootdisk_stop_glance_patch(name, fn):
+    print 'uuuuuuuu'+name
+    if name == 'nova.virt.images.fetch':
+        return virt_images_fetch_href3
     else:
         return fn
 
@@ -267,9 +339,6 @@ def create_domain_withflags_stop_libvirt_patch(name, fn):
         return fn
 
 
-
-
-
 def libvirt_lookup_by_name(self, instance_name):
 
     stopLibvirtService()
@@ -287,7 +356,7 @@ def libvirt_lookup_by_name(self, instance_name):
 
 def create_domain_lookup_stop_libvirt_patch(name, fn):
     print 'uuuuuuuu'+name
-    if name == 'nova.virt.libvirt.connection.LibvirtConnection._create_new_domain':
+    if name == 'nova.virt.libvirt.connection.LibvirtConnection._lookup_by_name':
         return libvirt_lookup_by_name
     else:
         return fn

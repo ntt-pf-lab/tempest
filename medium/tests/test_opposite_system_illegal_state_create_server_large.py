@@ -628,18 +628,20 @@ class DBErrorTest(LibvirtFunctionalTest):
     @attr(kind='large')
     def test_d02_140(self):
         self.assertRaises(exceptions.BuildErrorException,
-            self._create_server_with_fake_db, 'nova.virt.libvirt.connection', 'create-error',
-                           'fake_db.libvirt_fetch_image_stop_glance_patch', [])
+            self._create_server_with_fake_db, 'nova.virt.images', 'create-error',
+                           'fake_db.libvirt_fetch_image_kerneldisk_stop_glance_patch', [])
+
     @attr(kind='large')
     def test_d02_143(self):
         self.assertRaises(exceptions.BuildErrorException,
-            self._create_server_with_fake_db, 'nova.virt.libvirt.connection', 'create-error',
-                           'fake_db.libvirt_fetch_image_stop_glance_patch', [])
+            self._create_server_with_fake_db, 'nova.virt.images', 'create-error',
+                           'fake_db.libvirt_fetch_image_ramdisk_stop_glance_patch', [])
+    
     @attr(kind='large')
     def test_d02_146(self):
         self.assertRaises(exceptions.BuildErrorException,
-            self._create_server_with_fake_db, 'nova.virt.libvirt.connection', 'create-error',
-                           'fake_db.libvirt_fetch_image_stop_glance_patch', [])
+            self._create_server_with_fake_db, 'nova.virt.images', 'create-error',
+                           'fake_db.libvirt_fetch_image_rootdisk_stop_glance_patch', [])
     @attr(kind='large')
     def test_d02_156(self):
         self.assertRaises(exceptions.BuildErrorException,
@@ -663,7 +665,6 @@ class DBErrorTest(LibvirtFunctionalTest):
         self.assertRaises(exceptions.BuildErrorException,
             self._create_server_with_fake_db, 'nova.virt.libvirt.connection', 'create-error',
                            'fake_db.create_domain_lookup_stop_libvirt_patch', [])
-
 
     @attr(kind='large')
     def test_d02_172(self):
