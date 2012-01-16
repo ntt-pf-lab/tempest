@@ -595,5 +595,28 @@ class DBErrorTest(LibvirtFunctionalTest):
             self._create_server_with_fake_db, 'nova.compute.manager', 'create-error',
                            'fake_db.compute_instance_update_except_patch', [])
 
+    @attr(kind='large')
+    def test_d02_130(self):
+        self.assertRaises(TypeError,
+            self._create_server_with_fake_db, 'nova.compute.manager', 'create-error',
+                           'fake_db.compute_instance_update_spawn_stop_patch', [])
+
+    @attr(kind='large')
+    def test_d02_131(self):
+        self.assertRaises(exceptions.BuildErrorException,
+            self._create_server_with_fake_db, 'nova.compute.manager', 'create-error',
+                           'fake_db.compute_instance_update_spawn_except_patch', [])
+
+    @attr(kind='large')
+    def test_d02_172(self):
+        self.assertRaises(TypeError,
+            self._create_server_with_fake_db, 'nova.compute.manager', 'create-error',
+                           'fake_db.compute_instance_update_active_stop_patch', [])
+
+    @attr(kind='large')
+    def test_d02_173(self):
+        self.assertRaises(exceptions.TimeoutException,
+            self._create_server_with_fake_db, 'nova.compute.manager', 'create-error',
+                           'fake_db.compute_instance_update_active_except_patch', [])
 
 

@@ -4,6 +4,7 @@ import time
 from nova.db import api
 from nova.db.sqlalchemy import api as sql_api
 from nova.compute import task_states
+from nova.compute import vm_states
 
 #from storm import openstack
 #import storm.config
@@ -120,6 +121,58 @@ def compute_instance_update_except(self, context, instance_id, **kwargs):
 def compute_instance_update_except_patch(name, fn):
     if name == 'nova.compute.manager.ComputeManager._instance_update':
         return compute_instance_update_except
+    else:
+        return fn
+
+
+def compute_instance_update_stop_spawn(self, context, instance_id, **kwargs):
+    if kwargs['task_state'] == task_states.SPAWNING:
+        stopDBService()
+    return api.IMPL.instance_update(context, instance_id, kwargs)
+
+
+def compute_instance_update_spawn_stop_patch(name, fn):
+    if name == 'nova.compute.manager.ComputeManager._instance_update':
+        return compute_instance_update_stop_spawn
+    else:
+        return fn
+
+
+def compute_instance_update_except_spawn(self, context, instance_id, **kwargs):
+    if kwargs['task_state'] == task_states.SPAWNING:
+        raise Exception
+    return api.IMPL.instance_update(context, instance_id, kwargs)
+
+
+def compute_instance_update_spawn_except_patch(name, fn):
+    if name == 'nova.compute.manager.ComputeManager._instance_update':
+        return compute_instance_update_except_spawn
+    else:
+        return fn
+
+
+def compute_instance_update_stop_active(self, context, instance_id, **kwargs):
+    if not kwargs['task_state'] and kwargs['vm_state'] == vm_states.ACTIVE:
+        stopDBService()
+    return api.IMPL.instance_update(context, instance_id, kwargs)
+
+
+def compute_instance_update_active_stop_patch(name, fn):
+    if name == 'nova.compute.manager.ComputeManager._instance_update':
+        return compute_instance_update_stop_active
+    else:
+        return fn
+
+
+def compute_instance_update_excpt_active(self, context, instance_id, **kwargs):
+    if not kwargs['task_state'] and kwargs['vm_state'] == vm_states.ACTIVE:
+        raise Exception
+    return api.IMPL.instance_update(context, instance_id, kwargs)
+
+
+def compute_instance_update_active_except_patch(name, fn):
+    if name == 'nova.compute.manager.ComputeManager._instance_update':
+        return compute_instance_update_excpt_active
     else:
         return fn
 
