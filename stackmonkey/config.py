@@ -27,17 +27,20 @@ class NodesConfig(object):
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
             return default_value
 
-    def get_node_list(self, service):
+    def get_node_list(self, service, default_value=None):
         """Returns a list of node objects"""
 
         nodes = []
-        node_val_list = self.get(service).split(',')
-        for value in node_val_list:
-            nodes.append(NodeObject(value))
+        value_str = self.get(service, default_value)
+        if value_str:
+            node_val_list = value_str.split(',')
+            for value in node_val_list:
+                nodes.append(NodeObject(value))
 
-        if len(nodes) <= 1:
-            return nodes[0]
-        return nodes
+            if len(nodes) <=1:
+                return nodes[0]
+            return nodes
+        return None
 
     @property
     def api(self):
