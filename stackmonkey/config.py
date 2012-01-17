@@ -60,6 +60,18 @@ class NodesConfig(object):
         return self.get_node_list("glance")
 
     @property
+    def scheduler(self):
+        return self.get_node_list("scheduler")
+
+    @property
+    def keystone(self):
+        return self.get_node_list("keystone")
+
+    @property
+    def quantum(self):
+        return self.get_node_list("quantum")
+
+    @property
     def swift(self):
         return self.get_node_list("swift")
 
