@@ -31,7 +31,7 @@ def stopGlanceService():
                         'openstack', glance_havoc.config.nodes.ssh_timeout)
 
     glance_havoc.stop_glance_api()
-    time.sleep(10)
+
 
 def startLibvirtService():
    havoc = ssh_manager.HavocManager()
