@@ -209,7 +209,7 @@ class ImagesTest(FunctionalTest):
                 continue
             break
 
-    def _mk_tempfile():
+    def _mk_tempfile(self):
         return os.path.abspath(tempfile.mkstemp()[1])
 
     def _create_server(self):
