@@ -41,7 +41,7 @@ from medium.tests.processes import (
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
 
-default_config = storm.config.StormConfig('etc/medium.conf')
+default_config = storm.config.StormConfig('etc/medium-less-build_timeout.conf')
 config = default_config
 environ_processes = []
 
@@ -101,7 +101,8 @@ class FunctionalTest(unittest.TestCase):
                 self.config.nova.host,
                 self.config.nova.port))
         self.testing_processes.append(NovaComputeProcess(
-                self.config.nova.directory))
+                self.config.nova.directory,
+                    config_file=self.config.nova.directory + '/bin/nova.conf'))
         self.testing_processes.append(NovaNetworkProcess(
                 self.config.nova.directory))
         self.testing_processes.append(NovaSchedulerProcess(
@@ -117,6 +118,16 @@ class FunctionalTest(unittest.TestCase):
                               shell=True)
         subprocess.call('bin/nova-manage db sync',
                         cwd=self.config.nova.directory, shell=True)
+        try:
+            subprocess.check_call('mysql -u%s -p%s -e "'
+                              'connect ovs_quantum;'
+                              'delete from networks;'
+                              '"' % (
+                                  self.config.mysql.user,
+                                  self.config.mysql.password),
+                              shell=True)
+        except:
+            pass
 
         time.sleep(0)
         for process in self.testing_processes:
@@ -210,14 +221,36 @@ class FunctionalTest(unittest.TestCase):
                               shell=True)
 
 
-class ProcessDownTestCase(FunctionalTest):
+class ProcessDownTest(FunctionalTest):
     def setUp(self):
-        super(ProcessDownTestCase, self).setUp()
+        super(ProcessDownTest, self).setUp()
         self.image_ref = self.config.env.image_ref
         self.flavor_ref = self.config.env.flavor_ref
         self.ss_client = self.os.servers_client
         self.img_client = self.os.images_client
 #        self.kp_client = self.os.keypairs_client
+
+
+    def _create_instance(self, status='ACTIVE'):
+
+        meta = {'hello': 'world'}
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        file_contents = 'This is a test file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become ACTIVE
+        self.ss_client.wait_for_server_status(
+                          server['id'], status)
 
     @attr(kind='medium')
     def test_nova_compute_down_for_create(self):
@@ -228,27 +261,14 @@ class ProcessDownTestCase(FunctionalTest):
 
         """
         for process in self.testing_processes:
-            if process.command.find('nova-compute') >= 0:
+            if hasattr(process, 'compute_havoc'):
                 process.stop()
                 self.testing_processes.remove(process)
-        time.sleep(10)
+        time.sleep(60)
 
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = rand_name('server')
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        self.assertEqual(True, int(resp['status']) >= 500)
+        self.assertRaises(exceptions.BuildErrorException,
+                self._create_instance, 'ERROR')
+#        self.assertEqual(True, int(resp['status']) >= 500, resp['status'])
 
     @attr(kind='medium')
     def test_nova_network_down_for_create(self):
@@ -258,11 +278,14 @@ class ProcessDownTestCase(FunctionalTest):
         test_nova_network_down_for_create
 
         """
+        resp, body = self.ss_client.list_servers({'status': 'ERROR'})
+        count = len(body['servers'])
+
         for process in self.testing_processes:
-            if process.command.find('nova-network') >= 0:
+            if hasattr(process, 'network_havoc'):
                 process.stop()
                 self.testing_processes.remove(process)
-        time.sleep(10)
+        time.sleep(60)
 
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
@@ -279,13 +302,15 @@ class ProcessDownTestCase(FunctionalTest):
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
 
-        time.sleep(10)
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'BUILD')
+        try:
+            self.ss_client.wait_for_server_status(server['id'], 'ERROR')
+        except:
+            pass
+
         resp, body = self.ss_client.list_servers({'status': 'ERROR'})
 
         self.assertEqual('200', resp['status'])
-        self.assertEqual(1, len(body['servers']))
+        self.assertEqual(count + 1, len(body['servers']))
 
     @attr(kind='medium')
     def test_nova_scheduler_down_for_create(self):
@@ -295,11 +320,14 @@ class ProcessDownTestCase(FunctionalTest):
         test_nova_scheduler_down_for_create
 
         """
+        resp, body = self.ss_client.list_servers({'status': 'ERROR'})
+        count = len(body['servers'])
+
         for process in self.testing_processes:
-            if process.command.find('nova-scheduler') >= 0:
+            if hasattr(process, 'scheduler_havoc'):
                 process.stop()
                 self.testing_processes.remove(process)
-        time.sleep(10)
+        time.sleep(60)
 
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
@@ -315,9 +343,17 @@ class ProcessDownTestCase(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        time.sleep(10)
+        try:
+            self.ss_client.wait_for_server_status(server['id'], 'ERROR')
+        except:
+            pass
 
-        self.assertEqual('500', resp['status'])
+#        self.assertEqual('500', resp['status'])
+
+        resp, body = self.ss_client.list_servers({'status': 'ERROR'})
+
+        self.assertEqual('200', resp['status'])
+        self.assertEqual(count + 1, len(body['servers']))
 
     @attr(kind='medium')
     def test_nova_api_down_for_create(self):
@@ -328,7 +364,7 @@ class ProcessDownTestCase(FunctionalTest):
 
         """
         for process in self.testing_processes:
-            if process.command.find('nova-api') >= 0:
+            if hasattr(process, 'api_havoc'):
                 process.stop()
                 self.testing_processes.remove(process)
         time.sleep(10)
@@ -340,14 +376,17 @@ class ProcessDownTestCase(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
+
+        self.assertRaises(AttributeError,
+                      self.ss_client.create_server, name,
                                                     self.image_ref,
                                                     self.flavor_ref,
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
-        self.assertEqual('408', resp['status'])
+
+#        self.assertEqual('408', resp['status'])
 
     @attr(kind='medium')
     def test_nova_compute_down_for_reboot(self):
@@ -357,7 +396,6 @@ class ProcessDownTestCase(FunctionalTest):
         test_nova_compute_down_reboot
 
         """
-
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -381,13 +419,16 @@ class ProcessDownTestCase(FunctionalTest):
         self.assertEqual(1, len(body['servers']))
 
         for process in self.testing_processes:
-            if process.command.find('nova-compute') >= 0:
+            if hasattr(process, 'compute_havoc'):
                 process.stop()
                 self.testing_processes.remove(process)
-        time.sleep(10)
+        time.sleep(60)
 
         sid = server['id']
         resp, server = self.ss_client.reboot(sid, 'HARD')
+        time.sleep(10)
+
+        self.ss_client.wait_for_server_status(sid, 'ERROR')
 
         self.assertEqual(True, int(resp['status']) >= 500)
 
@@ -423,7 +464,7 @@ class ProcessDownTestCase(FunctionalTest):
         self.assertEqual(1, len(body['servers']))
 
         for process in self.testing_processes:
-            if process.command.find('nova-network') >= 0:
+            if hasattr(process, 'network_havoc'):
                 process.stop()
                 self.testing_processes.remove(process)
         time.sleep(10)
@@ -471,15 +512,17 @@ class ProcessDownTestCase(FunctionalTest):
         self.assertEqual(1, len(body['servers']))
 
         for process in self.testing_processes:
-            if process.command.find('nova-scheduler') >= 0:
+            if hasattr(process, 'scheduler_havoc'):
                 process.stop()
                 self.testing_processes.remove(process)
-        time.sleep(10)
+        time.sleep(60)
 
         sid = server['id']
         resp, server = self.ss_client.reboot(sid, 'HARD')
 
-        self.assertEqual(True, int(resp['status']) >= 500)
+        self.ss_client.wait_for_server_status(sid, 'REBOOT')
+        self.ss_client.wait_for_server_status(sid, 'ACTIVE')
+#        self.assertEqual(True, int(resp['status']) >= 500)
 
     @attr(kind='medium')
     def test_nova_api_down_for_reboot(self):
@@ -513,15 +556,16 @@ class ProcessDownTestCase(FunctionalTest):
         self.assertEqual(1, len(body['servers']))
 
         for process in self.testing_processes:
-            if process.command.find('nova-api') >= 0:
+            if hasattr(process, 'api_havoc'):
                 process.stop()
                 self.testing_processes.remove(process)
         time.sleep(10)
 
         sid = server['id']
-        resp, server = self.ss_client.reboot(sid, 'HARD')
+        self.assertRaises(AttributeError,
+            self.ss_client.reboot, sid, 'HARD')
 
-        self.assertEqual('408', resp['status'])
+        #self.assertEqual('408', resp['status'])
 
     @attr(kind='medium')
     def test_nova_compute_down_for_delete(self):
@@ -555,14 +599,15 @@ class ProcessDownTestCase(FunctionalTest):
         self.assertEqual(1, len(body['servers']))
 
         for process in self.testing_processes:
-            if process.command.find('nova-compute') >= 0:
+            if hasattr(process, 'compute_havoc'):
                 process.stop()
                 self.testing_processes.remove(process)
-        time.sleep(10)
+        time.sleep(60)
 
         sid = server['id']
         resp, server = self.ss_client.delete_server(sid)
 
+        self.ss_client.wait_for_server_status(sid, 'ERROR')
         self.assertEqual(True, int(resp['status']) >= 500)
 
     @attr(kind='medium')
@@ -597,7 +642,7 @@ class ProcessDownTestCase(FunctionalTest):
         self.assertEqual(1, len(body['servers']))
 
         for process in self.testing_processes:
-            if process.command.find('nova-network') >= 0:
+            if hasattr(process, 'network_havoc'):
                 process.stop()
                 self.testing_processes.remove(process)
         time.sleep(10)
@@ -645,10 +690,10 @@ class ProcessDownTestCase(FunctionalTest):
         self.assertEqual(1, len(body['servers']))
 
         for process in self.testing_processes:
-            if process.command.find('nova-scheduler') >= 0:
+            if hasattr(process, 'scheduler_havoc'):
                 process.stop()
                 self.testing_processes.remove(process)
-        time.sleep(10)
+        time.sleep(60)
 
         sid = server['id']
         resp, server = self.ss_client.delete_server(sid)
@@ -687,7 +732,7 @@ class ProcessDownTestCase(FunctionalTest):
         self.assertEqual(1, len(body['servers']))
 
         for process in self.testing_processes:
-            if process.command.find('nova-api') >= 0:
+            if hasattr(process, 'api_havoc'):
                 process.stop()
                 self.testing_processes.remove(process)
         time.sleep(10)
