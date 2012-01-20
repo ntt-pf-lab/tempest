@@ -29,6 +29,7 @@ from storm.common.utils.data_utils import rand_name
 from storm import exceptions
 from nova import utils
 from nova import test
+import stackmonkey.manager as ssh_manager
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -94,6 +95,10 @@ class FunctionalTest(unittest.TestCase):
     def setUp(self):
         self.os = openstack.Manager(config=self.config)
         self.testing_processes = []
+
+        self.havoc = ssh_manager.HavocManager()
+        self.ssh_con = self.havoc.connect('127.0.0.1', 'openstack',
+                        'openstack', self.havoc.config.nodes.ssh_timeout)
 
         # nova.
         self.testing_processes.append(NovaApiProcess(
@@ -192,8 +197,10 @@ class FunctionalTest(unittest.TestCase):
         time.sleep(10)
         self._dumpdb()
 
-        subprocess.call('sudo service rabbitmq-server restart',
-                        cwd=self.config.nova.directory, shell=True)
+        try:
+            self.havoc._run_cmd("sudo service rabbitmq-server start")
+        except:
+            pass
 
     def exec_sql(self, sql):
         exec_sql = 'mysql -u %s -p%s nova -e "' + sql + '"'
@@ -602,13 +609,13 @@ class ProcessDownTest(FunctionalTest):
             if hasattr(process, 'compute_havoc'):
                 process.stop()
                 self.testing_processes.remove(process)
-        time.sleep(60)
+        time.sleep(30)
 
         sid = server['id']
         resp, server = self.ss_client.delete_server(sid)
 
         self.ss_client.wait_for_server_status(sid, 'ERROR')
-        self.assertEqual(True, int(resp['status']) >= 500)
+#        self.assertEqual(True, int(resp['status']) >= 500)
 
     @attr(kind='medium')
     def test_nova_network_down_for_delete(self):
@@ -618,6 +625,8 @@ class ProcessDownTest(FunctionalTest):
         test_nova_network_down_for_delete
 
         """
+        resp, body = self.ss_client.list_servers({'status': 'ERROR'})
+        count = len(body['servers'])
 
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
@@ -645,18 +654,17 @@ class ProcessDownTest(FunctionalTest):
             if hasattr(process, 'network_havoc'):
                 process.stop()
                 self.testing_processes.remove(process)
-        time.sleep(10)
+        time.sleep(60)
 
         sid = server['id']
         resp, server = self.ss_client.delete_server(sid)
 
-        time.sleep(10)
         # Wait for the server to become active
-        self.ss_client.wait_for_server_status(sid, 'ACTIVE')
+        self.ss_client.wait_for_server_status(sid, 'ERROR')
         resp, body = self.ss_client.list_servers({'status': 'ERROR'})
 
         self.assertEqual('200', resp['status'])
-        self.assertEqual(1, len(body['servers']))
+        self.assertEqual(count + 1, len(body['servers']))
 
     @attr(kind='medium')
     def test_nova_scheduler_down_for_delete(self):
@@ -698,7 +706,9 @@ class ProcessDownTest(FunctionalTest):
         sid = server['id']
         resp, server = self.ss_client.delete_server(sid)
 
-        self.assertEqual(True, int(resp['status']) >= 500)
+        self.assertRaises(TypeError,
+            self.ss_client.wait_for_server_status, sid, 'ERROR')
+#        self.assertEqual(True, int(resp['status']) >= 500)
 
     @attr(kind='medium')
     def test_nova_api_down_for_delete(self):
@@ -738,11 +748,11 @@ class ProcessDownTest(FunctionalTest):
         time.sleep(10)
 
         sid = server['id']
-        resp, server = self.ss_client.delete_server(sid)
+        self.assertRaises(AttributeError,
+            self.ss_client.delete_server, sid)
 
-        self.assertEqual('408', resp['status'])
+#        self.assertEqual('408', resp['status'])
 
-    @test.skip_test('waiting is too long')
     @attr(kind='medium')
     def test_rabbitmq_down_for_create(self):
         """test for rabbitmq process is down"""
@@ -751,9 +761,10 @@ class ProcessDownTest(FunctionalTest):
         test_rabbitmq_down_for_create
 
         """
-        subprocess.call('sudo service rabbitmq-server stop',
-                        cwd=self.config.nova.directory, shell=True)
-
+        self.havoc._run_cmd("sudo service rabbitmq-server stop")
+#        subprocess.call('sudo service rabbitmq-server stop',
+#                        cwd=self.config.nova.directory, shell=True)
+        time.sleep(10)
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -769,9 +780,8 @@ class ProcessDownTest(FunctionalTest):
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
 
-        self.assertEqual(True, int(resp['status']) >= 500)
+        self.assertEqual(True, int(resp['status']) >= 500, resp['status'])
 
-    @test.skip_test('waiting is too long')
     @attr(kind='medium')
     def test_rabbitmq_down_for_reboot(self):
         """test for rabbitmq process is down"""
@@ -802,15 +812,16 @@ class ProcessDownTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         self.assertEqual(1, len(body['servers']))
 
-        subprocess.call('sudo service rabbitmq-server stop',
-                        cwd=self.config.nova.directory, shell=True)
+        self.havoc._run_cmd("sudo service rabbitmq-server stop")
+        time.sleep(10)
 
         sid = server['id']
         resp, server = self.ss_client.reboot(sid, 'HARD')
 
-        self.assertEqual(True, int(resp['status']) >= 500)
+        print resp
+        print server
+        self.assertEqual(True, int(resp['status']) >= 500, resp['status'])
 
-    @test.skip_test('waiting is too long')
     @attr(kind='medium')
     def test_rabbitmq_down_for_delete(self):
         """test for rabbitmq process is down"""
@@ -842,10 +853,12 @@ class ProcessDownTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         self.assertEqual(1, len(body['servers']))
 
-        subprocess.call('sudo service rabbitmq-server stop',
-                        cwd=self.config.nova.directory, shell=True)
+        self.havoc._run_cmd("sudo service rabbitmq-server stop")
+        time.sleep(20)
 
         sid = server['id']
         resp, server = self.ss_client.delete_server(sid)
 
-        self.assertEqual(True, int(resp['status']) >= 500)
+        print resp
+        print server
+        self.assertEqual(True, int(resp['status']) >= 500, resp['status'])
