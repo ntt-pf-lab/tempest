@@ -49,6 +49,10 @@ class NovaConfig(object):
         """Timeout in seconds to wait for an entity to build."""
         return float(self.get("build_timeout", 300))
 
+    def max_retries(self):
+        """Maximum number of times to retry creating a server."""
+        return self.get("max_create_server_retries", 5)
+
     @property
     def host(self):
         """IP address of nova daemon running. Defaults to 127.0.0.1"""
