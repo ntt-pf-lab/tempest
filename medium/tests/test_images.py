@@ -196,11 +196,11 @@ class ImagesTest(FunctionalTest):
                  'auth_url': self.config.nova.auth_url, 'config': config}
         self.ss_client_for_user3 = ServersClient(**user3)
         self.img_client_for_user3 = ImagesClient(**user3)
-	retry = 0
-        while True: 
+        retry = 0
+        while True:
             try:
-		self._create_server()
-	    except Exception as e:
+                self._create_server()
+            except Exception as e:
                 if retry > MAX_RETRY:
                         raise e
                         break
@@ -208,6 +208,9 @@ class ImagesTest(FunctionalTest):
                 retry += 1
                 continue
             break
+
+    def _mk_tempfile(self):
+        return os.path.abspath(tempfile.mkstemp()[1])
 
     def _create_server(self):
         accessIPv4 = '1.1.1.1'
@@ -229,7 +232,7 @@ class ImagesTest(FunctionalTest):
         self.server_id = server['id']
 
     def create_server(self):
-	pass
+        pass
 
     @attr(kind='medium')
     def test_list_images_when_image_amount_is_zero(self):
@@ -368,7 +371,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_when_disk_format_is_aki(self):
         """ List of all images should contain the aki image """
         # create an image for test
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
         name = 'server_' + self._testMethodName
         out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
                                       'disk_format=aki container_format=aki '
@@ -388,7 +391,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_when_disk_format_is_ari(self):
         """ List of all images should contain the ari image """
         # create an image for test
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
         name = 'server_' + self._testMethodName
         out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
                                       'disk_format=ari container_format=ari '
@@ -408,7 +411,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_when_disk_format_is_ami(self):
         """ List of all images should contain the ami image """
         # create an image for test
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
         name = 'server_' + self._testMethodName
         out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
                                       'disk_format=ami container_format=ami '
@@ -428,7 +431,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_when_disk_format_is_ovf(self):
         """ List of all images should contain the ovf image """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName
@@ -462,7 +465,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_when_disk_format_is_other(self):
         """ List of all images should contain the other format image """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName
@@ -505,7 +508,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_when_architecture_is_x86_64(self):
         """ List of all images should contain the x86-64 image """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName
@@ -543,7 +546,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_when_architecture_is_i386(self):
         """ List of all images should contain the i386 image """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName
@@ -581,7 +584,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_when_architecture_is_other(self):
         """ List of all images should contain the other architecture image """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName
@@ -892,7 +895,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_with_detail_when_disk_format_is_ami(self):
         """ Detailed list of images should contain the ami image """
         # create an image for test
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
         name = 'server_' + self._testMethodName
         out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
                                       'disk_format=ami container_format=ami '
@@ -912,7 +915,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_with_detail_when_disk_format_is_ovf(self):
         """ Detailed list of images should contain the ovf image """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName
@@ -946,7 +949,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_with_detail_when_disk_format_is_other(self):
         """ Detailed list of images should contain the other format image """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName
@@ -989,7 +992,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_with_detail_when_architecture_is_x86_64(self):
         """ Detailed list of images should contain the x86-64 image """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName
@@ -1027,7 +1030,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_with_detail_when_architecture_is_i386(self):
         """ Detailed list of images should contain the i386 image """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName
@@ -1066,7 +1069,7 @@ class ImagesTest(FunctionalTest):
         """ Detailed list of images should contain
             the other architecture image """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName
@@ -1333,7 +1336,7 @@ class ImagesTest(FunctionalTest):
     def test_get_image_when_disk_format_is_ami(self):
         """ Detail of the image should be returned """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
         # create an image for test
         name = 'server_' + self._testMethodName
         out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
@@ -1355,7 +1358,7 @@ class ImagesTest(FunctionalTest):
     def test_get_image_when_disk_format_is_ovf(self):
         """ Detail of the image should be returned """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName
@@ -1390,7 +1393,7 @@ class ImagesTest(FunctionalTest):
     def test_get_image_when_disk_format_is_other(self):
         """ Detail of the image should be returned """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName
@@ -1434,7 +1437,7 @@ class ImagesTest(FunctionalTest):
     def test_get_image_when_architecture_is_x86_64(self):
         """ Detail of the image should be returned """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName
@@ -1473,7 +1476,7 @@ class ImagesTest(FunctionalTest):
     def test_get_image_when_architecture_is_i386(self):
         """ Detail of the image should be returned """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName
@@ -1512,7 +1515,7 @@ class ImagesTest(FunctionalTest):
     def test_get_image_when_architecture_is_other(self):
         """ Detail of the image should be returned """
         # make an image file
-        tmp_file = os.path.abspath(tempfile.mkstemp()[1])
+        tmp_file = self._mk_tempfile()
 
         # create an image for test
         name = 'server_' + self._testMethodName

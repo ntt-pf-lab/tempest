@@ -55,9 +55,6 @@ nosetests -v -s ./medium/tests/test_virtual_interfaces.py
 if [ "$?" -ne "0" ]; then
     EXIT_CODE=1
 fi
-if [ "$?" -ne "0" ]; then
-    EXIT_CODE=1
-fi
 
 exit $EXIT_CODE
 
