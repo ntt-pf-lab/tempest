@@ -37,7 +37,7 @@ class RestClient(object):
         except:
             raise
 
-    def keystone_v2_auth(self, user, api_key, auth_url, tenant_name, service):
+    def keystone_v2_auth(self, user, api_key, auth_url, tenant_name, service="nova"):
         """
         Provides authentication via Keystone 2.0
         """
