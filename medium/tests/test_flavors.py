@@ -386,7 +386,6 @@ class FlavorsTest(FunctionalTest):
                "DROP TABLE IF EXISTS instance_types_bk;")
         self.exec_sql(sql)
 
-    @test.skip_test('Skip this case for bug #697')
     @attr(kind='medium')
     def test_get_flavor_details_when_specify_invalid_id(self):
         """ Return error because way to specify is inappropriate """
