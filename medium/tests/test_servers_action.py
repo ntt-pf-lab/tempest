@@ -256,6 +256,14 @@ class ServersActionTest(FunctionalTest):
         resp, server = self.ss_client.reboot(test_id, 'HARD')
         self.assertEqual('202', resp['status'])
 
+        # if task_state became none, can accept next api.
+        db_result = 'server_state'
+        while db_result != 'NULL':
+            sql = ("SELECT task_state FROM instances WHERE uuid = '%s';") % (test_id)
+            db_result = (self.get_data_from_mysql(sql))[:-1]
+            if db_result == 'NULL':
+                break
+
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
 
@@ -414,6 +422,14 @@ class ServersActionTest(FunctionalTest):
          """
         resp, server = self.ss_client.reboot(test_id, 'HARD')
         self.assertEquals('202', resp['status'])
+
+        # if task_state became none, can accept next api.
+        db_result = 'server_state'
+        while db_result != 'NULL':
+            sql = ("SELECT task_state FROM instances WHERE id = %s;") % (test_id)
+            db_result = (self.get_data_from_mysql(sql))[:-1]
+            if db_result == 'NULL':
+                break
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
