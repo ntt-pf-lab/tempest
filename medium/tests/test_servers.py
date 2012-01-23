@@ -1984,7 +1984,7 @@ class ServersTest(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        resp, body = self.ss_client.create_server_kw(name=name,
+        resp, body = self.ss_client.create_server(name=name,
                                                      flavorRef=self.flavor_ref,
                                                      meta=meta,
                                                      accessIPv4=accessIPv4,
@@ -2013,7 +2013,7 @@ class ServersTest(FunctionalTest):
                        'contents': base64.b64encode(file_contents)}]
         networks = [{'fixed_ip': '1.2.3.4.5.6.7.8.9',
                      'uuid':uuid}]
-        resp, body = self.ss_client.create_server_kw(name=name,
+        resp, body = self.ss_client.create_server(name=name,
                                                      imageRef=self.image_ref,
                                                      flavorRef=self.flavor_ref,
                                                      metadata=meta,
@@ -2039,7 +2039,7 @@ class ServersTest(FunctionalTest):
                        'contents': base64.b64encode(file_contents)}]
         networks = [{'fixed_ip': '10.0.1.1',
                      'uuid':'a-b-c-d-e-f-g-h-i-j'}]
-        resp, body = self.ss_client.create_server_kw(name=name,
+        resp, body = self.ss_client.create_server(name=name,
                                                      imageRef=self.image_ref,
                                                      flavorRef=self.flavor_ref,
                                                      metadata=meta,
@@ -2123,7 +2123,7 @@ class ServersTest(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        resp, body = self.ss_client.create_server_kw(name=name,
+        resp, body = self.ss_client.create_server(name=name,
                                                      imageRef=self.image_ref,
                                                      meta=meta,
                                                      accessIPv4=accessIPv4,
@@ -2153,7 +2153,7 @@ class ServersTest(FunctionalTest):
                        'contents': base64.b64encode(file_contents)}]
         networks = [{'fixed_ip': '10.0.1.1',
                      'uuid':uuid}]
-        resp, body = self.ss_client.create_server_kw(name=name,
+        resp, body = self.ss_client.create_server(name=name,
                                                      imageRef=self.image_ref,
                                                      flavorRef=self.flavor_ref,
                                                      metadata=meta,
@@ -2182,7 +2182,7 @@ class ServersTest(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server_kw(
+        resp, server = self.ss_client.create_server(
                                                 name=name,
                                                 imageRef=self.image_ref,
                                                 flavorRef=self.flavor_ref,
@@ -2214,7 +2214,7 @@ class ServersTest(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        resp, body = self.ss_client.create_server_kw(name=name,
+        resp, body = self.ss_client.create_server(name=name,
                                                      imageRef=self.image_ref,
                                                      flavorRef=self.flavor_ref,
                                                      metadata=meta,
@@ -2293,7 +2293,7 @@ class ServersTest(FunctionalTest):
                        'contents': base64.b64encode(file_contents)}]
         networks = [{'fixed_ip': '10.0.0.9',
                      'uuid':uuid}]
-        resp, server = self.ss_client.create_server_kw(
+        resp, server = self.ss_client.create_server(
                                                 name=name,
                                                 imageRef=self.image_ref,
                                                 flavorRef=self.flavor_ref,
@@ -2333,7 +2333,7 @@ class ServersTest(FunctionalTest):
                        'contents': base64.b64encode(file_contents)}]
         networks = [{'fixed_ip': '10.0.0.100', 'uuid': uuid[0]},
                     {'fixed_ip': '10.0.1.100', 'uuid': uuid[1]}]
-        resp, server = self.ss_client.create_server_kw(
+        resp, server = self.ss_client.create_server(
                                                    name=name,
                                                    imageRef=self.image_ref,
                                                    flavorRef=self.flavor_ref,
@@ -2370,7 +2370,7 @@ class ServersTest(FunctionalTest):
                        'contents': base64.b64encode(file_contents)}]
         networks = [{'fixed_ip': '10.0.0.1',
                      'uuid':uuid}]
-        resp, server = self.ss_client.create_server_kw(
+        resp, server = self.ss_client.create_server(
                                                 name=name,
                                                 imageRef=self.image_ref,
                                                 flavorRef=self.flavor_ref,
@@ -2392,7 +2392,7 @@ class ServersTest(FunctionalTest):
                        'contents': base64.b64encode(file_contents)}]
         networks = [{'fixed_ip': '10.0.0.1',
                      'uuid':uuid}]
-        resp, server = self.ss_client.create_server_kw(
+        resp, server = self.ss_client.create_server(
                                                 name=name,
                                                 imageRef=self.image_ref,
                                                 flavorRef=self.flavor_ref,
@@ -2424,7 +2424,7 @@ class ServersTest(FunctionalTest):
                        'contents': base64.b64encode(file_contents)}]
         networks = [{'fixed_ip': '192.168.0.1',
                      'uuid':uuid}]
-        resp, body = self.ss_client.create_server_kw(name=name,
+        resp, body = self.ss_client.create_server(name=name,
                                                      imageRef=self.image_ref,
                                                      flavorRef=self.flavor_ref,
                                                      metadata=meta,
@@ -2450,7 +2450,7 @@ class ServersTest(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        resp, body = self.ss_client.create_server_kw(name=name,
+        resp, body = self.ss_client.create_server(name=name,
                                                      imageRef=self.image_ref,
                                                      flavorRef=self.flavor_ref,
                                                      metadata=meta,
@@ -2478,7 +2478,7 @@ class ServersTest(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        resp, body = self.ss_client.create_server_kw(
+        resp, body = self.ss_client.create_server(
                                          name=name,
                                          imageRef=self.image_ref,
                                          flavorRef=self.flavor_ref,

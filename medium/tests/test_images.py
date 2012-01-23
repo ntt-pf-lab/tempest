@@ -196,18 +196,7 @@ class ImagesTest(FunctionalTest):
                  'auth_url': self.config.nova.auth_url, 'config': config}
         self.ss_client_for_user3 = ServersClient(**user3)
         self.img_client_for_user3 = ImagesClient(**user3)
-        retry = 0
-        while True:
-            try:
-                self._create_server()
-            except Exception as e:
-                if retry > MAX_RETRY:
-                        raise e
-                        break
-                print e
-                retry += 1
-                continue
-            break
+        self._create_server()
 
     def _mk_tempfile(self):
         return os.path.abspath(tempfile.mkstemp()[1])
@@ -224,7 +213,8 @@ class ImagesTest(FunctionalTest):
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
         time.sleep(5)
 
         # Wait for the server to become active
@@ -681,7 +671,8 @@ class ImagesTest(FunctionalTest):
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
@@ -718,7 +709,8 @@ class ImagesTest(FunctionalTest):
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
@@ -1167,7 +1159,8 @@ class ImagesTest(FunctionalTest):
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
@@ -1205,7 +1198,8 @@ class ImagesTest(FunctionalTest):
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
@@ -1618,7 +1612,8 @@ class ImagesTest(FunctionalTest):
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
@@ -1657,7 +1652,8 @@ class ImagesTest(FunctionalTest):
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
@@ -1816,7 +1812,8 @@ class ImagesTest(FunctionalTest):
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test
@@ -1848,7 +1845,8 @@ class ImagesTest(FunctionalTest):
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
         self.ss_client_for_user1.wait_for_server_status(server['id'], 'ACTIVE')
 
         # create an image for test

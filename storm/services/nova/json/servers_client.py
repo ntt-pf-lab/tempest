@@ -17,78 +17,107 @@ class ServersClient(object):
                                              config=config)
         self.build_interval = self.config.nova.build_interval
         self.build_timeout = self.config.nova.build_timeout
+        self.max_retries = self.config.nova.max_retries
         self.headers = {'Content-Type': 'application/json',
                         'Accept': 'application/json'}
 
-    def create_server_kw(self, *args, **kwargs):
+    def create_server(self, name, image_ref, flavor_ref, **kwargs):
         """
         Creates an instance of a server.
-        """
-
-        post_body = {}
-        post_body.update(kwargs)
-        post_body = json.dumps({'server': post_body})
-        print "post_body=", post_body
-        print "self.headers=", self.headers
-        resp, body = self.client.post('servers', post_body, self.headers)
-        if resp['status'] != '202':
-            return resp, body
-        body = json.loads(body)
-        return resp, body['server']
-
-    def create_server(self, name, image_ref, flavor_ref, meta=None,
-                      personality=None, accessIPv4=None, accessIPv6=None,
-                      networks=None, key_name=None, adminPass=None):
-        """
-        Creates an instance of a server.
-        name: The name of the server.
-        image_ref: The reference to the image used to build the server.
-        flavor_ref: The flavor used to build the server.
+        name (Required): The name of the server.
+        image_ref (Required): Reference to the image used to build the server.
+        flavor_ref (Required): The flavor used to build the server.
+        Following optional keyword arguments are accepted:
         adminPass: Sets the initial root password.
-        meta: A dictionary of values to be used as metadata.
+        metadata: A dictionary of values to be used as metadata.
         personality: A list of dictionaries for files to be injected into
         the server.
+        security_groups: A list of security group dicts.
+        networks: A list of network dicts with UUID and fixed_ip.
+        key_name: The name of the key pair
+        user_data: User data for instance.
+        availability_zone: Availability zone in which to launch instance.
         accessIPv4: The IPv4 access address for the server.
         accessIPv6: The IPv6 access address for the server.
-        networks: The networks to be allocated to the server.
-        key_name: The name of the keypair.
+        min_count: Count of minimum number of instances to launch.
+        max_count: Count of maximum number of instances to launch.
         """
 
+        retry_count = 0
+        retry = kwargs.get('retry', False)
         post_body = {
             'name': name,
             'imageRef': image_ref,
             'flavorRef': flavor_ref,
         }
 
-        if meta != None:
-            post_body['metadata'] = meta
+        if kwargs.get('meta'):
+            post_body['metadata'] = kwargs.get('meta')
 
-        if personality != None:
-            post_body['personality'] = personality
+        if kwargs.get('personality'):
+            post_body['personality'] = kwargs.get('personality')
 
-        if adminPass != None:
-            post_body['adminPass'] = adminPass
+        if kwargs.get('adminPass'):
+            post_body['adminPass'] = kwargs.get('adminPass')
 
-        if accessIPv4 != None:
-            post_body['accessIPv4'] = accessIPv4
+        if kwargs.get('security_groups'):
+            post_body['security_groups'] = kwargs.get('security_groups')
 
-        if accessIPv6 != None:
-            post_body['accessIPv6'] = accessIPv6
+        if kwargs.get('networks'):
+            post_body['networks'] = kwargs.get('networks')
 
-        if networks != None:
-            post_body['networks'] = networks
+        if kwargs.get('key_name'):
+            post_body['key_name'] = kwargs.get('key_name')
 
-        if key_name != None:
-            post_body['key_name'] = key_name
+        if kwargs.get('user_data'):
+            post_body['user_data'] = kwargs.get('user_data')
+
+        if kwargs.get('availability_zone'):
+            post_body['availability_zone'] = kwargs.get('availability_zone')
+
+        if kwargs.get('accessIPv4'):
+            post_body['accessIPv4'] = kwargs.get('accessIPv4')
+
+        if kwargs.get('accessIPv6'):
+            post_body['accessIPv6'] = kwargs.get('accessIPv6')
+
+        if kwargs.get('min_count'):
+            post_body['min_count'] = kwargs.get('min_count')
+
+        if kwargs.get('max_count'):
+            post_body['max_count'] = kwargs.get('max_count')
 
         post_body = json.dumps({'server': post_body})
         resp, body = self.client.post('servers', post_body, self.headers)
-#        body = json.loads(body)
-#        return resp, body['server']
-        if resp['status'] != '202':
-            return resp, body
+
         body = json.loads(body)
-        return resp, body['server']
+
+        # retry server creation if caller requests retry
+        if resp['status'] != '202' and retry:
+            while retry_count < self.max_retries:
+                resp, body = self.client.post('servers', post_body,
+                            self.headers)
+                body = json.loads(body)
+
+                # For positive tests, return JSON server details if HTTP 202
+                if resp['status'] == '202':
+                    return resp, body['server']
+                else:
+                    retry_count = retry_count + 1
+                    continue
+                    #self.wait_for_server_status(body['server']['id'],
+                    #'ACTIVE')
+                    #return
+            raise exceptions.BuildErrorException
+
+        # For negative tests, return body if not Normal Reponse Code 202
+        elif resp['status'] != '202' and not retry:
+            return resp, body
+
+        # For positive tests, return JSON server details if HTTP 202
+        else:
+            return resp, body['server']
+
 
     def update_server(self, server_id, name=None, meta=None, accessIPv4=None,
                       accessIPv6=None):
@@ -228,8 +257,6 @@ class ServersClient(object):
             resp, body = self.get_server(server_id)
             if resp['status'] == '404':
                 return
-
-            server_status = body['status']
 
             if (int(time.time()) - start >= self.build_timeout):
                 raise exceptions.BuildErrorException

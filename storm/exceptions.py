@@ -12,7 +12,8 @@ class BuildErrorException(Exception):
 
 class ItemNotFoundException(Exception):
     """ Exception on not found """
-    pass
+    def __repr__(self):
+        return "Requested resource could not be found"
 
 
 class BadRequest(Exception):
