@@ -30,6 +30,7 @@ from storm import openstack
 import storm.config
 from storm.services.nova.json.images_client import ImagesClient
 from storm.services.nova.json.servers_client import ServersClient
+from storm.services.keystone.json.keystone_client import TokenClient
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -67,30 +68,30 @@ def setUpModule(module):
                               shell=True)
 
         # create tenants.
-        subprocess.check_call('/opt/openstack/keystone/bin/keystone-manage tenant add tenant1',
+        subprocess.check_call('bin/keystone-manage tenant add tenant1',
                               cwd=config.keystone.directory, shell=True)
-        subprocess.check_call('/opt/openstack/keystone/bin/keystone-manage tenant add tenant2',
+        subprocess.check_call('bin/keystone-manage tenant add tenant2',
                               cwd=config.keystone.directory, shell=True)
 
         # create users.
-        subprocess.check_call('/opt/openstack/keystone/bin/keystone-manage user add '
+        subprocess.check_call('bin/keystone-manage user add '
                               'user1 user1 tenant1',
                               cwd=config.keystone.directory, shell=True)
-        subprocess.check_call('/opt/openstack/keystone/bin/keystone-manage user add '
+        subprocess.check_call('bin/keystone-manage user add '
                               'user2 user2 tenant1',
                               cwd=config.keystone.directory, shell=True)
-        subprocess.check_call('/opt/openstack/keystone/bin/keystone-manage user add '
+        subprocess.check_call('bin/keystone-manage user add '
                               'user3 user3 tenant2',
                               cwd=config.keystone.directory, shell=True)
 
         # grant role
-        subprocess.check_call('/opt/openstack/keystone/bin/keystone-manage role grant '
+        subprocess.check_call('bin/keystone-manage role grant '
                               'Member user1 tenant1',
                               cwd=config.keystone.directory, shell=True)
-        subprocess.check_call('/opt/openstack/keystone/bin/keystone-manage role grant '
+        subprocess.check_call('bin/keystone-manage role grant '
                               'Member user2 tenant1',
                               cwd=config.keystone.directory, shell=True)
-        subprocess.check_call('/opt/openstack/keystone/bin/keystone-manage role grant '
+        subprocess.check_call('bin/keystone-manage role grant '
                               'Member user3 tenant2',
                               cwd=config.keystone.directory, shell=True)
 
@@ -125,6 +126,74 @@ def tearDownModule(module):
                               shell=True)
     except Exception:
         pass
+
+
+class GlanceWrapper(object):
+    def __init__(self, token, config):
+        self.path = config.glance.directory
+        self.conf = config.glance.api_config
+        self.host = config.glance.host
+        self.port = config.glance.port
+        self.token = token
+
+    def _glance(self, action, params, yes=None):
+        cmd = "glance -A %s -H %s -p %s %s %s" %\
+             (self.token, self.host, self.port, action, params)
+        if yes:
+            cmd = ("yes %s|" % yes) + cmd
+        result = subprocess.check_output(cmd, cwd=self.path, shell=True)
+        return result
+
+    def index(self):
+        result = self._glance('index', '', yes="y")
+        return result
+
+    def add(self, image_name, image_format, container_format, image_file,
+            architecture='i386'):
+        params = "name=%s is_public=true disk_format=%s container_format=%s "\
+                 "architecture=%s < %s" \
+                      % (image_name,
+                        image_format,
+                        container_format,
+                        architecture,
+                        os.path.join(os.getcwd(), image_file))
+        result = self._glance('add', params)
+        # parse add new image ID: <image_id>
+        if result:
+            splited = str(result).split()
+            return splited[splited.count(splited)-1]
+
+    def add_image(self, image_name, image_format, container_format, image_file,
+                  kernel_id, architecture='i386'):
+        params = "name=%s is_public=true disk_format=%s container_format=%s "\
+                 "kernel_id=%s architecture=%s < %s" \
+                      % (image_name,
+                        image_format,
+                        container_format,
+                        kernel_id,
+                        architecture,
+                        os.path.join(os.getcwd(), image_file))
+        result = self._glance('add', params)
+        # parse add new image ID: <image_id>
+        if result:
+            splited = str(result).split()
+            return splited[splited.count(splited)-1]
+
+
+    def delete(self, image_id):
+        result = self._glance('delete', image_id, yes="y")
+        if result:
+            return image_id
+
+    def detail(self, image_name):
+        params = "name=%s" % image_name
+        result = self._glance('details', params, yes='y')
+        return result
+
+    def update(self, image_id, image_name):
+        params = "%s name=%s" % (image_id, image_name)
+        result = self._glance('update', params)
+        return result
 
 
 class FunctionalTest(unittest.TestCase):
@@ -173,6 +242,11 @@ class ImagesTest(FunctionalTest):
         self.flavor_ref = self.config.env.flavor_ref
         self.ss_client = self.os.servers_client
         self.img_client = self.os.images_client
+        self.token_client = TokenClient(self.config)
+        token = self.token_client.get_token(self.config.keystone.user,
+                                            self.config.keystone.password,
+                                            self.config.keystone.tenant_name)
+        self.glance = GlanceWrapper(token, self.config)
         class config(object):
             class env(object):
                 authentication = "keystone_v2"
@@ -370,19 +444,12 @@ class ImagesTest(FunctionalTest):
         # create an image for test
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=aki container_format=aki '
-                                      '< %s' % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        aki_image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'ami', 'ami', tmp_file)
 
         # execute and assert
         resp, images = self.img_client.list_images()
         self.assertEqual('200', resp['status'])
-        self.assertTrue(str(aki_image_id) in [x['id'] for x in images])
+        self.assertTrue(str(image_id) in [x['id'] for x in images])
 
     @attr(kind='medium')
     def test_list_images_when_disk_format_is_ari(self):
@@ -390,19 +457,12 @@ class ImagesTest(FunctionalTest):
         # create an image for test
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=ari container_format=ari '
-                                      '< %s' % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        ari_image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'ari', 'ari', tmp_file)
 
         # execute and assert
         resp, images = self.img_client.list_images()
         self.assertEqual('200', resp['status'])
-        self.assertTrue(str(ari_image_id) in [x['id'] for x in images])
+        self.assertTrue(str(image_id) in [x['id'] for x in images])
 
     @attr(kind='medium')
     def test_list_images_when_disk_format_is_ami(self):
@@ -410,19 +470,12 @@ class ImagesTest(FunctionalTest):
         # create an image for test
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=ami container_format=ami '
-                                      '< %s' % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        ami_image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'ami', 'ami', tmp_file)
 
         # execute and assert
         resp, images = self.img_client.list_images()
         self.assertEqual('200', resp['status'])
-        self.assertTrue(str(ami_image_id) in [x['id'] for x in images])
+        self.assertTrue(str(image_id) in [x['id'] for x in images])
 
     @attr(kind='medium')
     def test_list_images_when_disk_format_is_ovf(self):
@@ -432,14 +485,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=raw container_format=ovf '
-                                      '< %s' % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'raw', 'ovf', tmp_file)
 
         # execute and assert
         resp, images = self.img_client.list_images()
@@ -466,14 +512,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=aki container_format=aki '
-                                      '< %s' % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'aki', 'aki', tmp_file)
         # update the image
         subprocess.check_call('mysql -u%s -p%s -D glance -e "'
                               'UPDATE images SET container_format=\'test\' '
@@ -509,15 +548,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=aki container_format=aki '
-                                      'architecture=x86_64 < %s'
-                                      % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'aki', 'aki', tmp_file, 'x86_64')
 
         # execute and assert
         resp, images = self.img_client.list_images()
@@ -547,15 +578,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=aki container_format=aki '
-                                      'architecture=i386 < %s'
-                                      % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'aki', 'aki', tmp_file, 'i386')
 
         # execute and assert
         resp, images = self.img_client.list_images()
@@ -585,15 +608,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=aki container_format=aki '
-                                      'architecture=test < %s'
-                                      % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'aki', 'aki', tmp_file, 'test')
 
         # execute and assert
         resp, images = self.img_client.list_images()
@@ -894,19 +909,12 @@ class ImagesTest(FunctionalTest):
         # create an image for test
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=ami container_format=ami '
-                                      '< %s' % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        ami_image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'ami', 'ami', tmp_file)
 
         # execute and assert
         resp, images = self.img_client.list_images_with_detail()
         self.assertEqual('200', resp['status'])
-        self.assertTrue(str(ami_image_id) in [x['id'] for x in images])
+        self.assertTrue(str(image_id) in [x['id'] for x in images])
 
     @attr(kind='medium')
     def test_list_images_with_detail_when_disk_format_is_ovf(self):
@@ -916,14 +924,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=raw container_format=ovf '
-                                      '< %s' % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'raw', 'ovf', tmp_file)
 
         # execute and assert
         resp, images = self.img_client.list_images_with_detail()
@@ -950,14 +951,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=aki container_format=aki '
-                                      '< %s' % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'aki', 'aki', tmp_file)
         # update the image
         subprocess.check_call('mysql -u%s -p%s -D glance -e "'
                               'UPDATE images SET container_format=\'test\' '
@@ -993,15 +987,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=aki container_format=aki '
-                                      'architecture=x86_64 < %s'
-                                      % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'aki', 'aki', tmp_file, 'x86_64')
 
         # execute and assert
         resp, images = self.img_client.list_images_with_detail()
@@ -1031,15 +1017,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=aki container_format=aki '
-                                      'architecture=i386 < %s'
-                                      % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'aki', 'aki', tmp_file, 'i386')
 
         # execute and assert
         resp, images = self.img_client.list_images_with_detail()
@@ -1070,15 +1048,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=aki container_format=aki '
-                                      'architecture=test < %s'
-                                      % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'aki', 'aki', tmp_file, 'test')
 
         # execute and assert
         resp, images = self.img_client.list_images_with_detail()
@@ -1283,7 +1253,6 @@ class ImagesTest(FunctionalTest):
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
-    @tests.skip_test('Ignore this testcase for Bug #612')
     def test_get_image_when_image_id_is_string(self):
         """ Returns 400 response """
         # execute and assert
@@ -1292,7 +1261,6 @@ class ImagesTest(FunctionalTest):
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
-    @tests.skip_test('Ignore this testcase for Bug #612')
     def test_get_image_when_image_id_is_negative_value(self):
         """ Returns 400 response """
         # execute and assert
@@ -1301,7 +1269,6 @@ class ImagesTest(FunctionalTest):
         self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
-    @tests.skip_test('Ignore this testcase for Bug #612')
     def test_get_image_when_image_id_is_over_maxint(self):
         """ Error occurs that the format of parameter is invalid """
         # execute and assert
@@ -1336,20 +1303,13 @@ class ImagesTest(FunctionalTest):
         tmp_file = os.path.abspath(tempfile.mkstemp()[1])
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=ami container_format=ami '
-                                      '< %s' % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        ami_image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'ami', 'ami', tmp_file)
 
         # execute and assert
-        resp, image = self.img_client.get_image(ami_image_id)
+        resp, image = self.img_client.get_image(image_id)
         self.assertEqual('200', resp['status'])
         self.assertTrue(image)
-        self.assertEqual(str(ami_image_id), image['id'])
+        self.assertEqual(str(image_id), image['id'])
 
     @attr(kind='medium')
     def test_get_image_when_disk_format_is_ovf(self):
@@ -1359,14 +1319,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=raw container_format=ovf '
-                                      '< %s' % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'raw', 'ovf', tmp_file)
 
         # execute and assert
         resp, image = self.img_client.get_image(image_id)
@@ -1394,14 +1347,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=aki container_format=aki '
-                                      '< %s' % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'aki', 'aki', tmp_file)
         # update the image
         subprocess.check_call('mysql -u%s -p%s -D glance -e "'
                               'UPDATE images SET container_format=\'test\' '
@@ -1438,15 +1384,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=aki container_format=aki '
-                                      'architecture=x86_64 < %s'
-                                      % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'aki', 'aki', tmp_file, 'x86_64')
 
         # execute and assert
         resp, image = self.img_client.get_image(image_id)
@@ -1477,15 +1415,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=aki container_format=aki '
-                                      'architecture=i386 < %s'
-                                      % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'aki', 'aki', tmp_file, 'i386')
 
         # execute and assert
         resp, image = self.img_client.get_image(image_id)
@@ -1516,15 +1446,7 @@ class ImagesTest(FunctionalTest):
 
         # create an image for test
         name = 'server_' + self._testMethodName
-        out = subprocess.check_output('/opt/openstack/glance/bin/glance add -A tokenAdmin name=%s '
-                                      'disk_format=aki container_format=aki '
-                                      'architecture=test < %s'
-                                      % (name, tmp_file),
-                                      cwd=self.config.glance.directory,
-                                      shell=True)
-        match = re.search('Added new image with ID: (?P<image_id>.+)', out)
-        self.assertIsNotNone(match)
-        image_id = match.groupdict()['image_id']
+        image_id = self.glance.add(name, 'aki', 'aki', tmp_file, 'test')
 
         # execute and assert
         resp, image = self.img_client.get_image(image_id)

@@ -75,7 +75,7 @@ class ImagesClient(object):
         body = json.loads(body)
         if resp['status'] == '404':
             return resp, body
-        return resp, body['image']
+        return resp, body.get('image')
 
     def delete_image(self, image_id):
         """Deletes the provided image"""
