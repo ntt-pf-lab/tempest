@@ -271,7 +271,6 @@ class ServersActionTest(FunctionalTest):
         resp, server = self.ss_client.get_server(test_id)
         self.assertEqual('200', resp['status'])
 
-    @test.skip_test('Skip this case for bug #636')
     @attr(kind='medium')
     def test_reboot_when_specify_server_of_another_tenant(self):
 
@@ -352,7 +351,7 @@ class ServersActionTest(FunctionalTest):
          """
         invalid_test_id = 'opst_test'
         resp, _ = self.ss_client.reboot(invalid_test_id, 'HARD')
-        self.assertEquals('404', resp['status'])
+        self.assertEquals('400', resp['status'])
 
     @attr(kind='medium')
     def test_reboot_when_specify_negative_number_as_id(self):
@@ -365,7 +364,7 @@ class ServersActionTest(FunctionalTest):
 
         reboot_id = -1
         resp, _ = self.ss_client.reboot(reboot_id, 'HARD')
-        self.assertEquals('404', resp['status'])
+        self.assertEquals('400', resp['status'])
 
     @attr(kind='medium')
     def test_reboot_when_id_is_over_max_int(self):
@@ -378,7 +377,7 @@ class ServersActionTest(FunctionalTest):
 
         reboot_id = 2147483648
         resp, _ = self.ss_client.reboot(reboot_id, 'HARD')
-        self.assertEquals('404', resp['status'])
+        self.assertEquals('400', resp['status'])
 
     @attr(kind='medium')
     def test_reboot_when_server_is_running(self):
