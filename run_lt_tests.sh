@@ -27,10 +27,6 @@ nosetests -v -s ./medium/tests/test_flavors.py
 if [ "$?" -ne "0" ]; then
     EXIT_CODE=1
 fi
-nosetests -v -s ./medium/tests/test_images.py
-if [ "$?" -ne "0" ]; then
-    EXIT_CODE=1
-fi
 nosetests -v -s ./medium/tests/test_keypairs.py
 if [ "$?" -ne "0" ]; then
     EXIT_CODE=1
@@ -52,6 +48,10 @@ if [ "$?" -ne "0" ]; then
     EXIT_CODE=1
 fi
 nosetests -v -s ./medium/tests/test_virtual_interfaces.py
+if [ "$?" -ne "0" ]; then
+    EXIT_CODE=1
+fi
+nosetests -v -s ./medium/tests/test_images.py
 if [ "$?" -ne "0" ]; then
     EXIT_CODE=1
 fi
