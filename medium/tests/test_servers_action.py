@@ -207,7 +207,7 @@ class ServersActionTest(FunctionalTest):
         reboot server
 
          """
-        test_id = sys.maxint
+        test_id = 99999
         resp, server = self.ss_client.reboot(test_id, 'HARD')
         print "resp= ", resp
         print "server= ", server
@@ -271,6 +271,7 @@ class ServersActionTest(FunctionalTest):
         resp, server = self.ss_client.get_server(test_id)
         self.assertEqual('200', resp['status'])
 
+    @test.skip_test('Skip this case for bug #636')
     @attr(kind='medium')
     def test_reboot_when_specify_server_of_another_tenant(self):
 
@@ -712,7 +713,7 @@ class ServersActionTest(FunctionalTest):
 
         """
         # Make snapshot of the instance.
-        resp, _ = self.ss_client.create_image(sys.maxint, 'opst_test')
+        resp, _ = self.ss_client.create_image(99999, 'opst_test')
         self.assertEquals('404', resp['status'])
 
     @attr(kind='medium')
@@ -941,15 +942,6 @@ class ServersActionTest(FunctionalTest):
         alt_name = rand_name('server')
         resp, _ = self.ss_client.create_image(test_server_id, alt_name)
         self.assertEquals('404', resp['status'])
-
-        print """
-
-        deleting snapshot.
-
-        """
-        # Delete the snapshot
-        self.img_client.delete_image(alt_name)
-        self.img_client.wait_for_image_not_exists(alt_name)
 
     @test.skip_test('Skip this case for bug #678')
     @attr(kind='medium')
@@ -1473,18 +1465,22 @@ class CreateImageFatTest(FunctionalTest):
         self.img_client = self.os.images_client
 
         self.small_flavor_ref = 998
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage flavor create '
+        subprocess.check_call('bin/nova-manage flavor create '
             '--name=small --memory=1024 --cpu=1 --local_gb=1 '
-            '--flavor=%d --swap=0' % self.small_flavor_ref, shell=True)
+            '--flavor=%d --swap=0' % self.small_flavor_ref,
+            cwd=config.nova.directory, shell=True)
 
         self.fat_flavor_ref = 999
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage flavor create '
+        subprocess.check_call('bin/nova-manage flavor create '
             '--name=fat --memory=1024 --cpu=1 --local_gb=2 '
-            '--flavor=%d --swap=0' % self.fat_flavor_ref, shell=True)
+            '--flavor=%d --swap=0' % self.fat_flavor_ref,
+            cwd=config.nova.directory, shell=True)
 
         def flush_flavors():
-            subprocess.call('/opt/openstack/nova/bin/nova-manage flavor delete small --purge', shell=True)
-            subprocess.call('/opt/openstack/nova/bin/nova-manage flavor delete fat --purge', shell=True)
+            subprocess.call('bin/nova-manage flavor delete small --purge',
+                            cwd=config.nova.directory, shell=True)
+            subprocess.call('bin/nova-manage flavor delete fat --purge',
+                            cwd=config.nova.directory, shell=True)
 
         self.addCleanup(flush_flavors)
 
