@@ -332,7 +332,8 @@ class KeypairsTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality,
-                                                    key_name=keyname)
+                                                    key_name=keyname,
+                                                    retry=True)
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # execute and assert

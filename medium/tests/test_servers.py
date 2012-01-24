@@ -152,7 +152,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -196,7 +197,8 @@ class ServersTest(FunctionalTest):
                                                 meta=meta,
                                                 accessIPv4=accessIPv4,
                                                 accessIPv6=accessIPv6,
-                                                personality=personality)
+                                                personality=personality,
+                                                retry=True)
 
             print "%r %r" % (resp, server)
             # Wait for the server to become active
@@ -239,7 +241,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -302,7 +305,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -347,7 +351,8 @@ class ServersTest(FunctionalTest):
                                                 meta=meta,
                                                 accessIPv4=accessIPv4,
                                                 accessIPv6=accessIPv6,
-                                                personality=personality)
+                                                personality=personality,
+                                                retry=True)
 
             # Wait for the server to become active
             self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -391,7 +396,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         print """
 
@@ -430,7 +436,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -472,7 +479,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -524,7 +532,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -574,7 +583,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -605,7 +615,8 @@ class ServersTest(FunctionalTest):
                                             meta=meta,
                                             accessIPv4=accessIPv4,
                                             accessIPv6=accessIPv6,
-                                            personality=personality)
+                                            personality=personality,
+                                            retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -653,7 +664,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -696,7 +708,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -738,7 +751,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -774,7 +788,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -804,7 +819,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -836,7 +852,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -867,7 +884,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -898,7 +916,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -929,7 +948,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -959,7 +979,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -971,7 +992,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1003,7 +1025,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1035,7 +1058,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1066,7 +1090,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1097,7 +1122,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1127,7 +1153,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1146,7 +1173,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         resp, body = self.ss_client.list_servers({'status': 'ACTIVE'})
         print "resp=", resp
@@ -1178,7 +1206,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1196,7 +1225,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         resp, body = self.ss_client.list_servers({'status': 'BUILD'})
         print "resp=", resp
@@ -1228,7 +1258,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1259,7 +1290,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1289,7 +1321,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1319,7 +1352,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1337,7 +1371,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1368,7 +1403,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1386,7 +1422,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1418,7 +1455,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1436,7 +1474,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1466,7 +1505,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1484,7 +1524,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1515,7 +1556,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1533,7 +1575,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1564,7 +1607,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1582,7 +1626,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1630,7 +1675,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1665,7 +1711,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         print "resp:demo=", resp
         print "server:demo=", server
@@ -1680,7 +1727,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1716,7 +1764,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         self.assertEquals('202', resp['status'])
 
@@ -1774,7 +1823,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         print "resp=", resp
         print "server=", server
@@ -1886,7 +1936,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1898,7 +1949,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -1930,7 +1982,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         self.assertEqual('202', resp['status'])
         print "resp=", resp
@@ -2070,7 +2123,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -2188,7 +2242,8 @@ class ServersTest(FunctionalTest):
                                                 flavorRef=self.flavor_ref,
                                                 metadata=meta,
                                                 key_name=keyname,
-                                                personality=personality)
+                                                personality=personality,
+                                                retry=True)
         print "resp=", resp
         print "server=", server
         self.assertEqual('202', resp['status'])
@@ -2247,7 +2302,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -2299,7 +2355,8 @@ class ServersTest(FunctionalTest):
                                                 flavorRef=self.flavor_ref,
                                                 metadata=meta,
                                                 networks=networks,
-                                                personality=personality)
+                                                personality=personality,
+                                                retry=True)
 
         print "resp=", resp
         print "server=", server
@@ -2339,7 +2396,8 @@ class ServersTest(FunctionalTest):
                                                    flavorRef=self.flavor_ref,
                                                    metadata=meta,
                                                    networks=networks,
-                                                   personality=personality)
+                                                   personality=personality,
+                                                   retry=True)
 
         print "resp=", resp
         print "server=", server
@@ -2376,7 +2434,8 @@ class ServersTest(FunctionalTest):
                                                 flavorRef=self.flavor_ref,
                                                 metadata=meta,
                                                 networks=networks,
-                                                personality=personality)
+                                                personality=personality,
+                                                retry=True)
 
         self.assertEqual('202', resp['status'])
         print "resp1=", resp
@@ -2484,7 +2543,8 @@ class ServersTest(FunctionalTest):
                                          flavorRef=self.flavor_ref,
                                          metadata=meta,
                                          availability_zone=availability_zone,
-                                         personality=personality)
+                                         personality=personality,
+                                         retry=True)
         print "resp=", resp
         print "body=", body
         self.assertEqual('202', resp['status'])
@@ -2556,7 +2616,8 @@ class ServersTest(FunctionalTest):
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         print "resp=", resp
         print "server=", server
@@ -2570,7 +2631,8 @@ class ServersTest(FunctionalTest):
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         print "resp=", resp
         print "server=", server
@@ -2621,7 +2683,8 @@ class ServersTest(FunctionalTest):
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         print "resp=", resp
         print "server=", server
@@ -2635,7 +2698,8 @@ class ServersTest(FunctionalTest):
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         print "resp=", resp
         print "server=", server
@@ -2713,7 +2777,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -2745,7 +2810,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -2781,7 +2847,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -2815,7 +2882,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -2887,7 +2955,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -2925,7 +2994,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -2957,7 +3027,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -2969,7 +3040,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -3006,7 +3078,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -3044,7 +3117,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -3078,7 +3152,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -3114,7 +3189,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -3157,7 +3233,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -3193,7 +3270,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -3265,7 +3343,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -3301,7 +3380,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -3369,7 +3449,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -3409,7 +3490,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -3439,7 +3521,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -3478,7 +3561,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')

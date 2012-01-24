@@ -182,7 +182,8 @@ class ServersTest(FunctionalTest):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
 
         # Delete the server
         self.ss_client.delete_server(server['id'])

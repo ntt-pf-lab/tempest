@@ -160,7 +160,8 @@ class QuantumManagerQuantumResetTest(QuantumManagerFunctionalTest):
                                                     self.image_ref,
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6)
+                                                    accessIPv6=accessIPv6,
+                                                    retry=True)
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # flush data by restarting the process.
@@ -191,7 +192,8 @@ class QuantumManagerRestServiceTest(QuantumManagerFunctionalTest):
                                                     self.image_ref,
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6)
+                                                    accessIPv6=accessIPv6,
+                                                    retry=True)
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         emphasised_print('Start testing %s' % self.id())
@@ -328,7 +330,8 @@ class LibvirtRebootErrorTest(LibvirtFunctionalTest):
                                                     self.image_ref,
                                                     self.flavor_ref,
                                                     accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6)
+                                                    accessIPv6=accessIPv6,
+                                                    retry=True)
 
         # Wait for the server to become ACTIVE
         self.ss_client.wait_for_server_status(

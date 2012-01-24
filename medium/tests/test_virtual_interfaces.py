@@ -144,7 +144,8 @@ class VirtualInterfacesTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality,
-                                                    networks=networks)
+                                                    networks=networks,
+                                                    retry=True)
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # execute and assert
@@ -193,7 +194,8 @@ class VirtualInterfacesTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality,
-                                                    networks=networks)
+                                                    networks=networks,
+                                                    retry=True)
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # execute and assert
@@ -297,7 +299,8 @@ class VirtualInterfacesTest(FunctionalTest):
                                                     flavor_ref,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    retry=True)
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # execute and assert
@@ -342,7 +345,8 @@ class VirtualInterfacesTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality,
-                                                    networks=networks)
+                                                    networks=networks,
+                                                    retry=True)
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # execute and assert
@@ -393,7 +397,8 @@ class VirtualInterfacesTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality,
-                                                    networks=networks)
+                                                    networks=networks,
+                                                    retry=True)
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
         # execute and assert
