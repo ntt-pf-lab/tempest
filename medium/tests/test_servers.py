@@ -1943,6 +1943,7 @@ class ServersTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         self.assertEqual(str(self.image_ref), server['image']['id'])
 
+    @test.skip_test('ignore this case for bug.1050')
     @attr(kind='medium')
     def test_create_servers_specify_not_exists_image(self):
         print """
@@ -2082,6 +2083,7 @@ class ServersTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
 
+    @test.skip_test('ignore this case for bug.1051')
     @attr(kind='medium')
     def test_create_servers_specify_not_exists_flavor(self):
         print """
