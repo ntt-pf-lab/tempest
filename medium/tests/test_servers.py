@@ -2497,7 +2497,6 @@ class ServersTest(FunctionalTest):
         print "body=", body
         self.assertEqual('200', resp['status'])
 
-    @test.skip_test('ignore this case for bug.621')
     @attr(kind='medium')
     def test_ceate_server_specify_overlimit_to_meta(self):
         print """
