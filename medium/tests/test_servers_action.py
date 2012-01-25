@@ -1243,6 +1243,7 @@ class ServersActionTest(FunctionalTest):
         resp, server = self.ss_client.get_server(ss_server_id)
         self.assertEquals('ACTIVE', server['status'])
 
+    @test.skip_test('ignore this case for bug.642')
     @attr(kind='medium')
     def test_create_image_when_key_and_value_are_blank(self):
 
@@ -1293,6 +1294,7 @@ class ServersActionTest(FunctionalTest):
                                                   meta=meta)
         self.assertEquals('400', resp['status'])
 
+    @test.skip_test('ignore this case for bug.642')
     @attr(kind='medium')
     def test_ceate_image_when_specify_length_over_256_key_and_value(self):
 
