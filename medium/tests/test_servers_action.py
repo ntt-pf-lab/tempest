@@ -1243,7 +1243,6 @@ class ServersActionTest(FunctionalTest):
         resp, server = self.ss_client.get_server(ss_server_id)
         self.assertEquals('ACTIVE', server['status'])
 
-    @test.skip_test('Skip this case for bug #642')
     @attr(kind='medium')
     def test_create_image_when_key_and_value_are_blank(self):
 
@@ -1293,33 +1292,7 @@ class ServersActionTest(FunctionalTest):
                                                   alt_name,
                                                   meta=meta)
         self.assertEquals('400', resp['status'])
-        alt_img_url = resp['location']
-        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
-        self.assertIsNotNone(match)
-        alt_img_id = match.groupdict()['image_id']
-        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
-        resp_wait, _ = self.img_client.get_image(alt_img_id)
-        self.assertEquals('200', resp_wait['status'])
 
-        print """
-
-        creating server from snapshot.
-
-        """
-        resp, server = self.ss_client.create_server(name,
-                                                    alt_img_id,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-        # Wait for the server to become active
-        ss_server_id = server['id']
-        self.ss_client.wait_for_server_status(ss_server_id, 'ACTIVE')
-        resp, server = self.ss_client.get_server(ss_server_id)
-        self.assertEquals('ACTIVE', server['status'])
-
-    @test.skip_test('Skip this case for bug #642')
     @attr(kind='medium')
     def test_ceate_image_when_specify_length_over_256_key_and_value(self):
 
@@ -1367,34 +1340,6 @@ class ServersActionTest(FunctionalTest):
         meta = {'a' * 260: 'b' * 260}
         resp, _ = self.ss_client.create_image(test_id, alt_name, meta=meta)
         self.assertEquals('400', resp['status'])
-        alt_img_url = resp['location']
-        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
-        self.assertIsNotNone(match)
-        alt_img_id = match.groupdict()['image_id']
-        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
-        resp_wait, image_wait = self.img_client.get_image(alt_img_id)
-        print "resp_wait=", resp_wait
-        print "image_wait=", image_wait
-        self.assertEquals('200', resp_wait['status'])
-
-        print """
-
-        creating server from snapshot.
-
-        """
-        resp, server = self.ss_client.create_server(name,
-                                                    alt_img_id,
-                                                    self.flavor_ref,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-        print "resp=", resp
-        print "server=", server
-        # Wait for the server to become active
-        ss_server_id = server['id']
-        self.ss_client.wait_for_server_status(ss_server_id, 'ACTIVE')
-        resp, server = self.ss_client.get_server(ss_server_id)
-        self.assertEquals('ACTIVE', server['status'])
 
     @attr(kind='medium')
     def _test_create_image_403_base(self, vm_state, task_state, deleted=0):
