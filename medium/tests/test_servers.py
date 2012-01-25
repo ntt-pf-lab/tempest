@@ -2788,7 +2788,7 @@ class ServersTest(FunctionalTest):
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
 
-        resp, body = self.ss_client.get_server(sys.maxint)
+        resp, body = self.ss_client.get_server(999999)  # not exists
         print "resp=", resp
         print "body=", body
 
@@ -2828,7 +2828,6 @@ class ServersTest(FunctionalTest):
         print "body=", body
         self.assertEqual('403', resp['status'])
 
-    @test.skip_test('ignore this case for bug.623')
     @attr(kind='medium')
     def test_get_server_details_specify_string_to_id(self):
         print """
@@ -2842,7 +2841,6 @@ class ServersTest(FunctionalTest):
 
         self.assertEqual('400', resp['status'])
 
-    @test.skip_test('ignore this case for bug.624')
     @attr(kind='medium')
     def test_get_server_details_specify_negative_to_id(self):
         print """
@@ -2855,7 +2853,6 @@ class ServersTest(FunctionalTest):
         print "body=", body
         self.assertEqual('400', resp['status'])
 
-    @test.skip_test('ignore this case for bug.625')
     @attr(kind='medium')
     def test_get_server_details_specify_overlimits_to_id(self):
         print """
@@ -2867,7 +2864,7 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         print "body=", body
 
-        self.assertEqual('413', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_update_server(self):
