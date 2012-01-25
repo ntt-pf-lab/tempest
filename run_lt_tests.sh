@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+if [ $# -eq 0 ]; then
+    $@ = 'flavors keypairs servers_action servers tenant through virtual_interfaces images'
+fi
 
 # allocate networks.
 #mysql -uroot -pnova nova -e "delete from fixed_ips;"
@@ -23,38 +26,15 @@ exec_date=`date '+%Y%m%d%H%M'`
 pwd_place=`pwd`
 EXIT_CODE=0
 echo [$pwd_place]
-nosetests -v -s ./medium/tests/test_flavors.py
-if [ "$?" -ne "0" ]; then
-    EXIT_CODE=1
-fi
-nosetests -v -s ./medium/tests/test_keypairs.py
-if [ "$?" -ne "0" ]; then
-    EXIT_CODE=1
-fi
-nosetests -v -s ./medium/tests/test_servers_action.py
-if [ "$?" -ne "0" ]; then
-    EXIT_CODE=1
-fi
-nosetests -v -s ./medium/tests/test_servers.py
-if [ "$?" -ne "0" ]; then
-    EXIT_CODE=1
-fi
-nosetests -v -s ./medium/tests/test_tenant.py
-if [ "$?" -ne "0" ]; then
-    EXIT_CODE=1
-fi
-nosetests -v -s ./medium/tests/test_through.py
-if [ "$?" -ne "0" ]; then
-    EXIT_CODE=1
-fi
-nosetests -v -s ./medium/tests/test_virtual_interfaces.py
-if [ "$?" -ne "0" ]; then
-    EXIT_CODE=1
-fi
-nosetests -v -s ./medium/tests/test_images.py
-if [ "$?" -ne "0" ]; then
-    EXIT_CODE=1
-fi
+
+for test_case in $@; do
+    start_sec=`date +%s`
+    nosetests -v -s ./medium/tests/test_${test_case}.py
+    echo test_${test_case} finished in $((`date +%s` - $s)) secs
+    if [ "$?" -ne "0" ]; then
+        EXIT_CODE=1
+    fi
+done
 
 exit $EXIT_CODE
 
