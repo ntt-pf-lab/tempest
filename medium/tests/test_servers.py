@@ -3348,7 +3348,6 @@ class ServersTest(FunctionalTest):
 
         self.assertEqual('413', resp['status'])
 
-    @test.skip_test('ignore this case for bug.666')
     @attr(kind='medium')
     def test_delete_server_when_create_image(self):
         print """
@@ -3356,38 +3355,7 @@ class ServersTest(FunctionalTest):
         test_delete_server_when_create_image
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        # snapshot.
-        img_name = self._testMethodName + '_image'
-        resp, _ = self.ss_client.create_image(server['id'], img_name)
-        alt_img_url = resp['location']
-        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
-        self.assertIsNotNone(match)
-        alt_img_id = match.groupdict()['image_id']
-
-        # delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
-        print "resp=", resp
-        self.assertEqual('409', resp['status'])
-
-        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
+        self._test_delete_server_403_base('active', 'image_snapshot')
 
     @attr(kind='medium')
     def test_delete_server_specify_uuid(self):
