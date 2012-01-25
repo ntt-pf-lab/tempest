@@ -30,10 +30,10 @@ echo [$pwd_place]
 for test_case in $@; do
     start_sec=`date +%s`
     nosetests -v -s ./medium/tests/test_${test_case}.py
-    echo test_${test_case} finished in $((`date +%s` - $s)) secs
     if [ "$?" -ne "0" ]; then
         EXIT_CODE=1
     fi
+    echo test_${test_case} finished in $((`date +%s` - $s)) secs
 done
 
 exit $EXIT_CODE
