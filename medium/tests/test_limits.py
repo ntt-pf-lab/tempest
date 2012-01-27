@@ -68,19 +68,21 @@ class TestBase(unittest.TestCase):
                                   self.config.mysql.user,
                                   self.config.mysql.password),
                               shell=True)
-        subprocess.call('/opt/openstack/nova/bin/nova-manage db sync',
+        subprocess.call('%s db sync' % self.config.nova.nova_manage_path,
                         cwd=self.config.nova.directory, shell=True)
 
         # create users.
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage user create '
+        subprocess.check_call('%s user create '
                               '--name=%s --access=secrete --secret=secrete'\
-                                      % self.config.nova.username,
+                                      % (self.config.nova.nova_manage_path,
+                                          self.config.nova.username),
                               cwd=self.config.nova.directory, shell=True)
 
         # create projects.
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage project create '
+        subprocess.check_call('%s project create '
                               '--project=1 --user=%s'\
-                                      % self.config.nova.username,
+                                      % (self.config.nova.nova_manage_path,
+                                          self.config.nova.username),
                               cwd=self.config.nova.directory, shell=True)
 
     def tearDown(self):

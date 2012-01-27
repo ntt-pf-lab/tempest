@@ -69,6 +69,14 @@ class NovaConfig(object):
         """Directory of nova home. Defaults to /opt/stack/nova"""
         return self.get("directory", "/opt/stack/nova")
 
+    @property
+    def nova_manage_path(self):
+        """Path to nova-manage binary. Defaults to
+        /opt/stack/nova/bin/nova-manage"""
+        nova_manage_path = self.get("directory", "/opt/stack/nova") + \
+        "/bin/nova-manage"
+        return nova_manage_path
+
 
 class EnvironmentConfig(object):
     def __init__(self, conf):

@@ -114,13 +114,13 @@ class VirtualInterfacesTest(FunctionalTest):
         # create a network for test
         networks = []
         cidr = '10.0.10.0/24'
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
+        subprocess.check_call('%s network create '
                               '--label=label-1 '
                               '--project_id=1 '
                               '--fixed_range_v4=%s '
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
-                              '--network_size=32 ' % cidr,
+                              '--network_size=32 ' % (self.config.nova.nova_manage_path, cidr),
                               cwd=self.config.nova.directory, shell=True)
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
@@ -164,13 +164,13 @@ class VirtualInterfacesTest(FunctionalTest):
         # create a network for test
         networks = []
         cidr = '10.0.4.0/24'
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
+        subprocess.check_call('%s network create '
                               '--label=label-2 '
                               '--project_id=1 '
                               '--fixed_range_v4=%s '
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
-                              '--network_size=32 ' % cidr,
+                              '--network_size=32 ' % (self.config.nova.nova_manage_path, cidr),
                               cwd=self.config.nova.directory, shell=True)
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
@@ -315,13 +315,13 @@ class VirtualInterfacesTest(FunctionalTest):
         # create a network for test
         networks = []
         cidr = '10.0.5.0/24'
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
+        subprocess.check_call('%s network create '
                               '--label=label-3 '
                               '--project_id=1 '
                               '--fixed_range_v4=%s '
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
-                              '--network_size=32 ' % cidr,
+                              '--network_size=32 ' % (self.config.nova.nova_manage_path, cidr),
                               cwd=self.config.nova.directory, shell=True)
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
@@ -366,13 +366,14 @@ class VirtualInterfacesTest(FunctionalTest):
         cidrs = ['10.0.6.0/24', '10.0.7.0/24', '10.0.8.0/24']
         networks = []
         for cidr in cidrs:
-            subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
+            subprocess.check_call('%s network create '
                                   '--label=label-4 '
                                   '--project_id=1 '
                                   '--fixed_range_v4=%s '
                                   '--bridge_interface=br-int '
                                   '--num_networks=1 '
-                                  '--network_size=32 ' % cidr,
+                                  '--network_size=32 ' % (self.config.nova.nova_manage_path,
+                                      cidr),
                                   cwd=self.config.nova.directory, shell=True)
             sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
                   'WHERE cidr = \'%s\';' % cidr

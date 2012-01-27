@@ -52,19 +52,23 @@ def setUpModule(module):
 
     try:
         # create users.
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage user create '
-                              '--name=admin --access=secrete --secret=secrete',
+        subprocess.check_call('%s user create '
+                              '--name=admin --access=secrete --secret=secrete'
+                              % config.nova.nova_manage_path,
                               cwd=config.nova.directory, shell=True)
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage user create '
-                              '--name=demo --access=secrete --secret=secrete',
+        subprocess.check_call('%s user create '
+                              '--name=demo --access=secrete --secret=secrete' %
+                              config.nova.nova_manage_path,
                               cwd=config.nova.directory, shell=True)
 
         # create projects.
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage project create '
-                              '--project=1 --user=admin',
+        subprocess.check_call('%s project create '
+                              '--project=1 --user=admin' %
+                              config.nova.nova_manage_path,
                               cwd=config.nova.directory, shell=True)
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage project create '
-                              '--project=2 --user=demo',
+        subprocess.check_call('%s project create '
+                              '--project=2 --user=demo' %
+                              config.nova.nova_manage_path,
                               cwd=config.nova.directory, shell=True)
 
     except Exception:

@@ -90,7 +90,7 @@ class QuantumFunctionalTest(unittest.TestCase):
                               self.config.mysql.user,
                               self.config.mysql.password),
                           shell=True)
-        silent_check_call('/opt/openstack/nova/bin/nova-manage db sync',
+        silent_check_call('%s db sync' % self.config.nova.nova_manage_path,
                           cwd=self.config.nova.directory, shell=True)
 
         for process in self.testing_processes:
@@ -104,25 +104,28 @@ class QuantumFunctionalTest(unittest.TestCase):
         self.img_client = self.os.images_client
 
         # create users.
-        silent_check_call('/opt/openstack/nova/bin/nova-manage user create '
-                          '--name=admin --access=secrete --secret=secrete',
+        silent_check_call('%s user create '
+                          '--name=admin --access=secrete --secret=secrete' %
+                          self.config.nova.nova_manage_path,
                           cwd=self.config.nova.directory, shell=True)
         # create projects.
-        silent_check_call('/opt/openstack/nova/bin/nova-manage project create '
-                          '--project=1 --user=admin',
+        silent_check_call('%s project create '
+                          '--project=1 --user=admin' %
+                          self.config.nova.nova_manage_path,
                           cwd=self.config.nova.directory, shell=True)
 
         self.addCleanup(cleanup_virtual_instances)
         self.addCleanup(cleanup_processes, self.testing_processes)
 
     def check_create_network(self, retcode):
-        self.assertEqual(subprocess.call('/opt/openstack/nova/bin/nova-manage network create '
+        self.assertEqual(subprocess.call('%s network create '
                                              '--label=private_1-1 '
                                              '--project_id=1 '
                                              '--fixed_range_v4=10.0.0.0/24 '
                                              '--bridge_interface=br-int '
                                              '--num_networks=1 '
-                                             '--network_size=32 ',
+                                             '--network_size=32 ' %
+                                             self.config.nova.nova_manage_path,
                                          cwd=self.config.nova.directory,
                                          shell=True), retcode)
 
@@ -255,7 +258,7 @@ class LibvirtFunctionalTest(unittest.TestCase):
                               self.config.mysql.user,
                               self.config.mysql.password),
                           shell=True)
-        silent_check_call('/opt/openstack/nova/bin/nova-manage db sync',
+        silent_check_call('%s db sync',
                           cwd=self.config.nova.directory, shell=True)
 
         for process in self.testing_processes:
@@ -263,13 +266,14 @@ class LibvirtFunctionalTest(unittest.TestCase):
         time.sleep(10)
 
         # allocate networks.
-        silent_check_call('/opt/openstack/nova/bin/nova-manage network create '
+        silent_check_call('%s network create '
                           '--label=private_1-1 '
                           '--project_id=1 '
                           '--fixed_range_v4=10.0.0.0/24 '
                           '--bridge_interface=br-int '
                           '--num_networks=1 '
-                          '--network_size=32 ',
+                          '--network_size=32 ' %
+                          self.config.nova.nova_manage_path,
                           cwd=self.config.nova.directory, shell=True)
 
         self.addCleanup(cleanup_virtual_instances)
