@@ -39,6 +39,10 @@ nosetests -v -s ./medium/tests/test_servers.py
 if [ "$?" -ne "0" ]; then
     EXIT_CODE=1
 fi
+nosetests -v -s ./medium/tests/test_servers2.py
+if [ "$?" -ne "0" ]; then
+    EXIT_CODE=1
+fi
 nosetests -v -s ./medium/tests/test_tenant.py
 if [ "$?" -ne "0" ]; then
     EXIT_CODE=1
