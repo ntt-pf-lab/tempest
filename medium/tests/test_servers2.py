@@ -997,7 +997,6 @@ class ServersTest(FunctionalTest):
 
         self.assertEqual('404', resp['status'])
 
-    @test.skip_test('ignore this case for bug.622')
     @attr(kind='medium')
     def test_get_server_details_specify_other_tenant_server(self):
         print """

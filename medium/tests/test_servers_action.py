@@ -271,7 +271,6 @@ class ServersActionTest(FunctionalTest):
         resp, server = self.ss_client.get_server(test_id)
         self.assertEqual('200', resp['status'])
 
-    @test.skip_test('Skip this case for bug #636')
     @attr(kind='medium')
     def test_reboot_when_specify_server_of_another_tenant(self):
 
@@ -755,7 +754,7 @@ class ServersActionTest(FunctionalTest):
         # Make snapshot of the instance.
         alt_name = rand_name('ss_test')
         resp, _ = self.s2_client.create_image(test_server_id, alt_name)
-        self.assertEquals('404', resp['status'])
+        self.assertEquals('403', resp['status'])
 
     @attr(kind='medium')
     def test_create_image_when_server_is_during_boot_process(self):
