@@ -1413,7 +1413,7 @@ class ServersTest(FunctionalTest):
         test_delete_server_not_exists_id
 
         """
-        resp = self.ss_client.delete_server(sys.maxint)
+        resp = self.ss_client.delete_server(999999)  # not exists
         print "resp=", resp
         self.assertEqual('404', resp[0]['status'])
 
@@ -1479,7 +1479,6 @@ class ServersTest(FunctionalTest):
 
         self.assertEqual('404', resp['status'])
 
-    @test.skip_test('ignore this case for bug.662')
     @attr(kind='medium')
     def test_delete_server_specify_other_tenant_server(self):
         print """
@@ -1512,7 +1511,6 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         self.assertEqual('403', resp['status'])
 
-    @test.skip_test('ignore this case for bug.662')
     @attr(kind='medium')
     def test_delete_server_specify_string_to_server_id(self):
         print """
@@ -1524,7 +1522,6 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         self.assertEqual('400', resp['status'])
 
-    @test.skip_test('ignore this case for bug.662')
     @attr(kind='medium')
     def test_delete_server_specify_negative_to_server_id(self):
         print """
@@ -1536,7 +1533,6 @@ class ServersTest(FunctionalTest):
         print "resp=", resp
         self.assertEqual('400', resp['status'])
 
-    @test.skip_test('ignore this case for bug.662')
     @attr(kind='medium')
     def test_delete_server_specify_overlimits_to_server_id(self):
         print """
@@ -1547,7 +1543,7 @@ class ServersTest(FunctionalTest):
         resp, _ = self.ss_client.delete_server(sys.maxint + 1)
         print "resp=", resp
 
-        self.assertEqual('413', resp['status'])
+        self.assertEqual('400', resp['status'])
 
     @attr(kind='medium')
     def test_delete_server_when_create_image(self):
