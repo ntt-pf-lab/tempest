@@ -1910,4 +1910,3 @@ class ServersTest(FunctionalTest):
         name2 = server['name']
         self.assertEqual(name1, name2)
 
-

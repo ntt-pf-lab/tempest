@@ -218,10 +218,9 @@ class FunctionalTest(unittest.TestCase):
                 try:
                     print "Find existing instance %s" % s['id']
                     resp, body = self.os.servers_client.delete_server(s['id'])
-                    if resp['status'] == '200' or resp['status'] == '202':
+                    if resp['status'] in ('200', '202', '204'):
                         self.os.servers_client.wait_for_server_not_exists(
                                                                     s['id'])
-                        time.sleep(5)
                 except Exception as e:
                     print e
         except Exception:

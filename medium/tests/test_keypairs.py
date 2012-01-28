@@ -23,6 +23,7 @@ from nose.plugins.attrib import attr
 
 from storm import openstack
 import storm.config
+from storm.services.nova.json.keypairs_client import KeypairsClient
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -46,7 +47,7 @@ def setUpModule(module):
 
 
 def tearDownModule(module):
-    pass
+    config = module.config
 
 
 class FunctionalTest(unittest.TestCase):
@@ -91,6 +92,20 @@ class KeypairsTest(FunctionalTest):
         super(KeypairsTest, self).setUp()
         self.kp_client = self.os.keypairs_client
         self.ss_client = self.os.servers_client
+
+        class config(object):
+            class env(object):
+                authentication = "keystone_v2"
+
+            class nova(object):
+                build_interval = self.config.nova.build_interval
+                build_timeout = self.config.nova.build_timeout
+
+        # user1
+        user1 = {'username': 'user1', 'key': 'user1', 'tenant_name': 'tenant1',
+                 'auth_url': self.config.nova.auth_url, 'config': config}
+        self.kp_client_for_user1 = KeypairsClient(**user1)
+
         # Please wait, it will fail otherwise.
         time.sleep(5)
 
@@ -358,6 +373,23 @@ class KeypairsTest(FunctionalTest):
         keyname = 'key_' + self._testMethodName
         resp, body = self.kp_client.delete_keypair('')
         self.assertEqual('404', resp['status'])
+
+        # reset db
+        subprocess.check_call('mysql -u%s -p%s -D nova -e "'
+                              'DELETE FROM key_pairs;'
+                              '"' % (
+                                  self.config.mysql.user,
+                                  self.config.mysql.password),
+                              shell=True)
+
+    def test_delete_keypair_when_user_does_not_have_admin_role(self):
+        # create a keypair for test
+        keyname = 'key_' + self._testMethodName
+        self.kp_client_for_user1.create_keypair(keyname)
+
+        # execute and assert
+        resp, body = self.kp_client_for_user1.delete_keypair(keyname)
+        self.assertEqual('202', resp['status'])
 
         # reset db
         subprocess.check_call('mysql -u%s -p%s -D nova -e "'
