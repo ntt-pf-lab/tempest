@@ -89,10 +89,11 @@ class FunctionalTest(unittest.TestCase):
 #        self.output_eventlog()
 
     def exec_sql(self, sql):
-        exec_sql = 'mysql -u %s -p%s nova -Ns -e "' + sql + '"'
+        exec_sql = 'mysql -u %s -p%s -h%s nova -Ns -e "' + sql + '"'
         results = subprocess.check_output(exec_sql % (
                                           self.config.mysql.user,
-                                          self.config.mysql.password),
+                                          self.config.mysql.password,
+                                          self.config.mysql.host),
                                           shell=True)
         print 'results=' + str(results)
         return [tuple(result.split('\t'))
@@ -210,11 +211,12 @@ class VirtualInterfacesTest(FunctionalTest):
         """Returns 404 response"""
         # make sure no record in db
         try:
-            subprocess.check_call('mysql -u %s -p%s -D nova -e "'
+            subprocess.check_call('mysql -u %s -p%s -h%s -D nova -e "'
                               'DELETE FROM virtual_interfaces;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
         except Exception:
             pass
@@ -232,11 +234,12 @@ class VirtualInterfacesTest(FunctionalTest):
         """Returns 404 response"""
         # make sure no record in db
         try:
-            subprocess.check_call('mysql -u %s -p%s -D nova -e "'
+            subprocess.check_call('mysql -u %s -p%s -h%s -D nova -e "'
                               'DELETE FROM virtual_interfaces;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
         except Exception:
             pass
@@ -255,11 +258,12 @@ class VirtualInterfacesTest(FunctionalTest):
         """Returns 400 response"""
         # make sure no record in db
         try:
-            subprocess.check_call('mysql -u %s -p%s -D nova -e "'
+            subprocess.check_call('mysql -u %s -p%s -h%s -D nova -e "'
                               'DELETE FROM virtual_interfaces;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
         except Exception:
             pass
@@ -274,11 +278,12 @@ class VirtualInterfacesTest(FunctionalTest):
     def test_list_virtual_interfaces_when_network_amount_is_zero(self):
         """Returns 200 response with an empty list"""
         try:
-            subprocess.check_call('mysql -u %s -p%s -D nova -e "'
+            subprocess.check_call('mysql -u %s -p%s -h%s -D nova -e "'
                       'DELETE FROM virtual_interfaces;'
                       '"' % (
                           self.config.mysql.user,
-                          self.config.mysql.password),
+                          self.config.mysql.password,
+                          self.config.mysql.host),
                       shell=True)
         except Exception:
             pass

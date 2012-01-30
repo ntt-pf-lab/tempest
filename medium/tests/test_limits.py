@@ -61,12 +61,13 @@ class TestBase(unittest.TestCase):
         self.rest_client = self.os.servers_client.client
 
         # reset db.
-        subprocess.check_call('mysql -u%s -p%s -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -e "'
                               'DROP DATABASE IF EXISTS nova;'
                               'CREATE DATABASE nova;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
         subprocess.call('/opt/openstack/nova/bin/nova-manage db sync',
                         cwd=self.config.nova.directory, shell=True)
@@ -96,12 +97,13 @@ class TestBase(unittest.TestCase):
                                                     for name in resource)
         else:
             resource_sql = ''
-        s = subprocess.check_output("""mysql -u %s -p%s nova -Ns -e "
+        s = subprocess.check_output("""mysql -u %s -p%s -h%s nova -Ns -e "
                                        SELECT * FROM quotas
                                        WHERE project_id='%s'
                                              %s;" """\
                                          % (self.config.mysql.user,
                                             self.config.mysql.password,
+                                            self.config.mysql.host,
                                             self.config.nova.username,
                                             resource_sql),
                                          shell=True)
