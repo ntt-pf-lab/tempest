@@ -64,6 +64,11 @@ class NovaConfig(object):
         """Directory of nova home. Defaults to /opt/stack/nova"""
         return self.get("directory", "/opt/stack/nova")
 
+    @property
+    def config(self):
+        """path of nova.conf. Defaults to /opt/openstack/nova/etc/nova.conf"""
+        return self.get("config", "/opt/openstack/nova/etc/nova.conf")
+
 
 class EnvironmentConfig(object):
     def __init__(self, conf):
