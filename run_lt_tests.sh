@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 if [ $# -eq 0 ]; then
-    $@ = 'flavors keypairs servers_action servers tenant through virtual_interfaces images'
+    $@ = 'flavors keypairs servers_action servers servers2 tenant through virtual_interfaces images'
 fi
 
 # allocate networks.
