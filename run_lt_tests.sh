@@ -37,7 +37,7 @@ for test_case in $@; do
         EXIT_CODE=1
     fi
     printf "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n"
-    printf "& Finished MT TestSet %-20s in %05d sec &\n" $test_case $((`date +%s` - $s))
+    printf "& Finished MT TestSet %-20s in %05d sec &\n" $test_case $((`date +%s` - $start_sec))
     printf "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\n"
 done
 
