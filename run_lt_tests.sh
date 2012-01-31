@@ -28,12 +28,17 @@ EXIT_CODE=0
 echo [$pwd_place]
 
 for test_case in $@; do
+    printf "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"
+    printf "& Start MT TestSet %-20s &" $test_case
+    printf "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"
     start_sec=`date +%s`
     nosetests -v -s ./medium/tests/test_${test_case}.py
     if [ "$?" -ne "0" ]; then
         EXIT_CODE=1
     fi
-    echo test_${test_case} finished in $((`date +%s` - $s)) secs
+    printf "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"
+    printf "& Finished MT TestSet %-20s in %05d sec &" $test_case $((`date +%s` - $s))
+    printf "&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&"
 done
 
 exit $EXIT_CODE
