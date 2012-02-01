@@ -31,15 +31,35 @@ nosetests -v -s ./medium/tests/test_keypairs.py
 if [ "$?" -ne "0" ]; then
     EXIT_CODE=1
 fi
-nosetests -v -s ./medium/tests/test_servers_action.py
+#nosetests -v -s ./medium/tests/test_servers_action.py
+#if [ "$?" -ne "0" ]; then
+#    EXIT_CODE=1
+#fi
+nosetests -v -s ./medium/tests/test_reboot_server.py
 if [ "$?" -ne "0" ]; then
     EXIT_CODE=1
 fi
-nosetests -v -s ./medium/tests/test_servers.py
+nosetests -v -s ./medium/tests/test_create_image.py
 if [ "$?" -ne "0" ]; then
     EXIT_CODE=1
 fi
-nosetests -v -s ./medium/tests/test_servers2.py
+#nosetests -v -s ./medium/tests/test_servers.py
+#if [ "$?" -ne "0" ]; then
+#    EXIT_CODE=1
+#fi
+#nosetests -v -s ./medium/tests/test_servers2.py
+#if [ "$?" -ne "0" ]; then
+#    EXIT_CODE=1
+#fi
+nosetests -v -s ./medium/tests/test_create_server.py
+if [ "$?" -ne "0" ]; then
+    EXIT_CODE=1
+fi
+nosetests -v -s ./medium/tests/test_delete_update_server.py
+if [ "$?" -ne "0" ]; then
+    EXIT_CODE=1
+fi
+nosetests -v -s ./medium/tests/test_list_server.py
 if [ "$?" -ne "0" ]; then
     EXIT_CODE=1
 fi
