@@ -114,22 +114,24 @@ class FunctionalTest(unittest.TestCase):
                 self.config.nova.directory))
 
         # reset db.
-        subprocess.check_call('mysql -u%s -p%s -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -e "'
                               'DROP DATABASE IF EXISTS nova;'
                               'CREATE DATABASE nova;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
         subprocess.call('/opt/openstack/nova/bin/nova-manage db sync',
                         cwd=self.config.nova.directory, shell=True)
         try:
-            subprocess.check_call('mysql -u%s -p%s -e "'
+            subprocess.check_call('mysql -u%s -p%s -h%s -e "'
                               'connect ovs_quantum;'
                               'delete from networks;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
         except:
             pass
@@ -203,28 +205,31 @@ class FunctionalTest(unittest.TestCase):
             pass
 
     def exec_sql(self, sql):
-        exec_sql = 'mysql -u %s -p%s nova -e "' + sql + '"'
+        exec_sql = 'mysql -u %s -p%s -h%s nova -e "' + sql + '"'
         subprocess.check_call(exec_sql % (
                               self.config.mysql.user,
-                              self.config.mysql.password),
+                              self.config.mysql.password,
+                              self.config.mysql.host),
                               shell=True)
 
     def get_data_from_mysql(self, sql):
-        exec_sql = 'mysql -u %s -p%s nova -Ns -e "' + sql + '"'
+        exec_sql = 'mysql -u %s -p%s -h%s nova -Ns -e "' + sql + '"'
         result = subprocess.check_output(exec_sql % (
                                          self.config.mysql.user,
-                                         self.config.mysql.password),
+                                         self.config.mysql.password,
+                                         self.config.mysql.host),
                                          shell=True)
         return result
 
     def _dumpdb(self):
-        subprocess.check_call('mysql -u%s -p%s -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -e "'
                               'connect nova;'
             'select id, event_type,publisher_id, status from eventlog;'
             'select id,vm_state,power_state,task_state,deleted from instances;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
 
 

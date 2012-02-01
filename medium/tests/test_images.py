@@ -54,7 +54,7 @@ def setUpModule(module):
 
     try:
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D keystone -e "'
                               'DELETE FROM users WHERE name = \'user1\';'
                               'DELETE FROM users WHERE name = \'user2\';'
                               'DELETE FROM users WHERE name = \'user3\';'
@@ -64,7 +64,8 @@ def setUpModule(module):
                               '(SELECT * FROM users WHERE id = user_id);'
                               '"' % (
                                   config.mysql.user,
-                                  config.mysql.password),
+                                  config.mysql.password,
+                                  config.mysql.host),
                               shell=True)
 
         # create tenants.
@@ -104,7 +105,7 @@ def tearDownModule(module):
 
     # reset db
     try:
-        subprocess.check_call('mysql -u%s -p%s -D keystone -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D keystone -e "'
                               'SELECT * FROM tenants;'
                               'SELECT users.id AS user_id, users.name AS '
                               'user_name, password, tenants.name AS '
@@ -122,7 +123,8 @@ def tearDownModule(module):
                               '(SELECT * FROM users WHERE id = user_id);'
                               '"' % (
                                   config.mysql.user,
-                                  config.mysql.password),
+                                  config.mysql.password,
+                                  config.mysql.host),
                               shell=True)
     except Exception:
         pass
@@ -308,7 +310,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_when_image_amount_is_zero(self):
         """ List of all images should contain the expected image """
         # make sure no record in db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'CREATE TABLE IF NOT EXISTS images_wk '
                               'LIKE images;'
                               'DELETE FROM images_wk;'
@@ -316,7 +318,8 @@ class ImagesTest(FunctionalTest):
                               'DELETE FROM images;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
 
         # execute and assert
@@ -325,12 +328,13 @@ class ImagesTest(FunctionalTest):
         self.assertEqual(0, len(images))
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'INSERT INTO images SELECT * from images_wk;'
                               'DROP TABLE images_wk;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
 
     @attr(kind='medium')
@@ -349,7 +353,7 @@ class ImagesTest(FunctionalTest):
         self.img_client.wait_for_image_status(image_id, 'ACTIVE')
 
         # delete images for test
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'CREATE TABLE IF NOT EXISTS images_wk '
                               'LIKE images;'
                               'DELETE FROM images_wk;'
@@ -359,6 +363,7 @@ class ImagesTest(FunctionalTest):
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id,
                                   image_id),
                               shell=True)
@@ -374,12 +379,13 @@ class ImagesTest(FunctionalTest):
         self.img_client.wait_for_image_not_exists(image_id)
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'INSERT INTO images SELECT * from images_wk;'
                               'DROP TABLE images_wk;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
 
     @attr(kind='medium')
@@ -402,7 +408,7 @@ class ImagesTest(FunctionalTest):
             time.sleep(5)
 
         # delete images
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'CREATE TABLE IF NOT EXISTS images_wk '
                               'LIKE images;'
                               'DELETE FROM images_wk;'
@@ -412,6 +418,7 @@ class ImagesTest(FunctionalTest):
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   ','.join(image_ids),
                                   ','.join(image_ids)),
                               shell=True)
@@ -429,12 +436,13 @@ class ImagesTest(FunctionalTest):
             self.img_client.wait_for_image_not_exists(image_id)
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'INSERT INTO images SELECT * from images_wk;'
                               'DROP TABLE images_wk;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
 
     @attr(kind='medium')
@@ -492,11 +500,12 @@ class ImagesTest(FunctionalTest):
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id),
                               shell=True)
 
@@ -513,12 +522,13 @@ class ImagesTest(FunctionalTest):
         name = 'server_' + self._testMethodName
         image_id = self.glance.add(name, 'aki', 'aki', tmp_file)
         # update the image
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'UPDATE images SET container_format=\'test\' '
                               'WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id),
                               shell=True)
 
@@ -528,11 +538,12 @@ class ImagesTest(FunctionalTest):
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id),
                               shell=True)
 
@@ -555,13 +566,14 @@ class ImagesTest(FunctionalTest):
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM image_properties '
                               'WHERE image_id = %s;'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id,
                                   image_id),
                               shell=True)
@@ -585,13 +597,14 @@ class ImagesTest(FunctionalTest):
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM image_properties '
                               'WHERE image_id = %s;'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id,
                                   image_id),
                               shell=True)
@@ -615,13 +628,14 @@ class ImagesTest(FunctionalTest):
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM image_properties '
                               'WHERE image_id = %s;'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id,
                                   image_id),
                               shell=True)
@@ -755,7 +769,7 @@ class ImagesTest(FunctionalTest):
     def test_list_images_with_detail_when_image_amount_is_zero(self):
         """ Detailed list of images should contain the expected image """
         # delete images for test
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'CREATE TABLE IF NOT EXISTS images_wk '
                               'LIKE images;'
                               'DELETE FROM images_wk;'
@@ -763,7 +777,8 @@ class ImagesTest(FunctionalTest):
                               'DELETE FROM images;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
 
         # execute and assert
@@ -772,12 +787,13 @@ class ImagesTest(FunctionalTest):
         self.assertEqual(0, len(images))
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'INSERT INTO images SELECT * from images_wk;'
                               'DROP TABLE images_wk;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
 
     @attr(kind='medium')
@@ -796,7 +812,7 @@ class ImagesTest(FunctionalTest):
         self.img_client.wait_for_image_status(image_id, 'ACTIVE')
 
         # delete images for test
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'CREATE TABLE IF NOT EXISTS images_wk '
                               'LIKE images;'
                               'DELETE FROM images_wk;'
@@ -806,6 +822,7 @@ class ImagesTest(FunctionalTest):
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id,
                                   image_id),
                               shell=True)
@@ -821,12 +838,13 @@ class ImagesTest(FunctionalTest):
         self.img_client.wait_for_image_not_exists(image_id)
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'INSERT INTO images SELECT * from images_wk;'
                               'DROP TABLE images_wk;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
 
     @attr(kind='medium')
@@ -849,7 +867,7 @@ class ImagesTest(FunctionalTest):
             time.sleep(5)
 
         # delete images for test
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'CREATE TABLE IF NOT EXISTS images_wk '
                               'LIKE images;'
                               'DELETE FROM images_wk;'
@@ -859,6 +877,7 @@ class ImagesTest(FunctionalTest):
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   ','.join(image_ids),
                                   ','.join(image_ids)),
                               shell=True)
@@ -876,12 +895,13 @@ class ImagesTest(FunctionalTest):
             self.img_client.wait_for_image_not_exists(image_id)
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'INSERT INTO images SELECT * from images_wk;'
                               'DROP TABLE images_wk;'
                               '"' % (
                                   self.config.mysql.user,
-                                  self.config.mysql.password),
+                                  self.config.mysql.password,
+                                  self.config.mysql.host),
                               shell=True)
 
     @attr(kind='medium')
@@ -931,11 +951,12 @@ class ImagesTest(FunctionalTest):
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id),
                               shell=True)
 
@@ -952,12 +973,13 @@ class ImagesTest(FunctionalTest):
         name = 'server_' + self._testMethodName
         image_id = self.glance.add(name, 'aki', 'aki', tmp_file)
         # update the image
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'UPDATE images SET container_format=\'test\' '
                               'WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id),
                               shell=True)
 
@@ -967,11 +989,12 @@ class ImagesTest(FunctionalTest):
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id),
                               shell=True)
 
@@ -994,13 +1017,14 @@ class ImagesTest(FunctionalTest):
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM image_properties '
                               'WHERE image_id = %s;'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id,
                                   image_id),
                               shell=True)
@@ -1024,13 +1048,14 @@ class ImagesTest(FunctionalTest):
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM image_properties '
                               'WHERE image_id = %s;'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id,
                                   image_id),
                               shell=True)
@@ -1055,13 +1080,14 @@ class ImagesTest(FunctionalTest):
         self.assertTrue(str(image_id) in [x['id'] for x in images])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM image_properties '
                               'WHERE image_id = %s;'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id,
                                   image_id),
                               shell=True)
@@ -1327,11 +1353,12 @@ class ImagesTest(FunctionalTest):
         self.assertEqual(str(image_id), image['id'])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id),
                               shell=True)
 
@@ -1348,12 +1375,13 @@ class ImagesTest(FunctionalTest):
         name = 'server_' + self._testMethodName
         image_id = self.glance.add(name, 'aki', 'aki', tmp_file)
         # update the image
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'UPDATE images SET container_format=\'test\' '
                               'WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id),
                               shell=True)
 
@@ -1364,11 +1392,12 @@ class ImagesTest(FunctionalTest):
         self.assertEqual(str(image_id), image['id'])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id),
                               shell=True)
 
@@ -1392,13 +1421,14 @@ class ImagesTest(FunctionalTest):
         self.assertEqual(str(image_id), image['id'])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM image_properties '
                               'WHERE image_id = %s;'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id,
                                   image_id),
                               shell=True)
@@ -1423,13 +1453,14 @@ class ImagesTest(FunctionalTest):
         self.assertEqual(str(image_id), image['id'])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM image_properties '
                               'WHERE image_id = %s;'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id,
                                   image_id),
                               shell=True)
@@ -1454,13 +1485,14 @@ class ImagesTest(FunctionalTest):
         self.assertEqual(str(image_id), image['id'])
 
         # reset db
-        subprocess.check_call('mysql -u%s -p%s -D glance -e "'
+        subprocess.check_call('mysql -u%s -p%s -h%s -D glance -e "'
                               'DELETE FROM image_properties '
                               'WHERE image_id = %s;'
                               'DELETE FROM images WHERE id = %s;'
                               '"' % (
                                   self.config.mysql.user,
                                   self.config.mysql.password,
+                                  self.config.mysql.host,
                                   image_id,
                                   image_id),
                               shell=True)
