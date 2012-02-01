@@ -27,19 +27,32 @@ LOG = logging.getLogger('log-for-fake-db')
 
 def stopGlanceService():
     glance_havoc = ssh_manager.GlanceHavoc()
-    ssh_con = glance_havoc.connect('127.0.0.1', 'openstack',
-                        'openstack', glance_havoc.config.nodes.ssh_timeout)
+    ssh_con = glance_havoc.connect(
+                        glance_havoc.config.nodes.glance.ip,
+                        glance_havoc.config.nodes.glance.user,
+                        glance_havoc.config.nodes.glance.password,
+                        glance_havoc.config.nodes.ssh_timeout)
 
     glance_havoc.stop_glance_api()
 
 
 def startLibvirtService():
-   havoc = ssh_manager.HavocManager()
-   havoc._run_cmd("sudo service libvirt-bin start")
+    compute_havoc = ssh_manager.ComputeHavoc()
+    compute_ssh_con = compute_havoc.connect(
+                            compute_havoc.config.nodes.compute.ip,
+                            compute_havoc.config.nodes.compute.user,
+                            compute_havoc.config.nodes.compute.password,
+                            self.compute_havoc.config.nodes.ssh_timeout)
+    compute_havoc._run_cmd("sudo service libvirt-bin start")
 
 def stopLibvirtService():
-   havoc = ssh_manager.HavocManager()
-   havoc._run_cmd("sudo service libvirt-bin stop")
+    compute_havoc = ssh_manager.ComputeHavoc()
+    compute_ssh_con = compute_havoc.connect(
+                            compute_havoc.config.nodes.compute.ip,
+                            compute_havoc.config.nodes.compute.user,
+                            compute_havoc.config.nodes.compute.password,
+                            self.compute_havoc.config.nodes.ssh_timeout)
+    compute_havoc._run_cmd("sudo service libvirt-bin stop")
 
 def startDBService():
    havoc = ssh_manager.HavocManager()

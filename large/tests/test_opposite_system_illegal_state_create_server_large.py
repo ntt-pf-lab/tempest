@@ -24,7 +24,7 @@ from medium.tests.utils import (
         cleanup_virtual_instances, cleanup_processes)
 
 
-config = storm.config.StormConfig('etc/medium-less-build_timeout.conf')
+config = storm.config.StormConfig('etc/large.conf')
 environ_processes = []
 
 
@@ -133,20 +133,33 @@ class LibvirtFunctionalTest(unittest.TestCase):
         emphasised_print(self.id())
 
         self.havoc = ssh_manager.HavocManager()
-        self.ssh_con = self.havoc.connect('127.0.0.1', 'openstack',
-                        'openstack', self.havoc.config.nodes.ssh_timeout)
 
-        self.glance_havoc = ssh_manager.GlanceHavoc(host='127.0.0.1',
-            username='openstack', password='openstack',
-            api_config_file=os.path.join(self.config.glance.directory, self.config.glance.api_config),
-            registry_config_file=os.path.join(self.config.glance.directory, self.config.glance.registry_config))
+        self.ssh_con = self.havoc.connect(self.havoc.config.nodes.api.ip,
+                                          self.havoc.config.nodes.api.user,
+                                          self.havoc.config.nodes.api.password,
+                                          self.havoc.config.nodes.ssh_timeout)
+
+        self.glance_havoc = ssh_manager.GlanceHavoc(
+                            host=self.havoc.config.nodes.glance.ip,
+                            username=self.havoc.config.nodes.glance.user,
+                            password=self.havoc.config.nodes.glance.password,
+            api_config_file=os.path.join(self.config.glance.directory,
+                                         self.config.glance.api_config),
+            registry_config_file=os.path.join(self.config.glance.directory,
+                                        self.config.glance.registry_config))
             
-        self.glance_ssh_con = self.glance_havoc.connect('127.0.0.1', 'openstack',
-                            'openstack', self.glance_havoc.config.nodes.ssh_timeout)
+        self.glance_ssh_con = self.glance_havoc.connect(
+                                    self.havoc.config.nodes.glance.ip,
+                                    self.havoc.config.nodes.glance.user,
+                                    self.havoc.config.nodes.glance.password,
+                                    self.glance_havoc.config.nodes.ssh_timeout)
 
         self.compute_havoc = ssh_manager.ComputeHavoc()
-        self.compute_ssh_con = self.compute_havoc.connect('127.0.0.1', 'openstack',
-                            'openstack', self.compute_havoc.config.nodes.ssh_timeout)
+        self.compute_ssh_con = self.compute_havoc.connect(
+                                self.havoc.config.nodes.compute.ip,
+                                self.havoc.config.nodes.compute.user,
+                                self.havoc.config.nodes.compute.password,
+                                self.compute_havoc.config.nodes.ssh_timeout)
 
         self.os = openstack.Manager(config=self.config)
         self.image_ref = self.config.env.image_ref
@@ -211,7 +224,7 @@ class LibvirtFunctionalTest(unittest.TestCase):
     def get_fake_path(self, name):
         return os.path.join(
                 os.path.dirname(__file__),
-                'fakes',
+                '../../medium/tests/fakes',
                 name)
 
     def get_nova_path(self, name):
@@ -226,7 +239,7 @@ class CreateErrorNoStopTest(LibvirtFunctionalTest):
             fakepath, fake_patch_name, other_module_patchs):
 
         base_dir = os.path.join(self.config.nova.directory, 'instances/*')
-        self.havoc._run_cmd('sudo rm -fr ' + base_dir)
+        self.compute_havoc._run_cmd('sudo rm -fr ' + base_dir)
         # start fake nova-compute for libvirt error
         patches = [(monkey_module, fake_patch_name)]
         if other_module_patchs:
@@ -420,7 +433,7 @@ class CreateStopGlanceTest(LibvirtFunctionalTest):
             fakepath, fake_patch_name, other_module_patchs, status='ACTIVE'):
 
         base_dir = os.path.join(self.config.nova.directory, 'instances/*')
-        self.havoc._run_cmd('sudo rm -fr ' + base_dir)
+        self.compute_havoc._run_cmd('sudo rm -fr ' + base_dir)
         # start fake nova-compute for libvirt error
         patches = [(monkey_module, fake_patch_name)]
         if other_module_patchs:
@@ -484,7 +497,7 @@ class CreateStopLibvirtTest(LibvirtFunctionalTest):
 
     def tearDown(self):
         try:
-            self.havoc._run_cmd("sudo service libvirt-bin start")
+            self.compute_havoc._run_cmd("sudo service libvirt-bin start")
         except:
             pass
         try:
