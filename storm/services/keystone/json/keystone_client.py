@@ -21,6 +21,7 @@ from storm import exceptions
 import json
 import time
 import httplib2
+from cloudfiles.fjson import json_loads
 
 class KeystoneClient(object):
 
@@ -40,10 +41,9 @@ class KeystoneClient(object):
         post_body = {
             'name': name,
             'password': password,
+            'tenantId': tenant_id,
             'email': email
         }
-        if tenant_id != None:
-            post_body['tenantId'] = tenant_id
         post_body = json.dumps({'user': post_body})
         resp, body = self.admin_client.post('users', post_body, self.headers)
         body = json.loads(body)
@@ -186,3 +186,11 @@ class TokenClient(object):
         resp, body = self.http_obj.request(url, method,
                                            headers=headers, body=body)
         return resp, body
+
+    def get_token(self, user, password, tenant):
+        resp, body = self.auth(user, password, tenant)
+        if resp['status'] != '202':
+            body = json_loads(body)
+            access = body['access']
+            token = access['token']
+            return token['id']
