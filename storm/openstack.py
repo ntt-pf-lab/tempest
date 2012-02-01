@@ -5,6 +5,7 @@ from storm.services.nova.json.servers_client import ServersClient
 from storm.services.keystone.json.keystone_client import KeystoneClient
 
 import storm.config
+from storm.services.quantum.json.quantum_client import QuantumClient
 
 
 class Manager(object):
@@ -44,6 +45,11 @@ class Manager(object):
                                                   self.config.keystone.auth_url,
                                                   self.config.keystone.tenant_name,
                                                   config=config)
+            self.quantum_client = QuantumClient(self.config.nova.username,
+                                                self.config.nova.api_key,
+                                                self.config.nova.auth_url,
+                                                self.config.nova.tenant_name,
+                                                config=config)
         else:
             #Assuming basic/native authentication
             self.servers_client = ServersClient(self.config.nova.username,
