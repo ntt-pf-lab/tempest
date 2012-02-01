@@ -2,6 +2,7 @@ import os
 import subprocess
 import time
 import urllib
+from stackmonkey import manager
 
 
 def wait_to_launch(host, port):
@@ -53,38 +54,38 @@ class Process(object):
 
 class GlanceRegistryProcess(Process):
     def __init__(self, directory, config, **kwargs):
-        super(GlanceRegistryProcess, self)\
-                .__init__(directory,
-                          "/opt/openstack/glance/bin/glance-registry --config-file=%s" % config,
-                          **kwargs)
+        self.registry_havoc = manager.GlanceHavoc(registry_config_file=config,
+                **kwargs)
+
+    def start(self):
+        self.registry_havoc.start_glance_registry()
+
+    def stop(self):
+        self.registry_havoc.stop_glance_registry()
 
 
 class GlanceApiProcess(Process):
     def __init__(self, directory, config, host, port, **kwargs):
-        super(GlanceApiProcess, self)\
-                .__init__(directory,
-                          "/opt/openstack/glance/bin/glance-api --config-file=%s" % config,
-                          **kwargs)
-        self.host = host
-        self.port = port
+        self.glance_api_havoc = manager.GlanceHavoc(host, api_config_file=config,
+                **kwargs)
 
     def start(self):
-        super(GlanceApiProcess, self).start()
-        wait_to_launch(self.host, self.port)
+        self.glance_api_havoc.start_glance_api()
+
+    def stop(self):
+        self.glance_api_havoc.stop_glance_api()
 
 
 class KeystoneProcess(Process):
     def __init__(self, directory, config, host, port, **kwargs):
-        super(KeystoneProcess, self)\
-                .__init__(directory,
-                          "/opt/openstack/glance/bin/keystone --config-file %s -d" % config,
-                          **kwargs)
-        self.host = host
-        self.port = port
+        self.keystone_havoc = manager.KeystoneHavoc(host, config_file=config,
+                **kwargs)
 
     def start(self):
-        super(KeystoneProcess, self).start()
-        wait_to_launch(self.host, self.port)
+        self.keystone_havoc.start_keystone()
+
+    def stop(self):
+        self.keystone_havoc.stop_keystone()
 
 
 class NovaProcess(Process):
@@ -114,66 +115,68 @@ class NovaProcess(Process):
 
 class NovaApiProcess(NovaProcess):
     def __init__(self, directory, host, port, **kwargs):
-        super(NovaApiProcess, self)\
-                .__init__(directory, "bin/nova-api", **kwargs)
-        self.host = host
-        self.port = port
+        self.api_havoc = manager.ControllerHavoc(host, **kwargs)
 
     def start(self):
-        super(NovaApiProcess, self).start()
-        wait_to_launch(self.host, self.port)
+        self.api_havoc.start_nova_api()
+
+    def stop(self):
+        self.api_havoc.stop_nova_api()
 
 
 class NovaComputeProcess(NovaProcess):
     def __init__(self, directory, **kwargs):
-        super(NovaComputeProcess, self)\
-                .__init__(directory, "bin/nova-compute", **kwargs)
+        self.compute_havoc = manager.ComputeHavoc(**kwargs)
 
     def start(self):
-        if getattr(self, '_wrapped_command', None) is None:
-            self._original_command = self.command
-            self._wrapped_command = "sg libvirtd '%s'" % self.command
-        self.command = self._wrapped_command
-        super(NovaComputeProcess, self).start()
-        time.sleep(5)
+        self.compute_havoc.start_nova_compute()
 
     def stop(self):
-        kill_children_process(self._process.pid)
-        super(NovaComputeProcess, self).stop()
+        self.compute_havoc.stop_nova_compute()
 
 
 class NovaNetworkProcess(NovaProcess):
     def __init__(self, directory, **kwargs):
-        super(NovaNetworkProcess, self)\
-                .__init__(directory, "bin/nova-network", **kwargs)
+        self.network_havoc = manager.NetworkHavoc(**kwargs)
+
+    def start(self):
+        self.network_havoc.start_nova_network()
+
+    def stop(self):
+        self.network_havoc.stop_nova_network()
 
 
 class NovaSchedulerProcess(NovaProcess):
     def __init__(self, directory, **kwargs):
-        super(NovaSchedulerProcess, self)\
-                .__init__(directory, "bin/nova-scheduler", **kwargs)
+        self.scheduler_havoc = manager.ControllerHavoc(**kwargs)
+
+    def start(self):
+        self.scheduler_havoc.start_nova_scheduler()
+
+    def stop(self):
+        self.scheduler_havoc.stop_nova_scheduler()
 
 
 class QuantumProcess(Process):
     def __init__(self, directory, config, **kwargs):
-        super(QuantumProcess, self)\
-                .__init__(directory, "bin/quantum " + config, **kwargs)
+        self.quantum_havoc = manager.QuantumHavoc(config_file=config, **kwargs)
+
+    def start(self):
+        self.quantum_havoc.start_quantum()
+
+    def stop(self):
+        self.quantum_havoc.stop_quantum()
 
 
 class QuantumPluginOvsAgentProcess(Process):
     def __init__(self, directory, config, **kwargs):
-        super(QuantumPluginOvsAgentProcess, self)\
-                .__init__(directory, "sudo python "
-                                     "quantum/plugins/"
-                                         "openvswitch/agent/"
-                                         "ovs_quantum_agent.py "
-                                     "-v " + config,
-                          **kwargs)
+        self.havoc = manager.QuantumHavoc(agent_config_file=config, **kwargs)
+
+    def start(self):
+        self.havoc.start_quantum_plugin()
 
     def stop(self):
-        kill_children_process(self._process.pid, force=True)
-        os.system('/usr/bin/sudo /bin/kill %d' % self._process.pid)
-        self._process = None
+        self.havoc.stop_quantum_plugin()
 
 
 # Fakes

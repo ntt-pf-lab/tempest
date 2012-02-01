@@ -80,17 +80,19 @@ class FunctionalTest(unittest.TestCase):
         """
 
     def exec_sql(self, sql, db='nova'):
-        exec_sql = 'mysql -u %s -p%s ' + db + ' -e "' + sql + '"'
+        exec_sql = 'mysql -u %s -p%s -h%s ' + db + ' -e "' + sql + '"'
         subprocess.check_call(exec_sql % (
                               self.config.mysql.user,
-                              self.config.mysql.password),
+                              self.config.mysql.password,
+                              self.config.mysql.host),
                               shell=True)
 
     def get_data_from_mysql(self, sql, db='nova'):
-        exec_sql = 'mysql -u %s -p%s ' + db + ' -Ns -e "' + sql + '"'
+        exec_sql = 'mysql -u %s -p%s -h%s ' + db + ' -Ns -e "' + sql + '"'
         result = subprocess.check_output(exec_sql % (
                                          self.config.mysql.user,
-                                         self.config.mysql.password),
+                                         self.config.mysql.password,
+                                         self.config.mysql.host),
                                          shell=True)
 
         return result
@@ -1909,5 +1911,4 @@ class ServersTest(FunctionalTest):
         resp, server = self.ss_client.get_server(id2)
         name2 = server['name']
         self.assertEqual(name1, name2)
-
 

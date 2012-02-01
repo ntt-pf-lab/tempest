@@ -1,0 +1,11 @@
+# test frag start
+    import time
+    import os
+    fileflag = '/home/openstack/workspace/openstack-integration-tests/flag_stop_mysql'
+    f = open(fileflag, 'w')
+    f.write('stop mysql and delete this file to continue')
+    f.close()
+    while os.path.exists(fileflag):
+        time.sleep(10)
+# test frag end
+
