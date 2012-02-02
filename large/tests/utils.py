@@ -1,7 +1,9 @@
+import os
 import re
 import subprocess
 import tempfile
 import time
+import stackmonkey.manager as ssh_manager
 
 
 def cleanup_virtual_instances():
@@ -46,6 +48,21 @@ def silent_check_call(*args, **kwargs):
         raise
 
 
+def startDBService():
+    havoc = ssh_manager.HavocManager()
+    havoc._run_cmd("sudo service mysql start")
+
+
+def stopDBService():
+    havoc = ssh_manager.HavocManager()
+    havoc._run_cmd("sudo service mysql stop")
+
+
+def checkDBService():
+    havoc = ssh_manager.HavocManager()
+    return havoc._run_cmd("sudo service mysql status")
+
+
 def exist_vm_in_virsh(vm_id):
     for line in subprocess.check_output('virsh list --all',
                                         shell=True).split('\n')[2:-2]:
@@ -67,10 +84,11 @@ def get_vm_state_in_virsh(vm_id):
 
 
 def _exec_sql(config, sql, db):
-    exec_sql = 'mysql -u %s -p%s %s -Ns -e "' + sql + '"'
+    exec_sql = 'mysql -u %s -p%s -h%s %s -Ns -e "' + sql + '"'
     results = subprocess.check_output(exec_sql
                                       % (config.mysql.user,
                                          config.mysql.password,
+                                         config.mysql.host,
                                          db),
                                       shell=True)
     return [tuple(result.split('\t'))
@@ -79,18 +97,19 @@ def _exec_sql(config, sql, db):
 
 def _get_instance_in_db(config, id):
     sql = 'select id, vm_state, power_state, task_state, deleted '\
-          'from instances where id = %s;' % id
+          'from instances where id = %s;' % str(id)
     return _exec_sql(config, sql, db='nova')
 
 
 def _get_vif_in_db(config, id):
     sql = 'select id, instance_id, network_id, address, deleted '\
-          'from virtual_interfaces where id = %s;' % id
+          'from virtual_interfaces where id = %s;' % str(id)
     return _exec_sql(config, sql, db='nova')
 
 
 def _get_image_in_db(config, id):
-    sql = 'select id, status, deleted from images where id = %s;' % id
+    sql = 'select id, status, deleted, name, is_public, disk_format, '\
+          'container_format, location from images where id = %s;' % str(id)
     return _exec_sql(config, sql, db='glance')
 
 
@@ -172,3 +191,60 @@ def get_image_deleted_in_db(config, id):
         raise Exception('Image could not be found in DB.')
 
     return results[0][2]
+
+
+def get_image_name_in_db(config, id):
+    results = _get_image_in_db(config, id)
+    if not results:
+        raise Exception('Image could not be found in DB.')
+
+    return results[0][3]
+
+
+def get_image_is_public_in_db(config, id):
+    results = _get_image_in_db(config, id)
+    if not results:
+        raise Exception('Image could not be found in DB.')
+
+    return results[0][4]
+
+
+def get_image_disk_format_in_db(config, id):
+    results = _get_image_in_db(config, id)
+    if not results:
+        raise Exception('Image could not be found in DB.')
+
+    return results[0][5]
+
+
+def get_image_container_format_in_db(config, id):
+    results = _get_image_in_db(config, id)
+    if not results:
+        raise Exception('Image could not be found in DB.')
+
+    return results[0][6]
+
+
+def get_image_location_in_db(config, id):
+    results = _get_image_in_db(config, id)
+    if not results:
+        raise Exception('Image could not be found in DB.')
+
+    return results[0][7]
+
+
+def _id_to_instance_id(id, template='instance-%08x'):
+    """Convert an ID (int) to an instance ID (instance-[base 16 number])"""
+    return template % id
+
+
+def exist_instance_path(config, id):
+    instance_name = _id_to_instance_id(int(id))
+    instance_path = os.path.join(config.nova.directory,
+                                 'instances', instance_name)
+    return os.path.exists(instance_path)
+
+
+def exist_image_path(config, id):
+    image_path = os.path.join(config.glance.directory, 'images', str(id))
+    return os.path.exists(image_path)
