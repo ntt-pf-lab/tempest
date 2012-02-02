@@ -113,6 +113,16 @@ def _get_image_in_db(config, id):
     return _exec_sql(config, sql, db='glance')
 
 
+def _get_image_id_by_image_name_in_db(config, image_name):
+    sql = 'select id from images where name = \'%s\' '\
+          'order by created_at desc;' % image_name
+    results = _exec_sql(config, sql, db='glance')
+    if not results:
+        return None
+
+    return results[0][0]
+
+
 def exist_instance_in_db(config, id):
     results = _get_instance_in_db(config, id)
     if results:
@@ -232,6 +242,13 @@ def get_image_location_in_db(config, id):
 
     return results[0][7]
 
+
+def get_image_id_by_image_name_in_db(config, image_name):
+    image_id = _get_image_id_by_image_name_in_db(config, image_name)
+    if not image_id:
+        raise Exception('Image could not be found in DB.')
+
+    return int(image_id)
 
 def _id_to_instance_id(id, template='instance-%08x'):
     """Convert an ID (int) to an instance ID (instance-[base 16 number])"""
