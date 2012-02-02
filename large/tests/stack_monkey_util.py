@@ -49,7 +49,7 @@ nova_api = NovaApiProcess(
 nova_compute = NovaComputeProcess(config.nova.directory,
 #                                     patches=patches,
 #                                     env=env,
-                    config_file=config.nova.directory + '/etc/nova.conf')
+                    config_file=config.nova.directory + 'etc/nova.conf')
 
 
 nova_network = NovaNetworkProcess(
@@ -78,13 +78,27 @@ ssh_con = havoc.connect(havoc.config.nodes.api.ip,
                                           havoc.config.nodes.ssh_timeout)
 
 
-ctl_havoc = ssh_manager.ControllerHavoc()
+ctl_havoc = ssh_manager.ControllerHavoc(havoc.config.nodes.api.ip,
+                                          havoc.config.nodes.api.user,
+                                          havoc.config.nodes.api.password,
+                                          havoc.config.nodes.ssh_timeout)
 
 
 ctl_ssh_con = ctl_havoc.connect(ctl_havoc.config.nodes.api.ip,
                                           ctl_havoc.config.nodes.api.user,
                                           ctl_havoc.config.nodes.api.password,
                                           ctl_havoc.config.nodes.ssh_timeout)
+
+ctl_havoc_pkg = ssh_manager.ControllerHavoc(havoc.config.nodes.api.ip,
+                                          havoc.config.nodes.api.user,
+                                          havoc.config.nodes.api.password,
+                                          havoc.config.nodes.ssh_timeout)
+ctl_havoc_pkg.deploy_mode = 'pkg-multi'
+
+ctl_ssh_con_pkg = ctl_havoc_pkg.connect(ctl_havoc_pkg.config.nodes.api.ip,
+                                          ctl_havoc_pkg.config.nodes.api.user,
+                                          ctl_havoc_pkg.config.nodes.api.password,
+                                          ctl_havoc_pkg.config.nodes.ssh_timeout)
 
 
 glance_havoc = ssh_manager.GlanceHavoc(
@@ -108,7 +122,12 @@ compute_havoc = ssh_manager.ComputeHavoc(
                         host=havoc.config.nodes.compute.ip,
                         username=havoc.config.nodes.compute.user,
                         password=havoc.config.nodes.compute.password,
-                        config_file=config.nova.directory + '/etc/nova.conf')
+                        config_file=os.path.join(config.nova.directory,
+                                                 'etc/nova.conf') +\
+                                                 ' --logfile=' +\
+                                    os.path.join(config.nova.directory,
+                                                 '../log/nova-compute.log')
+                        )
 
 
 compute_ssh_con = compute_havoc.connect(
@@ -116,9 +135,6 @@ compute_ssh_con = compute_havoc.connect(
                                 havoc.config.nodes.compute.user,
                                 havoc.config.nodes.compute.password,
                                 compute_havoc.config.nodes.ssh_timeout)
-
-global _binary_name
-_binary_name = 'monkey_utils.py'
 
 
 def start_nova_api():
@@ -130,15 +146,16 @@ def stop_nova_api():
 
 
 def start_mysql():
-    ctl_havoc.start_mysql()
+    ctl_havoc_pkg.start_mysql()
 
 
 def stop_mysql():
-    ctl_havoc.stop_mysql()
+    ctl_havoc_pkg.stop_mysql()
 
 
 def start_glance_api():
     glance_havoc.start_glance_api()
+    time.sleep(0.1)
 
 
 def stop_glance_api():
@@ -147,8 +164,7 @@ def stop_glance_api():
 
 
 def start_nova_compute():
-#    compute_havoc.start_nova_compute
-    nova_compute.start()
+    compute_havoc.start_nova_compute()
 
 
 def stop_nova_compute():

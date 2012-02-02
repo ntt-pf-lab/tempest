@@ -38,52 +38,83 @@ class StackMonkeyTest(unittest.TestCase):
     def test_stop_nova_api(self):
 
         monkeyutil.stop_nova_api()
+        host = monkeyutil.havoc.config.nodes.api.ip
+        username = monkeyutil.havoc.config.nodes.api.user
+        pscmd = "ssh %s@%s 'ps -ef|grep nova-api|grep -v grep'" % (username, host)
+
         self.assertRaises(subprocess.CalledProcessError,
-            subprocess.check_call, 'ps -ef|grep nova-api|grep -v grep',
+            subprocess.check_call, pscmd,
                       shell=True)
 
     def test_start_nova_api(self):
 
         monkeyutil.start_nova_api()
-        subprocess.check_call('ps -ef|grep nova-api|grep -v grep',
+        host = monkeyutil.havoc.config.nodes.api.ip
+        username = monkeyutil.havoc.config.nodes.api.user
+        pscmd = "ssh %s@%s 'ps -ef|grep nova-api|grep -v grep'" % (username, host)
+        subprocess.check_call(pscmd,
                       shell=True)
 
     def test_stop_glance_api(self):
 
         monkeyutil.stop_glance_api()
+        host = monkeyutil.havoc.config.nodes.glance.ip
+        username = monkeyutil.havoc.config.nodes.glance.user
+        pscmd = "ssh %s@%s 'ps -ef|grep glance-api|grep -v grep'" % (username, host)
+
         self.assertRaises(subprocess.CalledProcessError,
-            subprocess.check_call, 'ps -ef|grep glance-api|grep -v grep',
+            subprocess.check_call, pscmd,
                       shell=True)
 
     def test_start_glance_api(self):
 
         monkeyutil.start_glance_api()
-        subprocess.check_call('ps -ef|grep glance-api|grep -v grep',
+        host = monkeyutil.havoc.config.nodes.glance.ip
+        username = monkeyutil.havoc.config.nodes.glance.user
+
+        pscmd = "ssh %s@%s 'ps -ef|grep glance-api|grep -v grep'" % (username, host)
+        subprocess.check_call(pscmd,
                       shell=True)
 
     def test_stop_mysql(self):
 
         monkeyutil.stop_mysql()
+        host = monkeyutil.havoc.config.nodes.mysql.ip
+        username = monkeyutil.havoc.config.nodes.mysql.user
+
+        pscmd = "ssh %s@%s 'ps -ef|grep mysql|grep -v grep'" % (username, host)
         self.assertRaises(subprocess.CalledProcessError,
-            subprocess.check_call, 'ps -ef|grep mysql|grep -v grep',
+            subprocess.check_call, pscmd,
                       shell=True)
 
     def test_start_mysql(self):
 
         monkeyutil.start_mysql()
-        subprocess.check_call('ps -ef|grep mysql|grep -v grep',
+        host = monkeyutil.havoc.config.nodes.mysql.ip
+        username = monkeyutil.havoc.config.nodes.mysql.user
+
+        pscmd = "ssh %s@%s 'ps -ef|grep mysql|grep -v grep'" % (username, host)
+        subprocess.check_call(pscmd,
                       shell=True)
 
 
     def test_stop_nova_compute(self):
 
         monkeyutil.stop_nova_compute()
+        host = monkeyutil.havoc.config.nodes.compute.ip
+        username = monkeyutil.havoc.config.nodes.compute.user
+
+        pscmd = "ssh %s@%s 'ps -ef|grep nova-compute|grep -v grep'" % (username, host)
         self.assertRaises(subprocess.CalledProcessError,
-            subprocess.check_call, 'ps -ef|grep nova-compute|grep -v grep',
+            subprocess.check_call, pscmd,
                       shell=True)
 
     def test_start_nova_compute(self):
 
         monkeyutil.start_nova_compute()
-        subprocess.check_call('ps -ef|grep nova-compute|grep -v grep',
+        host = monkeyutil.havoc.config.nodes.compute.ip
+        username = monkeyutil.havoc.config.nodes.compute.user
+
+        pscmd = "ssh %s@%s 'ps -ef|grep nova-compute|grep -v grep'" % (username, host)
+        subprocess.check_call(pscmd,
                       shell=True)
