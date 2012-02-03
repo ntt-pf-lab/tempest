@@ -55,6 +55,73 @@ class StackMonkeyTest(unittest.TestCase):
         subprocess.check_call(pscmd,
                       shell=True)
 
+
+    def test_stop_nova_scheduler(self):
+
+        monkeyutil.stop_nova_scheduler()
+        host = monkeyutil.havoc.config.nodes.scheduler.ip
+        username = monkeyutil.havoc.config.nodes.scheduler.user
+        pscmd = "ssh %s@%s 'ps -ef|grep nova-scheduler|grep -v grep'" % (username, host)
+
+        self.assertRaises(subprocess.CalledProcessError,
+            subprocess.check_call, pscmd,
+                      shell=True)
+
+    def test_start_nova_scheduler(self):
+
+        monkeyutil.start_nova_scheduler()
+        host = monkeyutil.havoc.config.nodes.scheduler.ip
+        username = monkeyutil.havoc.config.nodes.scheduler.user
+        pscmd = "ssh %s@%s 'ps -ef|grep nova-scheduler|grep -v grep'" % (username, host)
+        subprocess.check_call(pscmd,
+                      shell=True)
+
+
+    def test_stop_nova_network(self):
+
+        monkeyutil.stop_nova_network()
+        host = monkeyutil.havoc.config.nodes.network.ip
+        username = monkeyutil.havoc.config.nodes.network.user
+        pscmd = "ssh %s@%s 'ps -ef|grep nova-network|grep -v grep'" % (username, host)
+
+        self.assertRaises(subprocess.CalledProcessError,
+            subprocess.check_call, pscmd,
+                      shell=True)
+
+    def test_start_nova_network(self):
+
+        monkeyutil.start_nova_network()
+        host = monkeyutil.havoc.config.nodes.network.ip
+        username = monkeyutil.havoc.config.nodes.network.user
+        pscmd = "ssh %s@%s 'ps -ef|grep nova-network|grep -v grep'" % (username, host)
+        subprocess.check_call(pscmd,
+                      shell=True)
+
+
+    def test_stop_quantum(self):
+
+        monkeyutil.stop_quantum()
+        host = monkeyutil.havoc.config.nodes.network.ip
+        username = monkeyutil.havoc.config.nodes.network.user
+        pscmd = "ssh %s@%s 'ps -ef|grep quantum|grep -v grep'" % (username, host)
+
+        self.assertRaises(subprocess.CalledProcessError,
+            subprocess.check_call, pscmd,
+                      shell=True)
+
+    def test_start_quantum(self):
+
+        monkeyutil.start_quantum()
+        host = monkeyutil.havoc.config.nodes.network.ip
+        username = monkeyutil.havoc.config.nodes.network.user
+        pscmd = "ssh %s@%s 'ps -ef|grep quantum|grep -v grep'" % (username, host)
+        subprocess.check_call(pscmd,
+                      shell=True)
+
+
+
+
+
     def test_stop_glance_api(self):
 
         monkeyutil.stop_glance_api()
@@ -98,6 +165,29 @@ class StackMonkeyTest(unittest.TestCase):
                       shell=True)
 
 
+    def test_stop_rabbitmq(self):
+
+        monkeyutil.stop_rabbitmq()
+        host = monkeyutil.havoc.config.nodes.rabbitmq.ip
+        username = monkeyutil.havoc.config.nodes.rabbitmq.user
+
+        pscmd = "ssh %s@%s 'ps -ef|grep rabbitmq|grep -v grep'" % (username, host)
+        self.assertRaises(subprocess.CalledProcessError,
+            subprocess.check_call, pscmd,
+                      shell=True)
+
+
+    def test_start_rabbitmq(self):
+
+        monkeyutil.start_rabbitmq()
+        host = monkeyutil.havoc.config.nodes.rabbitmq.ip
+        username = monkeyutil.havoc.config.nodes.rabbitmq.user
+
+        pscmd = "ssh %s@%s 'ps -ef|grep rabbitmq|grep -v grep'" % (username, host)
+        subprocess.check_call(pscmd,
+                      shell=True)
+
+
     def test_stop_nova_compute(self):
 
         monkeyutil.stop_nova_compute()
@@ -112,6 +202,20 @@ class StackMonkeyTest(unittest.TestCase):
     def test_start_nova_compute(self):
 
         monkeyutil.start_nova_compute()
+        host = monkeyutil.havoc.config.nodes.compute.ip
+        username = monkeyutil.havoc.config.nodes.compute.user
+
+        pscmd = "ssh %s@%s 'ps -ef|grep nova-compute|grep -v grep'" % (username, host)
+        subprocess.check_call(pscmd,
+                      shell=True)
+
+    def test_start_nova_compute_with_patch(self):
+
+        fake_path = 'create-error'
+        patch = []
+        patch.append(('nova.db.api',
+                      'fake_db.db_stop_patch'))
+        monkeyutil.start_nova_compute_with_patch(fake_path, patch)
         host = monkeyutil.havoc.config.nodes.compute.ip
         username = monkeyutil.havoc.config.nodes.compute.user
 

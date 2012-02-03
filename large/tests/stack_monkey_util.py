@@ -123,10 +123,7 @@ compute_havoc = ssh_manager.ComputeHavoc(
                         username=havoc.config.nodes.compute.user,
                         password=havoc.config.nodes.compute.password,
                         config_file=os.path.join(config.nova.directory,
-                                                 'etc/nova.conf') +\
-                                                 ' --logfile=' +\
-                                    os.path.join(config.nova.directory,
-                                                 '../log/nova-compute.log')
+                                                 'etc/nova.conf')
                         )
 
 
@@ -137,6 +134,26 @@ compute_ssh_con = compute_havoc.connect(
                                 compute_havoc.config.nodes.ssh_timeout)
 
 
+network_havoc = ssh_manager.NetworkHavoc(
+                        host=havoc.config.nodes.network.ip,
+                        username=havoc.config.nodes.network.user,
+                        password=havoc.config.nodes.network.password,
+                        config_file=os.path.join(config.nova.directory,
+                                                 'etc/nova.conf')
+                        )
+
+
+quantum_havoc = ssh_manager.QuantumHavoc(
+                        host=havoc.config.nodes.network.ip,
+                        username=havoc.config.nodes.network.user,
+                        password=havoc.config.nodes.network.password,
+                        config_file=os.path.join(config.quantum.directory,
+                                                 config.quantum.config),
+                        agent_config_file=os.path.join(config.quantum.directory,
+                                                 config.quantum.agent_config)
+                        )
+
+
 def start_nova_api():
     ctl_havoc.start_nova_api()
 
@@ -145,12 +162,45 @@ def stop_nova_api():
     ctl_havoc.stop_nova_api()
 
 
+def start_nova_scheduler():
+    ctl_havoc.start_nova_scheduler()
+
+
+def stop_nova_scheduler():
+    ctl_havoc.stop_nova_scheduler()
+
+
+def start_nova_network():
+    network_havoc.start_nova_network()
+
+
+def stop_nova_network():
+    network_havoc.stop_nova_network()
+
+
+def stop_quantum():
+    quantum_havoc.stop_quantum()
+
+
+def start_quantum():
+    quantum_havoc.start_quantum()
+    quantum_havoc.start_quantum_plugin()
+
+
 def start_mysql():
     ctl_havoc_pkg.start_mysql()
 
 
 def stop_mysql():
     ctl_havoc_pkg.stop_mysql()
+
+
+def start_rabbitmq():
+    ctl_havoc_pkg.start_rabbitmq()
+
+
+def stop_rabbitmq():
+    ctl_havoc_pkg.stop_rabbitmq()
 
 
 def start_glance_api():
@@ -167,16 +217,27 @@ def start_nova_compute():
     compute_havoc.start_nova_compute()
 
 
+def start_nova_compute_with_patch(fake_path, patches):
+    compute_havoc.python_path = _get_fake_path(fake_path) + ':' + _get_stack_path()
+    #[('nova.virt.libvirt.connection', 'fake_libvirt.libvirt_con_get_info_patch')]
+    compute_havoc._set_monkey_patch_args(patches)
+    compute_havoc.start_nova_compute()
+
+
 def stop_nova_compute():
     compute_havoc.stop_nova_compute()
 
 
-def get_fake_path(self, name):
+def _get_fake_path(name):
     return os.path.join(
             os.path.dirname(__file__),
             '../../medium/tests/fakes',
             name)
 
+def _get_stack_path():
+    return os.path.join(
+            os.path.dirname(__file__),
+            '../../stackmonkey')
 
 def get_nova_path(self, name):
     p = os.path.dirname(__file__)
