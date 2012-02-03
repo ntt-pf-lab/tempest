@@ -45,10 +45,10 @@ class HavocManager(object):
     def _run_cmd(self, command=None):
         """Execute remote shell command, return output if successful"""
         try:
-            if self.deploy_mode == 'devstack-local':
-                p = subprocess.Popen(command, shell=True, env=self.shell_env)
+            if self.deploy_mode == 'devstack-local' or not hasattr(self,'client'):
+                p = subprocess.Popen(command, shell=True, env=self.shell_env, stdout=subprocess.PIPE)
                 if p.returncode is None:
-                    return True
+                    return p.stdout.read()
                 return False
 
             elif self.deploy_mode in ('pkg-multi', 'devstack-remote'):
@@ -164,7 +164,7 @@ class HavocManager(object):
                                                 config_label,
                                                 config_file,
                                                 self.monkey_args)
-                    if service == 'nova-compute':
+                    if service == 'openstack-nova-compute':
                         command = export + 'sg libvirtd %s/bin/%s --flagfile=\
                                 %s %s' % (self.service_root, service,
                                         config_file,
@@ -174,7 +174,7 @@ class HavocManager(object):
                         self.service_root, service, config_file)
 
                 else:
-                    if service == 'nova-compute':
+                    if service == 'openstack-nova-compute':
                         command = export + 'sg libvirtd %s/bin/%s' % (
                                 self.service_root, service)
                     else:
@@ -206,7 +206,7 @@ class HavocManager(object):
             elif action == 'status':
                     return is_running
 
-            command = 'service %s %s' % (service, action)
+            command = 'sudo service %s %s' % (service, action)
             return self._run_cmd(command)
 
         # Configure call to action for a remote devstack setup
@@ -233,8 +233,8 @@ class ControllerHavoc(HavocManager):
                     config_file=None, **kwargs):
         super(ControllerHavoc, self).__init__(host, username, password,
                 **kwargs)
-        self.api_service = 'nova-api'
-        self.scheduler_service = 'nova-scheduler'
+        self.api_service = 'openstack-nova-api'
+        self.scheduler_service = 'openstack-nova-scheduler'
         self.rabbit_service = 'rabbitmq-server'
         self.mysql_service = 'mysql'
         self.config_file = config_file
@@ -286,7 +286,7 @@ class NetworkHavoc(HavocManager):
     def __init__(self, host=None, username='root', password='root',
                     config_file=None, **kwargs):
         super(NetworkHavoc, self).__init__(host, username, password, **kwargs)
-        self.network_service = 'nova-network'
+        self.network_service = 'openstack-nova-network'
         self.config_file = config_file
 
     def stop_nova_network(self):
@@ -317,7 +317,7 @@ class ComputeHavoc(HavocManager):
     def __init__(self, host=None, username='root', password='root',
                     config_file=None, **kwargs):
         super(ComputeHavoc, self).__init__(host, username, password, **kwargs)
-        self.compute_service = 'nova-compute'
+        self.compute_service = 'openstack-nova-compute'
         self.terminated_instances = []
         self.config_file = config_file
 
@@ -400,8 +400,8 @@ class GlanceHavoc(HavocManager):
     def __init__(self, host=None, username='root', password='root',
                         api_config_file=None, registry_config_file=None):
         super(GlanceHavoc, self).__init__(host, username, password)
-        self.api_service = 'glance-api'
-        self.registry_service = 'glance-registry'
+        self.api_service = 'openstack-glance-api'
+        self.registry_service = 'openstack-glance-registy'
         self.api_config_file = api_config_file
         self.registry_config_file = registry_config_file
 
@@ -432,7 +432,7 @@ class KeystoneHavoc(HavocManager):
     def __init__(self, host=None, username='root', password='root',
                     config_file=None):
         super(KeystoneHavoc, self).__init__(host, username, password)
-        self.keystone_service = 'keystone'
+        self.keystone_service = 'openstack-keystone'
         self.config_file = config_file
 
     def start_keystone(self):
@@ -451,7 +451,7 @@ class QuantumHavoc(HavocManager):
     def __init__(self, host=None, username='root', password='root',
                     config_file=None, agent_config_file=None, **kwargs):
         super(QuantumHavoc, self).__init__(host, username, password, **kwargs)
-        self.quantum_service = 'quantum'
+        self.quantum_service = 'openstack-quantum'
         self.quantum_plugin = "quantum/plugins/openvswitch/agent/" \
                                 "ovs_quantum_agent.py"
         self.config_file = config_file
