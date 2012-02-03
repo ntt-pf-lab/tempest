@@ -106,7 +106,7 @@ def _get_vif_in_db(config, id):
     return _exec_sql(config, sql, db='nova')
 
 def _get_fixed_ips_in_db(config, id):
-    sql = 'select address, instance_id, virtual_interface_id '\
+    sql = 'select deleted, address, instance_id, virtual_interface_id '\
           'from fixed_ips where instance_id = %s;' % str(id)
     return _exec_sql(config, sql, db='nova')
 
@@ -158,7 +158,8 @@ def get_instance_exist_fixed_ips_in_db(config, id):
     if cnt_result == 0:
         raise Exception('Instance does not exist in fixed_ips table.')
     fixed_ips_results = _get_fixed_ips_in_db(config, id)
-    return fixed_ips_results[:3]
+    return fixed_ips_results[0]
+
 
 def get_instance_task_state_in_db(config, id):
     results = _get_instance_in_db(config, id)
@@ -194,6 +195,14 @@ def get_vif_instance_id_in_db(config, id):
 
 def exist_image_in_db(config, id):
     results = _get_image_in_db(config, id)
+    if results:
+        return True
+    else:
+        return False
+
+
+def exist_image_by_image_name_in_db(config, image_name):
+    results = _get_image_id_by_image_name_in_db(config, image_name)
     if results:
         return True
     else:
@@ -278,3 +287,66 @@ def exist_instance_path(config, id):
 def exist_image_path(config, id):
     image_path = os.path.join(config.glance.directory, 'images', str(id))
     return os.path.exists(image_path)
+
+
+class GlanceWrapper(object):
+    def __init__(self, token, config):
+        self.path = config.glance.directory
+        self.conf = config.glance.api_config
+        self.host = config.glance.host
+        self.port = config.glance.port
+        self.token = token
+    
+    def _glance(self, action, params, yes=None):
+        cmd = "glance -A %s -H %s -p %s %s %s" %\
+             (self.token, self.host, self.port, action, params)
+        if yes:
+            cmd = ("yes %s|" % yes) + cmd
+        result = subprocess.check_output(cmd, cwd=self.path, shell=True)
+        return result
+
+    def index(self):
+        result = self._glance('index', '', yes="y")
+        return result
+
+    def add(self, image_name, image_format, container_format, image_file):
+        params = "name=%s is_public=true disk_format=%s container_format=%s "\
+                 "< %s" % (image_name,
+                           image_format,
+                           container_format,
+                           image_file)
+        result = self._glance('add', params)
+        # parse add new image ID: <image_id>
+        if result:
+            splited = str(result).split()
+            return splited[splited.count(splited)-1]
+
+    def add_image(self, image_name, image_format, container_format, image_file,
+                  kernel_id):
+        params = "name=%s is_public=true disk_format=%s container_format=%s "\
+                 "kernel_id=%s < %s" % (image_name,
+                                        image_format,
+                                        container_format,
+                                        kernel_id,
+                                        image_file)
+        result = self._glance('add', params)
+        # parse add new image ID: <image_id>
+        if result:
+            splited = str(result).split()
+            return splited[splited.count(splited)-1]
+
+
+    def delete(self, image_id):
+        result = self._glance('delete', image_id, yes="y")
+        if result:
+            return image_id
+
+    def detail(self, image_name):
+        params = "name=%s" % image_name
+        result = self._glance('details', params, yes='y')
+        return result
+
+    def update(self, image_id, image_name):
+        params = "%s name=%s" % (image_id, image_name)
+        result = self._glance('update', params)
+        return result
