@@ -118,3 +118,17 @@ class StackMonkeyTest(unittest.TestCase):
         pscmd = "ssh %s@%s 'ps -ef|grep nova-compute|grep -v grep'" % (username, host)
         subprocess.check_call(pscmd,
                       shell=True)
+
+    def test_start_nova_compute_with_patch(self):
+
+        fake_path = 'create-error'
+        patch = []
+        patch.append(('nova.db.api',
+                      'nova.virt.libvirt.connection'))
+        monkeyutil.start_nova_compute_with_patch(fake_path, patch)
+        host = monkeyutil.havoc.config.nodes.compute.ip
+        username = monkeyutil.havoc.config.nodes.compute.user
+
+        pscmd = "ssh %s@%s 'ps -ef|grep nova-compute|grep -v grep'" % (username, host)
+        subprocess.check_call(pscmd,
+                      shell=True)

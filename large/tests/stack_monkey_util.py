@@ -123,10 +123,7 @@ compute_havoc = ssh_manager.ComputeHavoc(
                         username=havoc.config.nodes.compute.user,
                         password=havoc.config.nodes.compute.password,
                         config_file=os.path.join(config.nova.directory,
-                                                 'etc/nova.conf') +\
-                                                 ' --logfile=' +\
-                                    os.path.join(config.nova.directory,
-                                                 '../log/nova-compute.log')
+                                                 'etc/nova.conf')
                         )
 
 
@@ -167,11 +164,18 @@ def start_nova_compute():
     compute_havoc.start_nova_compute()
 
 
+def start_nova_compute_with_patch(fake_path, patches):
+    compute_havoc.python_path = _get_fake_path(fake_path)
+    #[('nova.virt.libvirt.connection', 'fake_libvirt.libvirt_con_get_info_patch')]
+    compute_havoc._set_monkey_patch_args(patches)
+    compute_havoc.start_nova_compute()
+
+
 def stop_nova_compute():
     compute_havoc.stop_nova_compute()
 
 
-def get_fake_path(self, name):
+def _get_fake_path(name):
     return os.path.join(
             os.path.dirname(__file__),
             '../../medium/tests/fakes',
