@@ -8,10 +8,7 @@ from nova import test
 
 class DeleteServerTest(unittest.TestCase):
 
-    @test.skip_test('ignore this case')
-    @attr(kind='large')
-    def test_D02_201(self):
-
+    def _create_server(self):
         # create server
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -28,13 +25,21 @@ class DeleteServerTest(unittest.TestCase):
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
 
+        return server_id
+
+    @test.skip_test('ignore this case')
+    @attr(kind='large')
+    def test_D02_201(self):
+
+        # create server
+        server_id = self._create_server()
         """
         Stop DB before _get_instance()
         on compute.api.API.delete()
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -66,20 +71,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_202(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Raise Exception from DB before _get_instance()
@@ -87,7 +79,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -119,20 +111,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_203(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Stop DB before db.virtual_interface_get_by_instance()
@@ -140,7 +119,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -172,20 +151,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_204(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Raise Exception from DB before db.virtual_interface_get_by_instance()
@@ -193,7 +159,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -225,20 +191,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_205(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Not exists VIF on DB before db.virtual_interface_get_by_instance()
@@ -246,7 +199,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -277,20 +230,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_211(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Melange Return error response(500)
@@ -298,7 +238,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -330,20 +270,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_212(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Melange is no response
@@ -351,7 +278,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -383,20 +310,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_220(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Melange Return error response(500)
@@ -404,7 +318,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -436,20 +350,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_221(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Melange is no response
@@ -457,7 +358,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -489,20 +390,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_225(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Stop libvirtd before _lookup_by_name()
@@ -510,7 +398,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -542,20 +430,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_228(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Stop libvirtd before virt_dom.destroy()
@@ -563,7 +438,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -595,20 +470,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_231(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Stop libvirtd before virt_dom.undefine()
@@ -616,7 +478,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -648,20 +510,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_232(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Execute command raise ProcessExecutionError
@@ -669,7 +518,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -700,20 +549,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_233(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Execute command is no response
@@ -721,7 +557,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -752,20 +588,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_234(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Execute command raise ProcessExecutionError
@@ -773,7 +596,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -804,20 +627,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_235(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Execute command is no response
@@ -825,7 +635,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -856,20 +666,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_236(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Execute command raise ProcessExecutionError
@@ -877,7 +674,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
@@ -908,20 +705,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_237(self):
 
         # create server
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        _, server = self.ss_client.create_server(name,
-                                                 self.image_ref,
-                                                 self.flavor_ref,
-                                                 accessIPv4=accessIPv4,
-                                                 accessIPv6=accessIPv6)
-
-        self.assertEquals('202', server['status'])
-        server_id = server['id']
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+        server_id = self._create_server()
 
         """
         Execute command raise IOError
@@ -929,7 +713,7 @@ class DeleteServerTest(unittest.TestCase):
         """
 
         # Delete server
-        resp, _ = self.ss_client.delete_server(server['id'])
+        resp, _ = self.ss_client.delete_server(server_id)
 
         """ assert
             response:204
