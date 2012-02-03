@@ -82,7 +82,6 @@ def get_vm_state_in_virsh(vm_id):
     else:
         raise Exception('VM could not be found by virsh.')
 
-
 def _exec_sql(config, sql, db):
     exec_sql = 'mysql -u %s -p%s -h%s %s -Ns -e "' + sql + '"'
     results = subprocess.check_output(exec_sql
@@ -103,9 +102,16 @@ def _get_instance_in_db(config, id):
 
 def _get_vif_in_db(config, id):
     sql = 'select id, instance_id, network_id, address, deleted '\
-          'from virtual_interfaces where id = %s;' % str(id)
+          'from virtual_interfaces where instance_id = %s;' % str(id)
     return _exec_sql(config, sql, db='nova')
 
+def _get_instance_exist_fixed_ips_in_db(config, id):
+    sql = 'select count * from fixed_ips where instance_id = %s' % str(id)
+    result = _exec_sql(config, sql, db='nova')
+    if result == 0:
+        return True
+    else :
+        return False
 
 def _get_image_in_db(config, id):
     sql = 'select id, status, deleted, name, is_public, disk_format, '\
