@@ -106,7 +106,7 @@ def _get_vif_in_db(config, id):
     return _exec_sql(config, sql, db='nova')
 
 def _get_fixed_ips_in_db(config, id):
-    sql = 'select address, instance_id, virtual_interface_id '\
+    sql = 'select deleted, address, instance_id, virtual_interface_id '\
           'from fixed_ips where instance_id = %s;' % str(id)
     return _exec_sql(config, sql, db='nova')
 
@@ -158,7 +158,8 @@ def get_instance_exist_fixed_ips_in_db(config, id):
     if cnt_result == 0:
         raise Exception('Instance does not exist in fixed_ips table.')
     fixed_ips_results = _get_fixed_ips_in_db(config, id)
-    return fixed_ips_results[:3]
+    return fixed_ips_results[0]
+
 
 def get_instance_task_state_in_db(config, id):
     results = _get_instance_in_db(config, id)
