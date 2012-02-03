@@ -201,6 +201,14 @@ def exist_image_in_db(config, id):
         return False
 
 
+def exist_image_by_image_name_in_db(config, image_name):
+    results = _get_image_id_by_image_name_in_db(config, image_name)
+    if results:
+        return True
+    else:
+        return False
+
+
 def get_image_status_in_db(config, id):
     results = _get_image_in_db(config, id)
     if not results:
