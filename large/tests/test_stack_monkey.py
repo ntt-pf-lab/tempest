@@ -124,7 +124,7 @@ class StackMonkeyTest(unittest.TestCase):
         fake_path = 'create-error'
         patch = []
         patch.append(('nova.db.api',
-                      'nova.virt.libvirt.connection'))
+                      'fake_db.db_stop_patch'))
         monkeyutil.start_nova_compute_with_patch(fake_path, patch)
         host = monkeyutil.havoc.config.nodes.compute.ip
         username = monkeyutil.havoc.config.nodes.compute.user
