@@ -1,6 +1,7 @@
 import os
 import re
 import subprocess
+import tempfile
 import time
 import utils
 
@@ -11,6 +12,7 @@ from storm import openstack
 import storm.config
 from storm import exceptions
 from storm.common.utils.data_utils import rand_name
+from storm.services.keystone.json.keystone_client import TokenClient
 import stackmonkey.manager as ssh_manager
 from nova import test
 
@@ -24,7 +26,7 @@ from medium.tests.processes import (
 from medium.tests.utils import (
         emphasised_print, silent_check_call,
         cleanup_virtual_instances, cleanup_processes)
-
+from large.tests.utils import GlanceWrapper
 
 config = storm.config.StormConfig('etc/large.conf')
 environ_processes = []
@@ -331,6 +333,64 @@ class GlanceErrorTest(FunctionalTest):
         self.assert_instance(server_id, vm_status)
         self.assert_image(None, image_name, image_status)
 
+    def _create_image_when_ref_image_is_deleted(self, vm_status, image_status):
+        """
+        1. create server
+        2. glance delete
+        3. create image"
+        """
+
+        # glance
+        self.testing_processes.append(GlanceRegistryProcess(
+                self.config.glance.directory,
+                self.config.glance.registry_config))
+        self.testing_processes.append(GlanceApiProcess(
+                self.config.glance.directory,
+                self.config.glance.api_config,
+                self.config.glance.host,
+                self.config.glance.port))
+
+        for process in self.testing_processes:
+            process.start()
+        time.sleep(10)
+
+        # glance add
+        token_client = TokenClient(self.config)
+        token = token_client.get_token(self.config.keystone.user,
+                                       self.config.keystone.password,
+                                       self.config.keystone.tenant_name)
+        glance = GlanceWrapper(token, self.config)
+        image_name = rand_name(self._testMethodName)
+        image_file = os.path.abspath(tempfile.mkstemp()[1])
+        #self.addCleanup(os.remove, image_file)
+        image_id = glance.add(image_name, 'ari', 'ari', image_file)
+        time.sleep(10)
+
+        # create server
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        server_name = rand_name(self._testMethodName)
+        _, server = self.ss_client.create_server(server_name,
+                                                 image_id,
+                                                 self.flavor_ref,
+                                                 accessIPv4=accessIPv4,
+                                                 accessIPv6=accessIPv6)
+        server_id = server['id']
+        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+
+        # glance delete
+        glance.delete(image_id)
+        time.sleep(10)
+
+        # execute
+        image_name = rand_name(self._testMethodName)
+        self.ss_client.create_image(server_id, image_name)
+        time.sleep(10)
+
+        # assert
+        self.assert_instance(server_id, vm_status)
+        self.assert_image(None, image_name, image_status)
+
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
     def test_d02_401(self):
@@ -419,6 +479,14 @@ class GlanceErrorTest(FunctionalTest):
             image_service.update(context, image_href, metadata, image_file)
         """
         self._create_image_with_fake_glance('', '', '', [], 'ACTIVE', 'error')
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_ci002(self):
+        """
+        Create image when the image referred by server is deleted
+        """
+        self._create_image_when_ref_image_is_deleted('ACTIVE', 'error')
 
 
 class LibvirtErrorTest(FunctionalTest):
@@ -1209,3 +1277,116 @@ class DBErrorTest(FunctionalTest):
 #                'create-image-error',
 #                'fake.instance_update_except_patch_at_last_update',
 #                [], 'ACTIVE')
+
+
+class RabbitMQErrorTest(FunctionalTest):
+
+    config = config
+
+    def setUp(self):
+        super(RabbitMQErrorTest, self).setUp()
+
+        # nova
+        self.testing_processes.append(NovaApiProcess(
+                self.config.nova.directory,
+                self.config.nova.host,
+                self.config.nova.port))
+        self.testing_processes.append(NovaNetworkProcess(
+                self.config.nova.directory))
+        self.testing_processes.append(NovaSchedulerProcess(
+                self.config.nova.directory))
+        self.testing_processes.append(NovaComputeProcess(
+                self.config.nova.directory))
+
+        # glance
+        self.testing_processes.append(GlanceRegistryProcess(
+                self.config.glance.directory,
+                self.config.glance.registry_config))
+        self.testing_processes.append(GlanceApiProcess(
+                self.config.glance.directory,
+                self.config.glance.api_config,
+                self.config.glance.host,
+                self.config.glance.port))
+
+        # quantum
+        self.testing_processes.append(FakeQuantumProcess('1'))
+
+        # reset db
+        self.reset_db()
+
+        for process in self.testing_processes:
+            process.start()
+        time.sleep(10)
+
+        # create users
+        silent_check_call('bin/nova-manage user create '
+                          '--name=admin --access=secrete --secret=secrete',
+                          cwd=self.config.nova.directory, shell=True)
+        # create projects
+        silent_check_call('bin/nova-manage project create '
+                          '--project=1 --user=admin',
+                          cwd=self.config.nova.directory, shell=True)
+
+        # allocate networks
+        silent_check_call('bin/nova-manage '
+                          '--flagfile=%s '
+                          'network create '
+                          '--label=private_1-1 '
+                          '--project_id=1 '
+                          '--fixed_range_v4=10.0.0.0/24 '
+                          '--bridge_interface=br-int '
+                          '--num_networks=1 '
+                          '--network_size=32 '
+                          % self.config.nova.config,
+                          cwd=self.config.nova.directory, shell=True)
+
+        self.addCleanup(cleanup_virtual_instances)
+        self.addCleanup(cleanup_processes, self.testing_processes)
+
+    def tearDown(self):
+        # start rabbitmq service
+        try:
+            self.havoc._run_cmd('sudo service rabbitmq-server start')
+        except:
+            pass
+        super(RabbitMQErrorTest, self).tearDown()
+
+    def _create_image_with_rabbitmq_stopped(self, monkey_module, fakepath,
+                fake_patch_name, other_module_patchs, vm_status, image_status):
+
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        server_name = rand_name(self._testMethodName)
+        _, server = self.ss_client.create_server(server_name,
+                                                 self.image_ref,
+                                                 self.flavor_ref,
+                                                 accessIPv4=accessIPv4,
+                                                 accessIPv6=accessIPv6)
+        server_id = server['id']
+        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+
+        # stop rabbitmq
+        self.havoc._run_cmd('sudo service rabbitmq-server stop')
+        time.sleep(10)
+
+        # execute
+        image_name = rand_name(self._testMethodName)
+        self.ss_client.create_image(server_id, image_name)
+        time.sleep(10)
+
+        # assert
+        self.assert_instance(server_id, vm_status)
+        self.assert_image(None, image_name, image_status)
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_1401(self):
+        """
+        RabbitMQ stopped
+
+        at nova.compute.api.py:API._cast_compute_message
+            rpc.cast(context, queue, kwargs)
+        """
+        #TODO
+        self._create_image_with_rabbitmq_stopped('', '', '', [],
+                                                 'ACTIVE', 'error')

@@ -287,3 +287,66 @@ def exist_instance_path(config, id):
 def exist_image_path(config, id):
     image_path = os.path.join(config.glance.directory, 'images', str(id))
     return os.path.exists(image_path)
+
+
+class GlanceWrapper(object):
+    def __init__(self, token, config):
+        self.path = config.glance.directory
+        self.conf = config.glance.api_config
+        self.host = config.glance.host
+        self.port = config.glance.port
+        self.token = token
+    
+    def _glance(self, action, params, yes=None):
+        cmd = "glance -A %s -H %s -p %s %s %s" %\
+             (self.token, self.host, self.port, action, params)
+        if yes:
+            cmd = ("yes %s|" % yes) + cmd
+        result = subprocess.check_output(cmd, cwd=self.path, shell=True)
+        return result
+
+    def index(self):
+        result = self._glance('index', '', yes="y")
+        return result
+
+    def add(self, image_name, image_format, container_format, image_file):
+        params = "name=%s is_public=true disk_format=%s container_format=%s "\
+                 "< %s" % (image_name,
+                           image_format,
+                           container_format,
+                           image_file)
+        result = self._glance('add', params)
+        # parse add new image ID: <image_id>
+        if result:
+            splited = str(result).split()
+            return splited[splited.count(splited)-1]
+
+    def add_image(self, image_name, image_format, container_format, image_file,
+                  kernel_id):
+        params = "name=%s is_public=true disk_format=%s container_format=%s "\
+                 "kernel_id=%s < %s" % (image_name,
+                                        image_format,
+                                        container_format,
+                                        kernel_id,
+                                        image_file)
+        result = self._glance('add', params)
+        # parse add new image ID: <image_id>
+        if result:
+            splited = str(result).split()
+            return splited[splited.count(splited)-1]
+
+
+    def delete(self, image_id):
+        result = self._glance('delete', image_id, yes="y")
+        if result:
+            return image_id
+
+    def detail(self, image_name):
+        params = "name=%s" % image_name
+        result = self._glance('details', params, yes='y')
+        return result
+
+    def update(self, image_id, image_name):
+        params = "%s name=%s" % (image_id, image_name)
+        result = self._glance('update', params)
+        return result
