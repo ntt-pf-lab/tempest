@@ -8,11 +8,10 @@ from nova import test
 
 class DeleteServerTest(unittest.TestCase):
 
-    def _create_server(self):
+    def _create_server(self,name):
         # create server
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
         _, server = self.ss_client.create_server(name,
                                                  self.image_ref,
                                                  self.flavor_ref,
@@ -32,7 +31,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_201(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
         """
         Stop DB before _get_instance()
         on compute.api.API.delete()
@@ -71,7 +70,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_202(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Raise Exception from DB before _get_instance()
@@ -111,7 +110,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_203(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Stop DB before db.virtual_interface_get_by_instance()
@@ -151,7 +150,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_204(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Raise Exception from DB before db.virtual_interface_get_by_instance()
@@ -191,7 +190,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_205(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Not exists VIF on DB before db.virtual_interface_get_by_instance()
@@ -230,7 +229,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_211(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Melange Return error response(500)
@@ -270,7 +269,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_212(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Melange is no response
@@ -310,7 +309,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_220(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Melange Return error response(500)
@@ -350,7 +349,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_221(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Melange is no response
@@ -390,7 +389,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_225(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Stop libvirtd before _lookup_by_name()
@@ -430,7 +429,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_228(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Stop libvirtd before virt_dom.destroy()
@@ -470,7 +469,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_231(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Stop libvirtd before virt_dom.undefine()
@@ -510,7 +509,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_232(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Execute command raise ProcessExecutionError
@@ -549,7 +548,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_233(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Execute command is no response
@@ -588,7 +587,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_234(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Execute command raise ProcessExecutionError
@@ -627,7 +626,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_235(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Execute command is no response
@@ -666,7 +665,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_236(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Execute command raise ProcessExecutionError
@@ -705,7 +704,7 @@ class DeleteServerTest(unittest.TestCase):
     def test_D02_237(self):
 
         # create server
-        server_id = self._create_server()
+        server_id = self._create_server(self._testMethodName)
 
         """
         Execute command raise IOError
