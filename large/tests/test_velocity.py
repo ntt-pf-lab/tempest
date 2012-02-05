@@ -22,6 +22,7 @@ import time
 import json
 import logging
 import inspect
+import threading
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
@@ -41,6 +42,7 @@ TENANT_LIMIT = 1000
 IMAGE_LIMIT = 100
 IMAGE_PATH = 'etc/images/tty.img'
 KEYPAIR_LIMIT = 1000
+COUNTS = 10
 
 # number of instance to boot up this scenario.
 NUM_OF_INSTANCE = 2
@@ -79,7 +81,7 @@ class ScenarioLogging(LoggingFeature):
         LOG.info("<<< Receive Response %s" % resp)
         LOG.debug("<<< Response Body %s" % body)
 
-class FunctionalTest(unittest.TestCase):
+class TestScenario(object):
 
     def setUp(self):
         self.default_config = storm.config.StormConfig('etc/large.conf')
@@ -96,7 +98,6 @@ class FunctionalTest(unittest.TestCase):
         config.nova.conf.set('nova', 'user', user)
         config.nova.conf.set('nova', 'api_key', password)
         config.nova.conf.set('nova', 'tenant_name', tenant_name)
-        
         self._load_client(config, data=self.data)
 
     def _load_client(self, config, data=None):
@@ -341,10 +342,11 @@ class GlanceWrapper(object):
         params = "%s name=%s" % (image_id, image_name)
         result = self._glance('update', params)
         return result
-        
-class ScenarioTest(FunctionalTest):
 
-    def _application_tenant(self, scenario):
+
+class ScenarioTest(TestScenario):
+
+    def application_tenant(self, scenario, segment, gw, dhcp):
         results = {}
         # create new uses
         results.update(self.data.setup_one_user(scenario))
@@ -366,11 +368,39 @@ class ScenarioTest(FunctionalTest):
         nw = self.data.create_network(scenario)
         results.update({'L2 Network': nw})
         # create IP block.
-        block = self.data.create_ip_block(scenario, '10.1.1.0/24', 255, 'virbr0', results['tenant']['id'], nw, '10.1.1.255', '10.1.1.2')
+        block = self.data.create_ip_block(scenario, segment, 255, 'virbr0', results['tenant']['id'], nw, gw, dhcp)
         results.update({'IP Block': block})
         return results
-    
-    def _standard_scenario(self, name):    
+
+    def standard_scenario(self, name, segment, gw, dhcp):    
+        '''
+        Scenario test for create "Standard Usage"
+        1. Create new user/tenant
+        2. Authorize
+        3. Create keypair for user
+        4. Create network for tenant
+        5. Boot 3 instance for user
+        '''
+        vmfw = 0
+        vmlb = 0
+        vmserver = 0
+        try:
+            setups = self.application_tenant(name, segment, gw, dhcp)
+        except:
+            raise
+        try:
+            # create instances.
+            vmfw = self._run_instance(setups['FW Image'])
+            vmlb = self._run_instance(setups['LB Image'])
+            vmserver = self._run_instance(setups['Server Image'])
+        except:
+            raise
+        finally:
+            self._terminate_instance(vmfw)
+            self._terminate_instance(vmlb)
+            self._terminate_instance(vmserver)
+
+    def snapshot_scenario(self, name, segment, gw, dhcp):    
         '''
         Scenario test for create "Standard Usage"
         1. Create new user/tenant
@@ -380,7 +410,7 @@ class ScenarioTest(FunctionalTest):
         5. Boot 3 instance for user
         '''
         try:
-            setups = self._application_tenant(name)
+            setups = self._application_tenant(name, segment, gw, dhcp)
         except:
             self.fail('Failed to setup tenant info')
         try:
@@ -388,13 +418,232 @@ class ScenarioTest(FunctionalTest):
             vmfw = self._run_instance(setups['FW Image'])
             vmlb = self._run_instance(setups['LB Image'])
             vmserver = self._run_instance(setups['Server Image'])
+            try:
+                # create snapshot.
+                resp, _ = self.server_client.create_image(vmserver, 'snapshot')
+                alt_img_url = resp['location']
+                match = re.search('/images/(?P<image_id>.+)', alt_img_url)
+                self.assertIsNotNone(match)
+                alt_img_id = match.groupdict()['image_id']
+                self.images_client.wait_for_image_status(alt_img_id, 'ACTIVE')
+            except:
+                raise
+            finally:
+                self.glance.delete(alt_img_id)
         except:
             self.fail('Failed to create server.')
         finally:
             self._terminate_instance(vmfw)
             self._terminate_instance(vmlb)
             self._terminate_instance(vmserver)
-        
+
+class TenantThread(threading.Thread):
+
+     def __init__(self, name, segment, gw, dhcp):
+         threading.Thread.__init__(self)
+         self.name = name
+         self.segment = segment
+         self.gw = gw
+         self.dhcp = dhcp
+
+     def run(self):
+         count = 0
+         while count < COUNTS:
+             print """
+
+             <VELOCITY> Tenant %s registration start.
+
+             """ % self.name
+             scenario = ScenarioTest()
+             try:
+                 scenario.setUp()
+                 scenario.application_tenant(self.name, self.segment, self.gw, self.dhcp)
+                 print """
+
+                 <VELOCITY> Tenant %s registration success.
+
+                 """ % self.name
+                 print """
+
+                 <VELOCTY> Tenant %s deregist start
+
+                 """ % self.name
+                 scenario.tearDown()
+                 print """
+
+                 <VELOCITY> Tenant %s deregist success.
+
+                 """ % self.name
+             except Exception ,e:
+                 print """
+
+                 <VELOCITY> Tenant %s failed
+
+                 """ % self.name
+                 print e
+                 scenario.tearDown()
+             count = count + 1
+
+
+class ScenairoThread(threading.Thread):
+
+     def __init__(self, name, segment, gw, dhcp):
+         threading.Thread.__init__(self)
+         self.name = name
+         self.segment = segment
+         self.gw = gw
+         self.dhcp = dhcp
+
+     def run(self):
+         count = 0
+         while count < COUNTS:
+             print """
+
+             <VELOCITY> Scenario %s execution start.
+
+             """ % self.name
+             scenario = ScenarioTest()
+             try:
+                 scenario.setUp()
+                 scenario.standard_scenario(self.name, self.segment, self.gw, self.dhcp)
+                 print """
+
+                 <VELOCITY> Scenario %s execution success.
+
+                 """ % self.name
+                 print """
+
+                 <VELOCTY> Scenario %s undefine start
+
+                 """ % self.name
+                 scenario.tearDown()
+                 print """
+
+                 <VELOCITY> Scenario %s undefine success.
+
+                 """ % self.name
+             except Exception ,e:
+                 print """
+
+                 <VELOCITY> Scenario %s execition failed
+
+                 """ % self.name
+                 print e
+                 scenario.tearDown()
+             count = count + 1
+
+
+class SnapshotThread(threading.Thread):
+
+     def __init__(self, name, segment, gw, dhcp):
+         threading.Thread.__init__(self)
+         self.name = name
+         self.segment = segment
+         self.gw = gw
+         self.dhcp = dhcp
+
+     def run(self):
+         count = 0
+         while count < COUNTS:
+             print """
+
+             <VELOCITY> Snapthot Scenario %s execution start.
+
+             """ % self.name
+             scenario = ScenarioTest()
+             try:
+                 scenario.setUp()
+                 scenario.snapshot_scenario(self.name, self.segment, self.gw, self.dhcp)
+                 print """
+
+                 <VELOCITY> Snapshot Scenario %s execution success.
+
+                 """ % self.name
+                 print """
+
+                 <VELOCTY> Snapshot Scenario %s undefine start
+
+                 """ % self.name
+                 scenario.tearDown()
+                 print """
+
+                 <VELOCITY> Snapshot Scenario %s undefine success.
+
+                 """ % self.name
+             except Exception ,e:
+                 print """
+
+                 <VELOCITY> Snapshot Scenario %s execition failed
+
+                 """ % self.name
+                 print e
+                 scenario.tearDown()
+             count = count + 1
+
+
+class VelocityTest(unittest.TestCase):
+
+    @attr(kind='large')
+    def test_tenant(self):
+        """
+        Simple Velocity test.
+        Create new tenant with 20 process.
+        K01
+        """
+        num_of_user = 20
+        count = 0
+        workers = []
+        while count < num_of_user:
+            t = TenantThread("thread" + str(count + 1), "10.%d.1.0/24" % count, "10.%d.1.255" % count, "10.%d.1.2" % count)
+            t.start()
+            workers.append(t)
+            count = count + 1
+            time.sleep(10)
+        for t in workers:
+            t.join()
+
+    @attr(kind='large')
+    def test_scenario(self):
+        """
+        Simple Velocity test.
+        Create tenant and servers with 20 process.
+        K02
+        """
+        num_of_user = 20
+        count = 0
+        workers = []
+        while count < num_of_user:
+            t = ScenairoThread("thread" + str(count + 1), "10.%d.1.0/24" % count, "10.%d.1.255" % count, "10.%d.1.2" % count)
+            t.start()
+            workers.append(t)
+            count = count + 1
+            time.sleep(10)
+        for t in workers:
+            t.join()
+
+    @attr(kind='large')
+    def test_complex(self):
+        """
+        Complex request tests.
+        Include palallel tenant registration.
+        Include image registration.
+        Include network creation.
+        Include server boot up.
+        Include snapshot creation.
+        With no sleep, 20 user on time.
+        C01-08
+        """
+        num_of_user = 20
+        count = 0
+        workers = []
+        while count < num_of_user:
+            t = SnapshotThread("thread" + str(count + 1), "10.%d.1.0/24" % count, "10.%d.1.255" % count, "10.%d.1.2" % count)
+            t.start()
+            workers.append(t)
+            count = count + 1
+        for t in workers:
+            t.join()
+
     def test_velocity_user(self):
         '''
         Velocity test for create user till limit.
