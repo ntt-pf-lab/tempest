@@ -18,16 +18,13 @@ import os
 import base64
 import re
 import subprocess
-import time
-import json
 import logging
-import inspect
+import json
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 
 import storm.config
-from kong import tests
 from storm import openstack
 from storm.common import rest_client
 from storm.common.rest_client import LoggingFeature
@@ -35,28 +32,31 @@ from storm.services.keystone.json.keystone_client import TokenClient
 from nose.plugins import skip
 
 # Configuration values for scenario test
-# number of instance to boot up this scenario.
-NUM_OF_INSTANCE = 2
-# using flavor on this scenario.
-FLAVORS = {1,2}
-# created user on this scenario.
-USER = "test_user2"
-PASSWORD = "password"
-# created tenant on this scenaro.
-TENANT = "tenant2"
 
 LOG = logging.getLogger("large.tests.test_scenario")
 messages = []
 
-
+# global passord for test users.
+PASSWORD = 'password'
+# bridge name for networking.
+BRIDGE = 'br-int'
+# Inner L2 network, bridge, gateway, dhcp
+L2_NETWORK = ('10.1.1.0/24', 'br-int', '10.1.1.255', '10.1.1.2') 
+# Outer L2 network, bridge, gateway, dhcp
+G2_NETWORK = ('172.30.1.0/24', 'br-int', '172.30.1.255', '172.30.1.2')
 
 def setUpModule(module):
+    ''' Prerequirement for test
+        1. define a user of administrator, and setting it on large.conf
+        2. No network definition on nova-network.
+        3. kernel and disk image registered on glance
+    '''
     rest_client.logging = ScenarioLogging()
 
 def tearDownModule(module):
     print "\nScenario execution done."
-    for m in messages:
-        print "Process: %s\n Result %s" % m
+    with open(".test_result.json", "w") as file:
+        json.dump(messages, file, sort_keys=False, indent=4)
 
 class ScenarioLogging(LoggingFeature):
 
@@ -89,7 +89,6 @@ class FunctionalTest(unittest.TestCase):
         config.nova.conf.set('nova', 'user', user)
         config.nova.conf.set('nova', 'api_key', password)
         config.nova.conf.set('nova', 'tenant_name', tenant_name)
-        
         self._load_client(config, data=self.data)
 
     def _load_client(self, config, data=None):
@@ -116,11 +115,11 @@ class FunctionalTest(unittest.TestCase):
                                   self.glance,
                                   data=data)
 
-    def _run_instance(self, image):
+    def _run_instance(self, name, image):
         meta = {}
         accessIPv4 = ''
         accessIPv6 = ''
-        name = "senario1"
+        name = name
         flavor_ref = '1'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
@@ -136,6 +135,11 @@ class FunctionalTest(unittest.TestCase):
         # Wait for the server to become active
         self.server_client.wait_for_server_status(server['id'], 'ACTIVE')
         return server['id']
+
+    def _list_all_instance(self):
+        _, server = self.server_client.list_servers_with_detail()
+        return server
+
 
     def _terminate_instance(self, server_id):
         self.server_client.delete_server(server_id)
@@ -233,16 +237,22 @@ class DataGenerator(object):
     def teardown_all(self):
         for i in self.images:
             self.glance.delete(i)
+        self.images = []
         for k in self.keypairs:
             self.keypair_client.delete_keypair(k)
+        self.keypairs = []
         for n in self.nw:
             self.nova_manage_network.delete_network(n)
+        self.nw = []
         for u in self.users:
             self.keystone_client.delete_user(u)
+        self.users = []
         for t in self.tenants:
             self.keystone_client.delete_tenant(t)
+        self.tenants = []
         for r in self.roles:
             self.keystone_client.delete_role(r['id'])
+        self.roles = []
         if self.data:
             self.data.teardown_all()
 
@@ -329,7 +339,7 @@ class GlanceWrapper(object):
         params = "%s name=%s" % (image_id, image_name)
         result = self._glance('update', params)
         return result
-        
+
 class ScenarioTest(FunctionalTest):
 
     def _application_tenant(self, scenario):
@@ -340,7 +350,6 @@ class ScenarioTest(FunctionalTest):
         # create glance image.
         kernel = self.data.add_image(scenario + "_Kernel", 'aki', 'aki', "etc/images/ttylinux-vmlinuz")
         results.update({'Kernel Image': kernel})
-        
         fw_image = self.data.add_image(scenario + "_FW", 'ami', 'ami', "etc/images/tty.img", kernel)
         results.update({'FW Image': fw_image})
         lb_image = self.data.add_image(scenario + "_LB", 'ami', 'ami', "etc/images/tty.img", kernel)
@@ -354,10 +363,21 @@ class ScenarioTest(FunctionalTest):
         nw = self.data.create_network(scenario)
         results.update({'L2 Network': nw})
         # create IP block.
-        block = self.data.create_ip_block(scenario, '10.1.1.0/24', 255, 'virbr0', results['tenant']['id'], nw, '10.1.1.255', '10.1.1.2')
+        block = self.data.create_ip_block(scenario, L2_NETWORK[0], 255, L2_NETWORK[1], results['tenant']['id'], nw, L2_NETWORK[2], L2_NETWORK[3])
         results.update({'IP Block': block})
         return results
-        
+
+    def _application_vpn_tenant(self, scenario):
+        results = self._application_tenant(scenario)
+        # create L2 network.
+        nw = self.data.create_network(scenario)
+        results.update({'VPN L2 Network': nw})
+        # create IP block.
+        block = self.data.create_ip_block(scenario, G2_NETWORK[0], 255, G2_NETWORK[1], results['tenant']['id'], nw, G2_NETWORK[2], G2_NETWORK[3])
+        results.update({'VPM IP Block': block})
+        return results
+
+    @attr(kind='large')
     def test_scenario_application_new_tenant(self):
         '''
         Scenario test for create "Applicate new tenant"
@@ -367,22 +387,131 @@ class ScenarioTest(FunctionalTest):
         4. Create network for tenant
         5. Boot 3 instance for user
         '''
+        result = {}
+        vmfw = 0
+        vmlb = 0
+        vmserver = 0
         try:
             setups = self._application_tenant("scenario_application")
+            result['setups'] = setups
         except:
-            self.fail('Failed to setup tenant info')
+            raise
         try:
             # create instances.
-            vmfw = self._run_instance(setups['FW Image'])
-            vmlb = self._run_instance(setups['LB Image'])
-            vmserver = self._run_instance(setups['Server Image'])
+            vmfw = self._run_instance("VM_FW", setups['FW Image'])
+            vmlb = self._run_instance("VM_LB", setups['LB Image'])
+            vmserver = self._run_instance("VM_Server", setups['Server Image'])
+            result['servers'] = self._list_all_instance()
         except:
-            self.fail('Failed to create server.')
+            raise
         finally:
             self._terminate_instance(vmfw)
             self._terminate_instance(vmlb)
             self._terminate_instance(vmserver)
+            messages.append({'scenario':'scenario_application', 'result': result})
 
+    @attr(kind='large')
+    def test_scenario_delete_tenant(self):
+        '''
+        Scenario test for create "Delete tenant"
+        1. Create new user/tenant
+        2. Authorize
+        3. Create keypair for user
+        4. Create network for tenant
+        5. Boot 3 instance for user
+        '''
+        result = {}
+        vmfw = 0
+        vmlb = 0
+        vmserver = 0
+        try:
+            setups = self._application_tenant("scenario_delete")
+            result['setups'] = setups
+        except:
+            raise
+        try:
+            # create instances.
+            vmfw = self._run_instance("VM_FW", setups['FW Image'])
+            vmlb = self._run_instance("VM_LB", setups['LB Image'])
+            vmserver = self._run_instance("VM_Server", setups['Server Image'])
+        except:
+            raise
+        finally:
+            self._terminate_instance(vmfw)
+            self._terminate_instance(vmlb)
+            self._terminate_instance(vmserver)
+            result['servers'] = self._list_all_instance()
+            self.data.teardown_all()
+            messages.append({'scenario':'scenario_delete', 'result': result})
+
+    @attr(kind='large')
+    def test_scenario_application_new_vpn_tenant(self):
+        '''
+        Scenario test for create "Applicate new tenant(VPN)"
+        1. Create new user/tenant for vpn
+        2. Authorize
+        3. Create keypair for user
+        4. Create network for tenant
+        5. Boot 3 instance for user
+        '''
+        result = {}
+        vmfw = 0
+        vmlb = 0
+        vmserver = 0
+        try:
+            setups = self._application_vpn_tenant("scenario_vpn_application")
+            result['setups'] = setups
+        except:
+            raise
+        try:
+            # create instances.
+            vmfw = self._run_instance("VM_FW", setups['FW Image'])
+            vmlb = self._run_instance("VM_LB", setups['LB Image'])
+            vmserver = self._run_instance("VM_Server", setups['Server Image'])
+            result['servers'] = self._list_all_instance()
+        except:
+            raise
+        finally:
+            self._terminate_instance(vmfw)
+            self._terminate_instance(vmlb)
+            self._terminate_instance(vmserver)
+            messages.append({'scenario':'scenario_application_vpn', 'result': result})
+
+    @attr(kind='large')
+    def test_scenario_delete_vpn_tenant(self):
+        '''
+        Scenario test for create "Delte tenant(VPN)"
+        1. Create new user/tenant for vpn
+        2. Authorize
+        3. Create keypair for user
+        4. Create network for tenant
+        5. Boot 3 instance for user
+        '''
+        result = {}
+        vmfw = 0
+        vmlb = 0
+        vmserver = 0
+        try:
+            setups = self._application_vpn_tenant("scenario_vpn_delete")
+            result['setups'] = setups
+        except:
+            raise
+        try:
+            # create instances.
+            vmfw = self._run_instance("VM_FW", setups['FW Image'])
+            vmlb = self._run_instance("VM_LB", setups['LB Image'])
+            vmserver = self._run_instance("VM_Server", setups['Server Image'])
+        except:
+            raise
+        finally:
+            self._terminate_instance(vmfw)
+            self._terminate_instance(vmlb)
+            self._terminate_instance(vmserver)
+            result['servers'] = self._list_all_instance()
+            self.data.teardown_all()
+            messages.append({'scenario':'scenario_delete_vpn', 'result': result})
+
+    @attr(kind='large')
     def test_scenario_scaleout(self):
         '''
         Scenario test for create "Add VM/Scale out"
@@ -395,24 +524,72 @@ class ScenarioTest(FunctionalTest):
         2. Bootup new vm
           2.1. Boot 1 instance for user
         '''
+        result = {}
+        vmfw = 0
+        vmlb = 0
+        vmserver = 0
+        scaled = 0
         try:
             setups = self._application_tenant("scenario_scaleout")
+            result['setups'] = setups
         except:
-            self.fail('Failed to setup tenant info')
+            raise
         try:
             # create instances.
-            vmfw = self._run_instance(setups['FW Image'])
-            vmlb = self._run_instance(setups['LB Image'])
-            vmserver = self._run_instance(setups['Server Image'])
-            scaled = self._run_instance(setups['Server Image'])
+            vmfw = self._run_instance("VM_FW", setups['FW Image'])
+            vmlb = self._run_instance("VM_LB", setups['LB Image'])
+            vmserver = self._run_instance("VM_Server", setups['Server Image'])
+            scaled = self._run_instance("Scaleout", setups['Server Image'])
+            result['servers'] = self._list_all_instance()
         except:
-            self.fail('Failed to create server.')
+            raise
         finally:
             self._terminate_instance(scaled)
             self._terminate_instance(vmserver)
             self._terminate_instance(vmlb)
             self._terminate_instance(vmfw)
+            messages.append({'scenario':'scenario_scaleout', 'result': result})
 
+    @attr(kind='large')
+    def test_scenario_scaleout_vpn(self):
+        '''
+        Scenario test for create "Add VM/Scale out"
+        1. Applicate new tenant
+          1.1. Create new user/tenant
+          1.2. Authorize
+          1.3. Create keypair for user
+          1.4. Create network for tenant
+          1.5. Boot 3 instance for user
+        2. Bootup new vm
+          2.1. Boot 1 instance for user
+        '''
+        result = {}
+        vmfw = 0
+        vmlb = 0
+        vmserver = 0
+        scaled = 0
+        try:
+            setups = self._application_vpn_tenant("scenario_scaleout")
+            result['setups'] = setups
+        except:
+            raise
+        try:
+            # create instances.
+            vmfw = self._run_instance("VM_FW", setups['FW Image'])
+            vmlb = self._run_instance("VM_LB", setups['LB Image'])
+            vmserver = self._run_instance("VM_Server", setups['Server Image'])
+            scaled = self._run_instance("Scaleout", setups['Server Image'])
+            result['servers'] = self._list_all_instance()
+        except:
+            raise
+        finally:
+            self._terminate_instance(scaled)
+            self._terminate_instance(vmserver)
+            self._terminate_instance(vmlb)
+            self._terminate_instance(vmfw)
+            messages.append({'scenario':'scenario_scaleout_vpn', 'result': result})
+
+    @attr(kind='large')
     def test_scenario_snapshot(self):
         '''
         Scenario test for create "Snapshot"
@@ -425,15 +602,20 @@ class ScenarioTest(FunctionalTest):
         2. Snapshot VM(Server)
           2.1. Snapshot to VM(Server)
         '''
+        result = {}
+        vmfw = 0
+        vmlb = 0
+        vmserver = 0
         try:
             setups = self._application_tenant("scenario_snapshot")
+            result['setups'] = setups
         except:
-            self.fail('Failed to setup tenant info')
+            raise
         try:
             # create instances.
-            vmfw = self._run_instance(setups['FW Image'])
-            vmlb = self._run_instance(setups['LB Image'])
-            vmserver = self._run_instance(setups['Server Image'])
+            vmfw = self._run_instance("VM_FW", setups['FW Image'])
+            vmlb = self._run_instance("VM_LB", setups['LB Image'])
+            vmserver = self._run_instance("VM_Server", setups['Server Image'])
             try:
                 # create snapshot.
                 resp, _ = self.server_client.create_image(vmserver, 'snapshot')
@@ -441,15 +623,65 @@ class ScenarioTest(FunctionalTest):
                 match = re.search('/images/(?P<image_id>.+)', alt_img_url)
                 self.assertIsNotNone(match)
                 alt_img_id = match.groupdict()['image_id']
-                self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
+                self.images_client.wait_for_image_status(alt_img_id, 'ACTIVE')
+                result['servers'] = self._list_all_instance()
             except:
-                self.fail('Failed to snapshot.')
+                raise
             finally:
                 self.glance.delete(alt_img_id)
         except:
-            self.fail('Failed to create server.')
+            raise
         finally:
             self._terminate_instance(vmfw)
             self._terminate_instance(vmlb)
             self._terminate_instance(vmserver)
+            messages.append({'scenario':'scenario_snapshot', 'result': result})
+
+    @attr(kind='large')
+    def test_scenario_snapshot_vpn(self):
+        '''
+        Scenario test for create "Snapshot"
+        1. Applicate new tenant
+          1.1. Create new user/tenant
+          1.2. Authorize
+          1.3. Create keypair for user
+          1.4. Create network for tenant
+          1.5. Boot 3 instance for user
+        2. Snapshot VM(Server)
+          2.1. Snapshot to VM(Server)
+        '''
+        result = {}
+        vmfw = 0
+        vmlb = 0
+        vmserver = 0
+        try:
+            setups = self._application_vpn_tenant("scenario_snapshot")
+            result['setups'] = setups
+        except:
+            raise
+        try:
+            # create instances.
+            vmfw = self._run_instance("VM_FW", setups['FW Image'])
+            vmlb = self._run_instance("VM_LB", setups['LB Image'])
+            vmserver = self._run_instance("VM_Server", setups['Server Image'])
+            try:
+                # create snapshot.
+                resp, _ = self.server_client.create_image(vmserver, 'snapshot')
+                alt_img_url = resp['location']
+                match = re.search('/images/(?P<image_id>.+)', alt_img_url)
+                self.assertIsNotNone(match)
+                alt_img_id = match.groupdict()['image_id']
+                self.images_client.wait_for_image_status(alt_img_id, 'ACTIVE')
+                result['servers'] = self._list_all_instance()
+            except:
+                raise
+            finally:
+                self.glance.delete(alt_img_id)
+        except:
+            raise
+        finally:
+            self._terminate_instance(vmfw)
+            self._terminate_instance(vmlb)
+            self._terminate_instance(vmserver)
+            messages.append({'scenario':'scenario_snapshot_vpn', 'result': result})
 
