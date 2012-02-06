@@ -26,7 +26,7 @@ class Client(object):
         while not self._is_timed_out(self.timeout, _start_time):
             try:
                 ssh.connect(self.host, username=self.username,
-                    password=self.password, look_for_keys=False,
+                    password=self.password, look_for_keys=True,
                     timeout=20)
                 _timeout = False
                 break
