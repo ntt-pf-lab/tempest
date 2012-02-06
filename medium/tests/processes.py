@@ -3,6 +3,7 @@ import subprocess
 import time
 import urllib
 from stackmonkey import manager
+from stackmonkey import config
 
 
 def wait_to_launch(host, port):
@@ -39,6 +40,8 @@ class Process(object):
         self.cwd = cwd
         self.command = command
         self.env = env
+        self.config = config.HavocConfig()
+        self.nodes = self.config.nodes
 
     def start(self):
         self._process = subprocess.Popen(self.command,
@@ -53,8 +56,11 @@ class Process(object):
 
 
 class GlanceRegistryProcess(Process):
-    def __init__(self, directory, config, **kwargs):
-        self.registry_havoc = manager.GlanceHavoc(registry_config_file=config,
+    def __init__(self, directory, config, host, **kwargs):
+        if not host:
+            host = self.nodes.glance.ip
+        print "processes Object: GlanceRegistry HOST IP:", host
+        self.registry_havoc = manager.GlanceHavoc(host, registry_config_file=config,
                 **kwargs)
 
     def start(self):
@@ -66,6 +72,9 @@ class GlanceRegistryProcess(Process):
 
 class GlanceApiProcess(Process):
     def __init__(self, directory, config, host, port, **kwargs):
+        if not host:
+            host = self.nodes.glance.ip
+        print "processes Object: GlanceAPI HOST IP: ", host
         self.glance_api_havoc = manager.GlanceHavoc(host, api_config_file=config,
                 **kwargs)
 
@@ -78,6 +87,9 @@ class GlanceApiProcess(Process):
 
 class KeystoneProcess(Process):
     def __init__(self, directory, config, host, port, **kwargs):
+        if not host:
+            host = self.nodes.keystone.ip
+        print "processes Object: Keystone HOST IP: ", host
         self.keystone_havoc = manager.KeystoneHavoc(host, config_file=config,
                 **kwargs)
 
@@ -115,6 +127,9 @@ class NovaProcess(Process):
 
 class NovaApiProcess(NovaProcess):
     def __init__(self, directory, host, port, **kwargs):
+        if not host:
+            host = self.nodes.api.ip
+        print "processes Object: NovaAPI HOST IP:", host
         self.api_havoc = manager.ControllerHavoc(host, **kwargs)
 
     def start(self):
@@ -125,8 +140,11 @@ class NovaApiProcess(NovaProcess):
 
 
 class NovaComputeProcess(NovaProcess):
-    def __init__(self, directory, **kwargs):
-        self.compute_havoc = manager.ComputeHavoc(**kwargs)
+    def __init__(self, directory, host=None, **kwargs):
+        if not host:
+            host = self.nodes.compute.ip
+        print "prccesses Object: NovaCompute HOST IP: ", host
+        self.compute_havoc = manager.ComputeHavoc(host, **kwargs)
 
     def start(self):
         self.compute_havoc.start_nova_compute()
@@ -136,8 +154,11 @@ class NovaComputeProcess(NovaProcess):
 
 
 class NovaNetworkProcess(NovaProcess):
-    def __init__(self, directory, **kwargs):
-        self.network_havoc = manager.NetworkHavoc(**kwargs)
+    def __init__(self, directory, host=None, **kwargs):
+        if not host:
+            host = self.nodes.network.ip
+        print "processes Object: NovaNetwork HOST IP:", host
+        self.network_havoc = manager.NetworkHavoc(host, **kwargs)
 
     def start(self):
         self.network_havoc.start_nova_network()
@@ -147,8 +168,11 @@ class NovaNetworkProcess(NovaProcess):
 
 
 class NovaSchedulerProcess(NovaProcess):
-    def __init__(self, directory, **kwargs):
-        self.scheduler_havoc = manager.ControllerHavoc(**kwargs)
+    def __init__(self, directory, host=None, **kwargs):
+        if not host:
+            host = self.nodes.scheduler.ip
+        print "processes Object: NovaScheduler HOST IP:", host
+        self.scheduler_havoc = manager.ControllerHavoc(host, **kwargs)
 
     def start(self):
         self.scheduler_havoc.start_nova_scheduler()
@@ -159,7 +183,10 @@ class NovaSchedulerProcess(NovaProcess):
 
 class QuantumProcess(Process):
     def __init__(self, directory, config, **kwargs):
-        self.quantum_havoc = manager.QuantumHavoc(config_file=config, **kwargs)
+        host = self.nodes.quantum.ip
+        print "processes Object: Quantum HOST IP: ", host
+        self.quantum_havoc = manager.QuantumHavoc(host=host, config_file=config,
+                                                **kwargs)
 
     def start(self):
         self.quantum_havoc.start_quantum()
@@ -170,7 +197,10 @@ class QuantumProcess(Process):
 
 class QuantumPluginOvsAgentProcess(Process):
     def __init__(self, directory, config, **kwargs):
-        self.havoc = manager.QuantumHavoc(agent_config_file=config, **kwargs)
+        host = self.nodes.quantum.ip
+        print "processes Object: Quantum Plugin HOST IP: ", host
+        self.havoc = manager.QuantumHavoc(host=host, agent_config_file=config,
+                                            **kwargs)
 
     def start(self):
         self.havoc.start_quantum_plugin()
