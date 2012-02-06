@@ -71,6 +71,7 @@ class FunctionalTest(unittest.TestCase):
     def tearDown(self):
         self.data.teardown_all()
 
+    @attr(kind='large')
     def swap_user(self, user, password, tenant_name):
         config = storm.config.StormConfig('etc/large.conf')
         config.keystone.conf.set('keystone', 'user', user)
@@ -79,14 +80,17 @@ class FunctionalTest(unittest.TestCase):
         self.os = openstack.Manager(config)
         self.client = self.os.keystone_client
 
+    @attr(kind='large')
     def diable_user(self, user_name):
         user = self.get_user_by_name(user_name)
         self.client.enable_disable_user(user['id'], False)
 
+    @attr(kind='large')
     def diable_tenant(self, tenant_name):
         tenant = self.get_tenant_by_name(tenant_name)
         self.client.update_tenant(tenant['id'], tenant['description'], False)
 
+    @attr(kind='large')
     def get_user_by_name(self, name):
         _, body = self.client.get_users()
         users = body['users']['values']
@@ -94,6 +98,7 @@ class FunctionalTest(unittest.TestCase):
         if len(user) > 0:
             return user[0]
 
+    @attr(kind='large')
     def get_tenant_by_name(self, name):
         _, body = self.client.get_tenants()
         tenants = body['tenants']['values']
@@ -101,6 +106,7 @@ class FunctionalTest(unittest.TestCase):
         if len(tenant) > 0:
             return tenant[0]
 
+    @attr(kind='large')
     def get_role_by_name(self, name):
         _, body = self.client.get_roles()
         roles = body['roles']['values']
@@ -108,10 +114,12 @@ class FunctionalTest(unittest.TestCase):
         if len(role) > 0:
             return role[0]
 
+    @attr(kind='large')
     def expire_token(self, user_id, tenant_id):
         sql = "update token set expires = '2000-01-01' where user_id=%s and tenant_id=%s" % (user_id, tenant_id)
         self.db.exec_mysql(sql)
 
+    @attr(kind='large')
     def remove_token(self, user_id, tenant_id):
         sql = "delete from token where user_id=%s and tenant_id=%s" % (user_id, tenant_id)
         self.db.exec_mysql(sql)
@@ -138,7 +146,7 @@ class DataGenerator(object):
         self.tenants = []
         self.roles = []
         self.role_name = None
-        
+
     def setup_one_user(self):
         _, tenant = self.client.create_tenant("test_tenant1", "tenant_for_test")
         _, user = self.client.create_user("test_user1", "password", tenant['tenant']['id'], "user1@mail.com")
@@ -164,12 +172,14 @@ class DataGenerator(object):
 
 class KeystoneTest(FunctionalTest):
 
+    @attr(kind='large')
     def test_get_tenants(self):
         self.data.setup_one_user()
         _, body = self.client.get_tenants()
         tenants = body['tenants']['values']
         self.assertIn('test_tenant1', [t['name'] for t in tenants], "test_tenant1 should be include.")
 
+    @attr(kind='large')
     def test_get_tenants_with_no_grant(self):
         self.data.setup_one_user()
         self.swap_user('test_user1', 'password', 'test_tenant1')
@@ -177,6 +187,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('401', resp['status'])
         messages.append(('test_get_tenants_with_no_grant',body))
 
+    @attr(kind='large')
     def test_get_tenants_with_expired_user(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
@@ -189,6 +200,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('403', resp['status'])
         messages.append(('test_get_tenants_with_expired_user', body))
 
+    @attr(kind='large')
     def test_get_tenants_with_no_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
@@ -201,14 +213,15 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
         messages.append(('test_get_tenants_with_no_token', body))
 
+    @attr(kind='large')
     def test_create_tenants(self):
         _, body = self.client.create_tenant("test_tenant1", "tenant_for_test")
         self.data.tenants.append(body['tenant'])
-        
         self.assertEquals('test_tenant1', body['tenant']['name'])
         self.assertEquals('tenant_for_test', body['tenant']['description'])
         messages.append(('test_create_tenants', body))
 
+    @attr(kind='large')
     def test_create_tenants_with_no_grant(self):
         self.data.setup_one_user()
         self.swap_user('test_user1', 'password', 'test_tenant1')
@@ -216,6 +229,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('401', resp['status'])
         messages.append(('test_create_tenants_with_no_grant',body))
 
+    @attr(kind='large')
     def test_create_tenants_with_expired_user(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
@@ -228,6 +242,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('403', resp['status'])
         messages.append(('test_create_tenants_with_expired_user', body))
 
+    @attr(kind='large')
     def test_create_tenants_with_no_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
@@ -240,41 +255,48 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
         messages.append(('test_get_tenants_with_no_token', body))
 
+    @attr(kind='large')
     def test_create_tenants_conflict(self):
         self.data.setup_one_user()
         resp, body = self.client.create_tenant("test_tenant1", "tenant_for_test")
         self.assertEqual('409', resp['status'])
         messages.append(('test_create_tenants_conflict', body))
 
+    @attr(kind='large')
     @tests.skip_test('Unable to create bad object')
     def test_create_tenants_bad_object(self):
         resp, body = self.client.create_tenant(True, "tenant_for_test")
         self.assertEqual('400', resp['status'])
         messages.append(('test_create_tenants_bad_object', body))
 
+    @attr(kind='large')
     def test_create_tenants_empty_name(self):
         resp, body = self.client.create_tenant("", "tenant_for_test")
         self.assertEqual('400', resp['status'])
         messages.append(('test_create_tenants_empty_name', body))
 
+    @attr(kind='large')
     @tests.skip_test('Not check 256 value in tenant name.')
     def test_create_tenants_over_256_name(self):
         resp, body = self.client.create_tenant("a" * 256, "tenant_for_test")
         self.assertEqual('400', resp['status'])
         messages.append(('test_create_tenants_over_256_name', body))
 
+    @attr(kind='large')
     @tests.skip_test('Not check 256 value in tenant description.')
     def test_create_tenants_over_256_description(self):
         resp, body = self.client.create_tenant("a" * 256, "tenant_for_test")
         self.assertEqual('400', resp['status'])
         messages.append(('test_create_tenants_over_256_description', body))
 
+    @attr(kind='large')
     def test_delete_tenants(self):
         _, body = self.client.create_tenant("test_tenant1", "tenant_for_test")
         resp, body = self.client.delete_tenant(body['tenant']['id'])
         self.assertEquals('204', resp['status'])
         messages.append(('test_delete_tenants', body))
 
+    @attr(kind='large')
     def test_delete_tenants_with_no_grant(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
@@ -283,6 +305,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('401', resp['status'])
         messages.append(('test_delete_tenants_with_no_grant',body))
 
+    @attr(kind='large')
     def test_delete_tenants_with_expired_user(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
@@ -295,6 +318,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('403', resp['status'])
         messages.append(('test_delete_tenants_with_expired_user', body))
 
+    @attr(kind='large')
     def test_delete_tenants_with_no_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
@@ -307,12 +331,14 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
         messages.append(('test_delete_tenants_with_no_token', body))
 
+    @attr(kind='large')
     def test_delete_tenants_with_no_exist_id(self):
         self.data.setup_one_user()
         resp, body = self.client.delete_tenant('99999999')
         self.assertEqual('404', resp['status'])
         messages.append(('test_delete_tenants_with_no_exist_id', body))
 
+    @attr(kind='large')
     def test_auth(self):
         self.data.setup_one_user()
         # create token.
@@ -322,6 +348,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         messages.append(('test_auth', body))
 
+    @attr(kind='large')
     def test_auth_with_expire_token(self):
         self.data.setup_one_user()
         # create token.
@@ -334,6 +361,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         messages.append(('test_auth_with_expire_token', body))
 
+    @attr(kind='large')
     def test_auth_with_none_token(self):
         self.data.setup_one_user()
         # create token.
@@ -346,6 +374,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('200', resp['status'])
         messages.append(('test_auth_with_none_token', body))
 
+    @attr(kind='large')
     def test_auth_with_disable_user(self):
         self.data.setup_one_user()
         self.diable_user('test_user1')
@@ -353,6 +382,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('403', resp['status'])
         messages.append(('test_auth_with_diable_user', body))
 
+    @attr(kind='large')
     def test_auth_with_disable_tenant(self):
         self.data.setup_one_user()
         self.diable_tenant('test_tenant1')
@@ -360,30 +390,35 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('403', resp['status'])
         messages.append(('test_auth_with_disable_tenant', body))
 
+    @attr(kind='large')
     def test_auth_with_illigal_password(self):
         self.data.setup_one_user()
         resp, body = self.token_client.auth('test_user1', 'test', 'test_tenant1')
         self.assertEqual('401', resp['status'])
         messages.append(('test_auth_with_illigal_password', body))
 
+    @attr(kind='large')
     def test_auth_with_illigal_name(self):
         self.data.setup_one_user()
         resp, body = self.token_client.auth('not_exist', 'password', 'test_tenant1')
         self.assertEqual('401', resp['status'])
         messages.append(('test_auth_with_illigal_name', body))
 
+    @attr(kind='large')
     def test_auth_with_illigal_tenant(self):
         self.data.setup_one_user()
         resp, body = self.token_client.auth('test_user1', 'password', 'test_tenant99')
         self.assertEqual('401', resp['status'])
         messages.append(('test_auth_with_illigal_tenant', body))
 
+    @attr(kind='large')
     def test_get_users(self):
         self.data.setup_one_user()
         _, body = self.client.get_users()
         users = body['users']['values']
         self.assertIn('test_user1', [u['name'] for u in users], "test_user1 should be include.")
 
+    @attr(kind='large')
     def test_get_users_with_no_grant(self):
         self.data.setup_one_user()
         self.swap_user('test_user1', 'password', 'test_tenant1')
@@ -391,6 +426,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('401', resp['status'])
         messages.append(('test_get_users_with_no_grant',body))
 
+    @attr(kind='large')
     def test_get_users_with_expired_user(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
@@ -403,6 +439,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('403', resp['status'])
         messages.append(('test_get_users_with_expired_user', body))
 
+    @attr(kind='large')
     def test_get_users_with_no_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
@@ -415,6 +452,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
         messages.append(('test_get_users_with_no_token', body))
 
+    @attr(kind='large')
     def test_create_user(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
@@ -424,6 +462,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('test_user2', body['user']['name'])
         messages.append(('test_create_user',body))
 
+    @attr(kind='large')
     def test_create_users_with_no_grant(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
@@ -432,6 +471,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('401', resp['status'])
         messages.append(('test_create_users_with_no_grant',body))
 
+    @attr(kind='large')
     def test_create_users_with_expired_user(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
@@ -445,6 +485,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('403', resp['status'])
         messages.append(('test_get_users_with_expired_user', body))
 
+    @attr(kind='large')
     def test_create_users_with_no_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
@@ -458,6 +499,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
         messages.append(('test_create_users_with_no_token', body))
 
+    @attr(kind='large')
     def test_create_users_with_conflict_name(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
@@ -465,6 +507,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('409', resp['status'])
         messages.append(('test_create_users_with_conflict_name',body))
 
+    @attr(kind='large')
     def test_create_users_with_conflict_email(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
@@ -472,6 +515,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('409', resp['status'])
         messages.append(('test_create_users_with_conflict_email',body))
 
+    @attr(kind='large')
     @tests.skip_test("Not check 256 value on user name")
     def test_create_users_with_over_256_name(self):
         self.data.setup_one_user()
@@ -480,6 +524,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('400', resp['status'])
         messages.append(('test_create_users_with_over_256_name',body))
 
+    @attr(kind='large')
     def test_create_users_with_empty_name(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
@@ -487,6 +532,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('400', resp['status'])
         messages.append(('test_create_users_with_empty_name',body))
 
+    @attr(kind='large')
     @tests.skip_test("Not check 256 value on user password")
     def test_create_users_with_over_256_password(self):
         self.data.setup_one_user()
@@ -495,6 +541,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('400', resp['status'])
         messages.append(('test_create_users_with_over_256_name',body))
 
+    @attr(kind='large')
     def test_create_users_with_empty_password(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
@@ -502,6 +549,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('400', resp['status'])
         messages.append(('test_create_users_with_empty_password',body))
 
+    @attr(kind='large')
     @tests.skip_test("Not check mail format")
     def test_create_users_with_bad_mail_format(self):
         self.data.setup_one_user()
@@ -510,12 +558,14 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('400', resp['status'])
         messages.append(('test_create_users_with_bad_mail_format',body))
 
+    @attr(kind='large')
     def test_create_users_with_non_exist_tenant(self):
         self.data.setup_one_user()
         resp, body = self.client.create_user('test_user2', 'password', '99999999', 'user2@test.com')
         self.assertEqual('404', resp['status'])
         messages.append(('test_create_users_with_non_exist_tenant',body))
 
+    @attr(kind='large')
     def test_delete_user(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
@@ -524,6 +574,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEquals('204', resp['status'])
         messages.append(('test_delete_user', body))
 
+    @attr(kind='large')
     def test_delete_users_with_no_grant(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
@@ -532,6 +583,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('401', resp['status'])
         messages.append(('test_delete_users_with_no_grant',body))
 
+    @attr(kind='large')
     def test_delete_user_with_expired_user(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
@@ -544,6 +596,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('403', resp['status'])
         messages.append(('test_delete_user_with_expired_user', body))
 
+    @attr(kind='large')
     def test_delete_user_with_no_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
@@ -556,12 +609,14 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
         messages.append(('test_delete_user_with_no_token', body))
 
+    @attr(kind='large')
     def test_delete_user_with_no_exist_id(self):
         self.data.setup_one_user()
         resp, body = self.client.delete_user('99999999')
         self.assertEqual('404', resp['status'])
         messages.append(('test_delete_user_with_no_exist_id', body))
 
+    @attr(kind='large')
     def test_get_roles(self):
         self.data.setup_role()
         _, body = self.client.get_roles()
@@ -569,6 +624,7 @@ class KeystoneTest(FunctionalTest):
         role_names = [r['name'] for r in roles]
         self.assertIn(self.data.role_name, role_names)
 
+    @attr(kind='large')
     def test_get_roles_with_no_grant(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -577,6 +633,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('401', resp['status'])
         messages.append(('test_get_roles_with_no_grant',body))
 
+    @attr(kind='large')
     def test_get_roles_with_expired_user(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -590,6 +647,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('403', resp['status'])
         messages.append(('test_get_roles_with_expired_user', body))
 
+    @attr(kind='large')
     def test_get_roles_with_no_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
@@ -602,6 +660,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
         messages.append(('test_get_roles_with_no_token', body))
 
+    @attr(kind='large')
     def test_get_user_roles(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -613,6 +672,7 @@ class KeystoneTest(FunctionalTest):
         roles = body['roles']['values']
         self.assertEquals(tenant['id'], roles[0]['tenantId'])
 
+    @attr(kind='large')
     def test_get_user_roles_with_no_grant(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -620,12 +680,13 @@ class KeystoneTest(FunctionalTest):
         tenant = self.get_tenant_by_name('test_tenant1')
         role = self.get_role_by_name(self.data.role_name)
         self.client.create_role_ref(user['id'], role['id'], tenant['id'])
-    
+
         self.swap_user('test_user1', 'password', 'test_tenant1')
         resp, body = self.client.get_user_roles(user['id'])
         self.assertEqual('401', resp['status'])
         messages.append(('test_get_user_roles_with_no_grant',body))
 
+    @attr(kind='large')
     def test_get_user_roles_with_expired_user(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -642,6 +703,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('403', resp['status'])
         messages.append(('test_get_user_roles_with_expired_user', body))
 
+    @attr(kind='large')
     def test_get_user_roles_with_no_token(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -658,6 +720,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
         messages.append(('test_get_user_roles_with_no_token', body))
 
+    @attr(kind='large')
     def test_get_user_roles_with_not_exist_user(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -670,6 +733,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
         messages.append(('test_get_user_roles_with_not_exist_user', body))
 
+    @attr(kind='large')
     def test_create_user_roles(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -681,18 +745,20 @@ class KeystoneTest(FunctionalTest):
         roles = body['roles']['values']
         self.assertEquals(tenant['id'], roles[0]['tenantId'])
 
+    @attr(kind='large')
     def test_create_user_roles_with_no_grant(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
         tenant = self.get_tenant_by_name('test_tenant1')
         role = self.get_role_by_name(self.data.role_name)
-    
+
         self.swap_user('test_user1', 'password', 'test_tenant1')
         resp, body = self.client.create_role_ref(user['id'], role['id'], tenant['id'])
         self.assertEqual('401', resp['status'])
         messages.append(('test_create_user_roles_with_no_grant',body))
 
+    @attr(kind='large')
     def test_create_user_roles_with_expired_user(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -708,6 +774,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('403', resp['status'])
         messages.append(('test_create_user_roles_with_expired_user', body))
 
+    @attr(kind='large')
     def test_create_user_roles_with_no_token(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -723,6 +790,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
         messages.append(('test_create_user_roles_with_no_token', body))
 
+    @attr(kind='large')
     def test_create_user_roles_with_not_exist_user(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -733,6 +801,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
         messages.append(('test_create_user_roles_with_not_exist_user', body))
 
+    @attr(kind='large')
     def test_create_user_roles_with_not_exist_role(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -743,6 +812,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
         messages.append(('test_create_user_roles_with_not_exist_role', body))
 
+    @attr(kind='large')
     def test_create_user_roles_with_not_exist_tenant(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -753,6 +823,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
         messages.append(('test_create_user_roles_with_not_exist_user', body))
 
+    @attr(kind='large')
     @tests.skip_test("Duplicate entry returned 500 error")
     def test_create_user_roles_with_conflict(self):
         self.data.setup_one_user()
@@ -765,6 +836,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('409', resp['status'])
         messages.append(('test_create_user_roles_with_conflict', body))
 
+    @attr(kind='large')
     def test_delete_user_role(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -776,6 +848,7 @@ class KeystoneTest(FunctionalTest):
         resp, body = self.client.delete_role_ref(user['id'], role['id'])
         self.assertEquals('204', resp['status'])
 
+    @attr(kind='large')
     def test_delete_user_roles_with_no_grant(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -784,12 +857,13 @@ class KeystoneTest(FunctionalTest):
         role = self.get_role_by_name(self.data.role_name)
         _, body = self.client.create_role_ref(user['id'], role['id'], tenant['id'])
         role = body['role']
-    
+
         self.swap_user('test_user1', 'password', 'test_tenant1')
         resp, body = self.client.delete_role_ref(user['id'], role['id'])
         self.assertEqual('401', resp['status'])
         messages.append(('test_delete_user_roles_with_no_grant',body))
 
+    @attr(kind='large')
     def test_delete_user_roles_with_expired_user(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -807,6 +881,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('403', resp['status'])
         messages.append(('test_create_user_roles_with_expired_user', body))
 
+    @attr(kind='large')
     def test_delete_user_roles_with_no_token(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -824,6 +899,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEqual('404', resp['status'])
         messages.append(('test_create_user_roles_with_no_token', body))
 
+    @attr(kind='large')
     @tests.skip_test("None exist user not occured exception")
     def test_delete_user_role_with_not_exist_user(self):
         self.data.setup_one_user()
@@ -837,6 +913,7 @@ class KeystoneTest(FunctionalTest):
         self.assertEquals('404', resp['status'])
         messages.append(('test_delete_user_role_with_not_exist_user', body))
 
+    @attr(kind='large')
     @tests.skip_test("None exist role not occured exception")
     def test_delete_user_role_with_not_exist_role(self):
         self.data.setup_one_user()

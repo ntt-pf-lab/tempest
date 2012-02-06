@@ -69,7 +69,6 @@ class FunctionalTest(unittest.TestCase):
         config.nova.conf.set('nova', 'user', user)
         config.nova.conf.set('nova', 'api_key', password)
         config.nova.conf.set('nova', 'tenant_name', tenant_name)
-        
         self._load_client(config, data=self.data)
 
     def change_admin(self):
@@ -87,7 +86,7 @@ class FunctionalTest(unittest.TestCase):
         self.db = DBController(config)
         token = self.token_client.get_token(config.keystone.user,
                                             config.keystone.password,
-                                            config.keystone.tenant_name)        
+                                            config.keystone.tenant_name)
         self.nova_manage_network = NetworkWrapper(self.default_config)
         self.glance = GlanceWrapper(token, self.default_config)
         self.data = DataGenerator(self.keystone_client,
@@ -259,7 +258,7 @@ class GlanceWrapper(object):
         self.host = config.glance.host
         self.port = config.glance.port
         self.token = token
-    
+
     def _glance(self, action, params, yes=None):
         cmd = "glance -A %s -H %s -p %s %s %s" %\
              (self.token, self.host, self.port, action, params)
@@ -272,7 +271,7 @@ class GlanceWrapper(object):
     def index(self):
         result = self._glance('index', '', yes="y")
         return result
-    
+
     def add(self, image_name, image_format, container_format, image_file):
         params = "name=%s is_public=true disk_format=%s container_format=%s < %s" \
                       % (image_name,
@@ -297,7 +296,6 @@ class GlanceWrapper(object):
         if result:
             splited = str(result).split()
             return splited[splited.count(splited)-1]
-
 
     def delete(self, image_id):
         result = self._glance('delete', image_id, yes="y")
@@ -343,7 +341,8 @@ class LongTermTest(FunctionalTest):
         block = self.data.create_ip_block(scenario, '10.1.1.0/24', 255, 'virbr0', results['tenant']['id'], nw, '10.1.1.255', '10.1.1.2')
         results.update({'IP Block': block})
         return results
-        
+
+    @attr(kind='large')
     def test_long_term(self):
         '''
         Loop applicate new tenant scenario.

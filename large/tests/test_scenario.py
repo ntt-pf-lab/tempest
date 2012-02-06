@@ -357,7 +357,8 @@ class ScenarioTest(FunctionalTest):
         block = self.data.create_ip_block(scenario, '10.1.1.0/24', 255, 'virbr0', results['tenant']['id'], nw, '10.1.1.255', '10.1.1.2')
         results.update({'IP Block': block})
         return results
-        
+
+    @attr(kind='large')
     def test_scenario_application_new_tenant(self):
         '''
         Scenario test for create "Applicate new tenant"

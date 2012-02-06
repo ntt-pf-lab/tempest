@@ -369,8 +369,8 @@ class ScenarioTest(FunctionalTest):
         block = self.data.create_ip_block(scenario, '10.1.1.0/24', 255, 'virbr0', results['tenant']['id'], nw, '10.1.1.255', '10.1.1.2')
         results.update({'IP Block': block})
         return results
-    
-    def _standard_scenario(self, name):    
+
+    def _standard_scenario(self, name):
         '''
         Scenario test for create "Standard Usage"
         1. Create new user/tenant
