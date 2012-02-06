@@ -6,7 +6,7 @@ import time
 
 import storm.config
 import stackmonkey.manager as ssh_manager
-#from nova import log
+from nova import log
 
 
 from medium.tests.processes import (
@@ -17,7 +17,7 @@ from medium.tests.processes import (
         NovaNetworkProcess, NovaSchedulerProcess,
         FakeQuantumProcess)
 
-#log.setup()
+log.setup()
 config = storm.config.StormConfig('etc/large.conf')
 
 

@@ -10,8 +10,8 @@ from storm import openstack
 import storm.config
 from storm import exceptions
 from storm.common.utils.data_utils import rand_name
-#from nova import utils
-#from nova import flags
+from nova import utils
+from nova import flags
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -426,12 +426,12 @@ class LibvirtSnapshotErrorTest(LibvirtFunctionalTest):
         self._snapshot_image_with_fake_libvirt('tempfile',
                         'general-error', 'fake.mkdtemp_patch', 'ACTIVE')
 
-    '''
+
     @attr(kind='medium')
     def test_d02_432(self):
         self._snapshot_image_with_fake_libvirt('nova.utils',
                         'general-error', 'fake.execute_patch', 'ACTIVE')
-    '''
+
 
     @attr(kind='medium')
     def test_d02_433(self):
