@@ -62,11 +62,14 @@ class Client(object):
         :returns: data read from standard output of the command
 
         """
-        ssh = self._get_ssh_connection()
-        stdin, stdout, stderr = ssh.exec_command(cmd)
-        output = stdout.read()
-        ssh.close()
-        return output
+        try:
+            ssh = self._get_ssh_connection()
+            stdin, stdout, stderr = ssh.exec_command(cmd)
+            output = stdout.read()
+            ssh.close()
+            return output
+        except:
+            raise
 
     def test_connection_auth(self):
         """ Returns true if ssh can connect to server"""
