@@ -105,6 +105,38 @@ class ServicesConfig(object):
             return default_value
 
     @property
+    def nova_api_service(self):
+        return self.get("nova_api_service", "nova-api")
+
+    @property
+    def nova_scheduler_service(self):
+        return self.get("nova_scheduler_service", "nova-scheduler")
+
+    @property
+    def nova_compute_service(self):
+        return self.get("nova_compute_service", "nova-compute")
+
+    @property
+    def nova_network_service(self):
+        return self.get("nova_network_service", "nova-network")
+
+    @property
+    def glance_api_service(self):
+        return self.get("glance_api_service", "glance-api")
+
+    @property
+    def glance_registry_service(self):
+        return self.get("glance_registry_service", "glance-registry")
+
+    @property
+    def keystone_service(self):
+        return self.get("keystone-service", "keystone")
+
+    @property
+    def quantum_service(self):
+        return self.get("quantum-service", "quantum")
+
+    @property
     def mysql_user(self):
         return self.get("mysql_user", "root")
 

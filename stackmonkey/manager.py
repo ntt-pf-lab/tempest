@@ -233,8 +233,8 @@ class ControllerHavoc(HavocManager):
                     config_file=None, **kwargs):
         super(ControllerHavoc, self).__init__(host, username, password,
                 **kwargs)
-        self.api_service = 'openstack-nova-api'
-        self.scheduler_service = 'openstack-nova-scheduler'
+        self.api_service = self.services.nova_api_service
+        self.scheduler_service = self.services.nova_scheduler_service
         self.rabbit_service = 'rabbitmq-server'
         self.mysql_service = 'mysql'
         self.config_file = config_file
@@ -286,7 +286,7 @@ class NetworkHavoc(HavocManager):
     def __init__(self, host=None, username='root', password='root',
                     config_file=None, **kwargs):
         super(NetworkHavoc, self).__init__(host, username, password, **kwargs)
-        self.network_service = 'openstack-nova-network'
+        self.network_service = self.services.nova_network_service
         self.config_file = config_file
 
     def stop_nova_network(self):
@@ -317,7 +317,7 @@ class ComputeHavoc(HavocManager):
     def __init__(self, host=None, username='root', password='root',
                     config_file=None, **kwargs):
         super(ComputeHavoc, self).__init__(host, username, password, **kwargs)
-        self.compute_service = 'openstack-nova-compute'
+        self.compute_service = self.services.nova_compute_service
         self.terminated_instances = []
         self.config_file = config_file
 
@@ -400,8 +400,8 @@ class GlanceHavoc(HavocManager):
     def __init__(self, host=None, username='root', password='root',
                         api_config_file=None, registry_config_file=None):
         super(GlanceHavoc, self).__init__(host, username, password)
-        self.api_service = 'openstack-glance-api'
-        self.registry_service = 'openstack-glance-registy'
+        self.api_service = self.services.glance_api_service
+        self.registry_service = self.services.glance_registry_service
         self.api_config_file = api_config_file
         self.registry_config_file = registry_config_file
 
@@ -432,7 +432,7 @@ class KeystoneHavoc(HavocManager):
     def __init__(self, host=None, username='root', password='root',
                     config_file=None):
         super(KeystoneHavoc, self).__init__(host, username, password)
-        self.keystone_service = 'openstack-keystone'
+        self.keystone_service = self.services.keystone_service
         self.config_file = config_file
 
     def start_keystone(self):
@@ -451,7 +451,7 @@ class QuantumHavoc(HavocManager):
     def __init__(self, host=None, username='root', password='root',
                     config_file=None, agent_config_file=None, **kwargs):
         super(QuantumHavoc, self).__init__(host, username, password, **kwargs)
-        self.quantum_service = 'openstack-quantum'
+        self.quantum_service = self.services.quantum_service
         self.quantum_plugin = "quantum/plugins/openvswitch/agent/" \
                                 "ovs_quantum_agent.py"
         self.config_file = config_file
