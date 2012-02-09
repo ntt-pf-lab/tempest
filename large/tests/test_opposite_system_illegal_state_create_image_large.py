@@ -860,178 +860,194 @@ class LibvirtErrorTest(FunctionalTest):
         self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
 
 
-#class QuantumErrorTest(FunctionalTest):
-#
-#    config = config
-#
-#    def setUp(self):
-#        super(QuantumErrorTest, self).setUp()
-#
-#        # nova
-#        self.testing_processes.append(NovaApiProcess(
-#                self.config.nova.directory,
-#                self.config.nova.host,
-#                self.config.nova.port))
-#        self.testing_processes.append(NovaNetworkProcess(
-#                self.config.nova.directory))
-#        self.testing_processes.append(NovaSchedulerProcess(
-#                self.config.nova.directory))
-#        self.testing_processes.append(NovaComputeProcess(
-#                self.config.nova.directory))
-#
-#        # glance
-#        self.testing_processes.append(GlanceRegistryProcess(
-#                self.config.glance.directory,
-#                self.config.glance.registry_config))
-#        self.testing_processes.append(GlanceApiProcess(
-#                self.config.glance.directory,
-#                self.config.glance.api_config,
-#                self.config.glance.host,
-#                self.config.glance.port))
-#
-#        # reset db
-#        self.reset_db()
-#
-#        for process in self.testing_processes:
-#            process.start()
-#        time.sleep(10)
-#
-#        # create users
-#        silent_check_call('bin/nova-manage user create '
-#                          '--name=admin --access=secrete --secret=secrete',
-#                          cwd=self.config.nova.directory, shell=True)
-#        # create projects
-#        silent_check_call('bin/nova-manage project create '
-#                          '--project=1 --user=admin',
-#                          cwd=self.config.nova.directory, shell=True)
-#
-#        self.addCleanup(cleanup_virtual_instances)
-#        self.addCleanup(cleanup_processes, self.testing_processes)
-#
-#    def tearDown(self):
-#        super(QuantumErrorTest, self).tearDown()
-#
-#    def check_create_network(self, retcode):
-#        self.assertEqual(subprocess.call('bin/nova-manage '
-#                                         '--flagfile=%s '
-#                                         'network create '
-#                                         '--label=private_1-1 '
-#                                         '--project_id=1 '
-#                                         '--fixed_range_v4=10.0.0.0/24 '
-#                                         '--bridge_interface=br-int '
-#                                         '--num_networks=1 '
-#                                         '--network_size=32 '
-#                                         % self.config.nova.config,
-#                                         cwd=self.config.nova.directory,
-#                                         shell=True), retcode)
-#
-#    def _create_image_with_quantum(self, vm_status, image_status, **param):
-#        # quantum
-#        quantum = QuantumProcess(self.config.quantum.directory,
-#                        self.config.quantum.config)
-#        quantum_plugin = QuantumPluginOvsAgentProcess(
-#                        self.config.quantum.directory,
-#                        self.config.quantum.agent_config)
-#
-#        self.testing_processes.append(quantum)
-#        self.testing_processes.append(quantum_plugin)
-#        quantum.start()
-#        quantum_plugin.start()
-#
-#        self.check_create_network(0)
-#
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        server_name = rand_name(self._testMethodName)
-#        _, server = self.ss_client.create_server(server_name,
-#                                                 self.image_ref,
-#                                                 self.flavor_ref,
-#                                                 accessIPv4=accessIPv4,
-#                                                 accessIPv6=accessIPv6)
-#        server_id = server['id']
-#        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
-#
-#        emphasised_print('Start testing %s' % self.id())
-#
-#        if param['delete_vif_db']:
-#            subprocess.check_call('mysql -u%s -p%s -h%s -e "'
-#                                  'connect nova;'
-#                                  'delete from fixed_ips;'
-#                                  'delete from virtual_interfaces;'
-#                                  '"' % (
-#                                      self.config.mysql.user,
-#                                      self.config.mysql.password,
-#                                      self.config.mysql.host),
-#                                  shell=True)
-#
-#        # execute
-#        image_name = rand_name(self._testMethodName)
-#        self.ss_client.create_image(server_id, image_name)
-#        time.sleep(10)
-#
-#        # assert
-#        self.assert_instance(server_id, vm_status)
-#        self.assert_image(None, image_name, image_status)
-#
-#    def _create_image_with_fake_quantum(self, vm_status, image_status,
-#                                        **param):
-#        # quantum
-#        quantum = FakeQuantumProcess('1', **param)
-#        self.testing_processes.append(quantum)
-#        quantum.start()
-#
-#        self.check_create_network(0)
-#
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        server_name = rand_name(self._testMethodName)
-#        _, server = self.ss_client.create_server(server_name,
-#                                                 self.image_ref,
-#                                                 self.flavor_ref,
-#                                                 accessIPv4=accessIPv4,
-#                                                 accessIPv6=accessIPv6)
-#        server_id = server['id']
-#        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
-#
-#        emphasised_print('Start testing %s' % self.id())
-#        quantum.set_test(True)
-#
-#        # execute
-#        image_name = rand_name(self._testMethodName)
-#        self.ss_client.create_image(server_id, image_name)
-#        time.sleep(10)
-#
-#        # assert
-#        self.assert_instance(server_id, vm_status)
-#        self.assert_image(None, image_name, image_status)
-#
-#    def _test_show_port_attachment(self, vm_status, image_status,
-#                                   status_code):
-#        self._create_image_with_fake_quantum(vm_status, image_status,
-#                                         show_port_attachment=status_code)
-#
+class QuantumErrorTest(FunctionalTest):
+
+    config = config
+
+    def setUp(self):
+        super(QuantumErrorTest, self).setUp()
+
+        # nova
+        self.testing_processes.append(NovaApiProcess(
+                self.config.nova.directory,
+                self.config.nova.host,
+                self.config.nova.port))
+        self.testing_processes.append(NovaNetworkProcess(
+                self.config.nova.directory))
+        self.testing_processes.append(NovaSchedulerProcess(
+                self.config.nova.directory))
+        self.testing_processes.append(NovaComputeProcess(
+                self.config.nova.directory))
+
+        # glance
+        self.testing_processes.append(GlanceRegistryProcess(
+                self.config.glance.directory,
+                self.config.glance.registry_config))
+        self.testing_processes.append(GlanceApiProcess(
+                self.config.glance.directory,
+                self.config.glance.api_config,
+                self.config.glance.host,
+                self.config.glance.port))
+
+        # reset db
+        self.reset_db()
+
+        for process in self.testing_processes:
+            process.start()
+        time.sleep(10)
+
+        # create users
+        silent_check_call('bin/nova-manage user create '
+                          '--name=admin --access=secrete --secret=secrete',
+                          cwd=self.config.nova.directory, shell=True)
+        # create projects
+        silent_check_call('bin/nova-manage project create '
+                          '--project=1 --user=admin',
+                          cwd=self.config.nova.directory, shell=True)
+
+        self.addCleanup(cleanup_virtual_instances)
+        self.addCleanup(cleanup_processes, self.testing_processes)
+
+    def tearDown(self):
+        super(QuantumErrorTest, self).tearDown()
+
+    def check_create_network(self, retcode):
+        self.assertEqual(subprocess.call('bin/nova-manage '
+                                         '--flagfile=%s '
+                                         'network create '
+                                         '--label=private_1-1 '
+                                         '--project_id=1 '
+                                         '--fixed_range_v4=10.0.0.0/24 '
+                                         '--bridge_interface=br-int '
+                                         '--num_networks=1 '
+                                         '--network_size=32 '
+                                         % self.config.nova.config,
+                                         cwd=self.config.nova.directory,
+                                         shell=True), retcode)
+
+    def _create_image_with_quantum(self, vm_status, image_status, **param):
+        # quantum
+        quantum = QuantumProcess(self.config.quantum.directory,
+                        self.config.quantum.config)
+        quantum_plugin = QuantumPluginOvsAgentProcess(
+                        self.config.quantum.directory,
+                        self.config.quantum.agent_config)
+
+        self.testing_processes.append(quantum)
+        self.testing_processes.append(quantum_plugin)
+        quantum.start()
+        quantum_plugin.start()
+
+        self.check_create_network(0)
+
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        server_name = rand_name(self._testMethodName)
+        _, server = self.ss_client.create_server(server_name,
+                                                 self.image_ref,
+                                                 self.flavor_ref,
+                                                 accessIPv4=accessIPv4,
+                                                 accessIPv6=accessIPv6)
+        server_id = server['id']
+        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+
+        emphasised_print('Start testing %s' % self.id())
+
+        if param['delete_vif_db']:
+            subprocess.check_call('mysql -u%s -p%s -h%s -e "'
+                                  'connect nova;'
+                                  'delete from fixed_ips;'
+                                  'delete from virtual_interfaces;'
+                                  '"' % (
+                                      self.config.mysql.user,
+                                      self.config.mysql.password,
+                                      self.config.mysql.host),
+                                  shell=True)
+
+        # execute
+        image_name = rand_name(self._testMethodName)
+        self.ss_client.create_image(server_id, image_name)
+        time.sleep(10)
+
+        # assert
+        self.assert_instance(server_id, vm_status)
+        self.assert_image(None, image_name, image_status)
+
+    def _create_image_with_fake_quantum(self, vm_status, image_status,
+                                        **param):
+        # quantum
+        quantum = FakeQuantumProcess('1', **param)
+        self.testing_processes.append(quantum)
+        quantum.start()
+
+        self.check_create_network(0)
+
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        server_name = rand_name(self._testMethodName)
+        _, server = self.ss_client.create_server(server_name,
+                                                 self.image_ref,
+                                                 self.flavor_ref,
+                                                 accessIPv4=accessIPv4,
+                                                 accessIPv6=accessIPv6)
+        server_id = server['id']
+        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+
+        emphasised_print('Start testing %s' % self.id())
+        quantum.set_test(True)
+
+        # execute
+        image_name = rand_name(self._testMethodName)
+        self.ss_client.create_image(server_id, image_name)
+        time.sleep(10)
+
+        # assert
+        self.assert_instance(server_id, vm_status)
+        self.assert_image(None, image_name, image_status)
+
+    def _test_show_port_attachment(self, vm_status, image_status,
+                                   status_code):
+        self._create_image_with_fake_quantum(vm_status, image_status,
+                                         show_port_attachment=status_code)
+
 #    @test.skip_test('Not yet implemented')
 #    @attr(kind='large')
 #    def test_d02_412(self):
 #        self._create_image_with_quantum('ACTIVE', 'error', delete_vif_db=True)
-#
-#    @test.skip_test('Not yet implemented')
-#    @attr(kind='large')
-#    def test_d02_413(self):
-#        """show_port_attachment_forbidden"""
-#        self._test_show_port_attachment('ACTIVE', 'error', 403)
-#
-#    @test.skip_test('Not yet implemented')
-#    @attr(kind='large')
-#    def test_d02_414(self):
-#        """show_port_attachment_network_not_found"""
-#        self._test_show_port_attachment('ACTIVE', 'error', 420)
-#
-#    @test.skip_test('Not yet implemented')
-#    @attr(kind='large')
-#    def test_d02_415(self):
-#        """show_port_attachment_port_not_found"""
-#        self._test_show_port_attachment('ACTIVE', 'error', 430)
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_413(self):
+        """
+        Forbidden(403) in port attachment from Quantum
+
+
+        at nova.xxxxx
+            GET /tenants/{tenant-id}/networks/{network-id}/ports/ {port-id}/attachment
+        """
+        self._test_show_port_attachment('ACTIVE', 'error', 403)
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_414(self):
+        """
+        NetworkNotFound(420) in port attachment from Quantum
+
+        at nova.xxxxx
+            GET /tenants/{tenant-id}/networks/{network-id}/ports/ {port-id}/attachment
+        """
+        self._test_show_port_attachment('ACTIVE', 'error', 420)
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_415(self):
+        """
+        PortNotFound(430) in port attachment from Quantum
+
+        at nova.xxxxx
+            GET /tenants/{tenant-id}/networks/{network-id}/ports/ {port-id}/attachment
+        """
+        self._test_show_port_attachment('ACTIVE', 'error', 430)
 
 
 class DBErrorTest(FunctionalTest):
@@ -1230,19 +1246,46 @@ class DBErrorTest(FunctionalTest):
 #                'fake.instance_update_except_patch_at_first_update',
 #                [], 'ACTIVE')
 
-#    @attr(kind='large')
-#    def test_d02_410(self):
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_410(self):
+        """
+        DB stopped
+
+        at nova.xxxxx
+            db.virtual_interface_get_by_instance(context, instance_id)
+        """
+        self._create_image_with_fake_db('', '', '', [], 'ACTIVE', 'error')
 #        self._create_image_with_fake_db('nova.db.api',
 #                'create-image-error',
 #                'fake.virtual_interface_get_by_instance_stop_patch',
 #                [], 'ACTIVE')
-#
-#    @attr(kind='large')
-#    def test_d02_411(self):
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_411(self):
+        """
+        VIF not found
+
+        at nova.xxxxx
+            db.virtual_interface_get_by_instance(context, instance_id)
+        """
+        self._create_image_with_fake_db('', '', '', [], 'ACTIVE', 'error')
 #        self._create_image_with_fake_db('nova.db.api',
 #                'create-image-error',
 #                'fake.virtual_interface_get_by_instance_except_patch',
 #                [], 'ACTIVE')
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_412(self):
+        """
+        VIF not found
+
+        at nova.xxxxx
+            db.virtual_interface_get_by_instance(context, instance_id)
+        """
+        self._create_image_with_fake_db('', '', '', [], 'ACTIVE', 'error')
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
@@ -1390,3 +1433,139 @@ class RabbitMQErrorTest(FunctionalTest):
         #TODO
         self._create_image_with_rabbitmq_stopped('', '', '', [],
                                                  'ACTIVE', 'error')
+
+
+class MelangeErrorTest(FunctionalTest):
+
+    config = config
+
+    def setUp(self):
+        super(MelangeErrorTest, self).setUp()
+
+        # nova
+        self.testing_processes.append(NovaApiProcess(
+                self.config.nova.directory,
+                self.config.nova.host,
+                self.config.nova.port))
+        self.testing_processes.append(NovaNetworkProcess(
+                self.config.nova.directory))
+        self.testing_processes.append(NovaSchedulerProcess(
+                self.config.nova.directory))
+
+        # glance
+        self.testing_processes.append(GlanceRegistryProcess(
+                self.config.glance.directory,
+                self.config.glance.registry_config))
+        self.testing_processes.append(GlanceApiProcess(
+                self.config.glance.directory,
+                self.config.glance.api_config,
+                self.config.glance.host,
+                self.config.glance.port))
+
+        # quantum
+        self.testing_processes.append(FakeQuantumProcess('1'))
+
+        # reset db
+        self.reset_db()
+
+        for process in self.testing_processes:
+            process.start()
+        time.sleep(10)
+
+        # create users
+        silent_check_call('bin/nova-manage user create '
+                          '--name=admin --access=secrete --secret=secrete',
+                          cwd=self.config.nova.directory, shell=True)
+        # create projects
+        silent_check_call('bin/nova-manage project create '
+                          '--project=1 --user=admin',
+                          cwd=self.config.nova.directory, shell=True)
+        # allocate networks
+        silent_check_call('bin/nova-manage '
+                          '--flagfile=%s '
+                          'network create '
+                          '--label=private_1-1 '
+                          '--project_id=1 '
+                          '--fixed_range_v4=10.0.0.0/24 '
+                          '--bridge_interface=br-int '
+                          '--num_networks=1 '
+                          '--network_size=32 '
+                          % self.config.nova.config,
+                          cwd=self.config.nova.directory, shell=True)
+
+        self.addCleanup(cleanup_virtual_instances)
+        self.addCleanup(cleanup_processes, self.testing_processes)
+
+    def tearDown(self):
+        self.mysql_start()
+        super(MelangeErrorTest, self).tearDown()
+
+    def _create_image_with_fake_melange(self, monkey_module, fakepath,
+                fake_patch_name, other_module_patchs, vm_status, image_status):
+
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        _, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6)
+        server_id = server['id']
+        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+
+        # replace Melange by fake
+        #TODO
+
+        # execute
+        image_name = rand_name(self._testMethodName)
+        self.ss_client.create_image(server_id, image_name)
+        time.sleep(10)
+
+        # assert
+        self.assert_instance(server_id, vm_status)
+        self.assert_image(None, image_name, image_status)
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_416(self):
+        """
+        500 Response from Melange
+
+        at nova.xxxxx
+            GET ipam%(tenant_scope)s/ip_blocks % locals()
+        """
+        self._create_image_with_fake_melange('', '', '', [], 'ACTIVE', 'error')
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_417(self):
+        """
+        No response from Melange
+
+        at nova.xxxxx
+            GET ipam%(tenant_scope)s/ip_blocks % locals()
+        """
+        self._create_image_with_fake_melange('', '', '', [], 'ACTIVE', 'error')
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_418(self):
+        """
+        500 Response from Melange
+
+        at nova.xxxxx
+            GET ipam%(tenant_scope)s/networks/%(network_id)s/interfaces/%(vif_id)s/ip_allocations % locals()
+        """
+        self._create_image_with_fake_melange('', '', '', [], 'ACTIVE', 'error')
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_419(self):
+        """
+        No response from Melange
+
+        at nova.xxxxx
+            GET ipam%(tenant_scope)s/networks/%(network_id)s/interfaces/%(vif_id)s/ip_allocations % locals()
+        """
+        self._create_image_with_fake_melange('', '', '', [], 'ACTIVE', 'error')
