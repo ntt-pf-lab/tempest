@@ -65,9 +65,15 @@ class Client(object):
         try:
             ssh = self._get_ssh_connection()
             stdin, stdout, stderr = ssh.exec_command(cmd)
-            output = stdout.read()
+            status = stdout.channel.recv_exit_status()
+            stdout.channel.settimeout(10)
+            try:
+                output = stdout.read()
+            except socket.timeout:
+                if status == 0:
+                    status, output = status, None
             ssh.close()
-            return output
+            return status, output
         except:
             raise
 
