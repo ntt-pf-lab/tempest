@@ -4,7 +4,6 @@ import time
 import urllib
 from stackmonkey import manager
 from stackmonkey import config
-import sys
 
 
 def wait_to_launch(host, port):
@@ -61,7 +60,6 @@ class GlanceRegistryProcess(Process):
         super(GlanceRegistryProcess, self).__init__('test', 'test', env=None)
         if not host:
             host = self.nodes.glance.ip
-        print "processes Object: GlanceRegistry HOST IP:", host
         self.registry_havoc = manager.GlanceHavoc(host,
             registry_config_file=config, **kwargs)
 
@@ -77,7 +75,6 @@ class GlanceApiProcess(Process):
         super(GlanceApiProcess, self).__init__('test', 'test', env=None)
         if not host:
             host = self.nodes.glance.ip
-        print "processes Object: GlanceAPI HOST IP: ", host
         self.glance_api_havoc = manager.GlanceHavoc(host, api_config_file=config,
                 **kwargs)
 
@@ -93,7 +90,6 @@ class KeystoneProcess(Process):
         super(KeystoneProcess, self).__init__('test', 'test', env=None)
         if not host:
             host = self.nodes.keystone.ip
-        print "processes Object: Keystone HOST IP: ", host
         self.keystone_havoc = manager.KeystoneHavoc(host, config_file=config,
                 **kwargs)
 
@@ -134,7 +130,6 @@ class NovaApiProcess(NovaProcess):
         super(NovaApiProcess, self).__init__('test', 'test', **kwargs)
         if not host:
             host = self.nodes.api.ip
-        print "processes Object: NovaAPI HOST IP:", host
         self.api_havoc = manager.ControllerHavoc(host, **kwargs)
 
     def start(self):
@@ -149,7 +144,6 @@ class NovaComputeProcess(NovaProcess):
         super(NovaComputeProcess, self).__init__('test', 'test', **kwargs)
         if not host:
             host = self.nodes.compute.ip
-        print "prccesses Object: NovaCompute HOST IP: ", host
         self.compute_havoc = manager.ComputeHavoc(host, **kwargs)
 
     def start(self):
@@ -164,7 +158,6 @@ class NovaNetworkProcess(NovaProcess):
         super(NovaNetworkProcess, self).__init__('test', 'test', **kwargs)
         if not host:
             host = self.nodes.network.ip
-        print "processes Object: NovaNetwork HOST IP:", host
         self.network_havoc = manager.NetworkHavoc(host, **kwargs)
 
     def start(self):
@@ -179,7 +172,6 @@ class NovaSchedulerProcess(NovaProcess):
         super(NovaSchedulerProcess, self).__init__('test', 'test', **kwargs)
         if not host:
             host = self.nodes.scheduler.ip
-        print "processes Object: NovaScheduler HOST IP:", host
         self.scheduler_havoc = manager.ControllerHavoc(host, **kwargs)
 
     def start(self):
@@ -193,7 +185,6 @@ class QuantumProcess(Process):
     def __init__(self, directory, config, **kwargs):
         super(QuantumProcess, self).__init__('test', 'test', env=None)
         host = self.nodes.quantum.ip
-        print "processes Object: Quantum HOST IP: ", host
         self.quantum_havoc = manager.QuantumHavoc(host=host, config_file=config,
                                                 **kwargs)
 
@@ -209,7 +200,6 @@ class QuantumPluginOvsAgentProcess(Process):
         super(QuantumPluginOvsAgentProcess, self).__init__('test', 'test',
                                                             env=None)
         host = self.nodes.quantum.ip
-        print "processes Object: Quantum Plugin HOST IP: ", host
         self.havoc = manager.QuantumHavoc(host=host, agent_config_file=config,
                                             **kwargs)
 

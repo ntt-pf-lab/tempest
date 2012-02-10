@@ -80,8 +80,7 @@ ssh_con = havoc.connect(havoc.config.nodes.api.ip,
 
 ctl_havoc = ssh_manager.ControllerHavoc(havoc.config.nodes.api.ip,
                                           havoc.config.nodes.api.user,
-                                          havoc.config.nodes.api.password,
-                                          havoc.config.nodes.ssh_timeout)
+                                          havoc.config.nodes.api.password)
 
 
 ctl_ssh_con = ctl_havoc.connect(ctl_havoc.config.nodes.api.ip,
@@ -93,12 +92,11 @@ ctl_havoc_pkg = ssh_manager.ControllerHavoc(havoc.config.nodes.api.ip,
                                           havoc.config.nodes.api.user,
                                           havoc.config.nodes.api.password,
                                           havoc.config.nodes.ssh_timeout)
-ctl_havoc_pkg.deploy_mode = 'pkg-multi'
 
 ctl_ssh_con_pkg = ctl_havoc_pkg.connect(ctl_havoc_pkg.config.nodes.api.ip,
-                                          ctl_havoc_pkg.config.nodes.api.user,
-                                          ctl_havoc_pkg.config.nodes.api.password,
-                                          ctl_havoc_pkg.config.nodes.ssh_timeout)
+                                      ctl_havoc_pkg.config.nodes.api.user,
+                                      ctl_havoc_pkg.config.nodes.api.password,
+                                      ctl_havoc_pkg.config.nodes.ssh_timeout)
 
 
 glance_havoc = ssh_manager.GlanceHavoc(
@@ -115,7 +113,7 @@ glance_ssh_con = glance_havoc.connect(
                                     havoc.config.nodes.glance.ip,
                                     havoc.config.nodes.glance.user,
                                     havoc.config.nodes.glance.password,
-                                    glance_havoc.config.nodes.ssh_timeout)
+                                    havoc.config.nodes.ssh_timeout)
 
 
 compute_havoc = ssh_manager.ComputeHavoc(
@@ -131,7 +129,7 @@ compute_ssh_con = compute_havoc.connect(
                                 havoc.config.nodes.compute.ip,
                                 havoc.config.nodes.compute.user,
                                 havoc.config.nodes.compute.password,
-                                compute_havoc.config.nodes.ssh_timeout)
+                                havoc.config.nodes.ssh_timeout)
 
 
 network_havoc = ssh_manager.NetworkHavoc(

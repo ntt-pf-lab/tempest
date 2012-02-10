@@ -14,7 +14,6 @@
 # under the License.
 
 import subprocess
-import time
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
@@ -118,10 +117,6 @@ class StackMonkeyTest(unittest.TestCase):
         subprocess.check_call(pscmd,
                       shell=True)
 
-
-
-
-
     def test_stop_glance_api(self):
 
         monkeyutil.stop_glance_api()
@@ -171,7 +166,7 @@ class StackMonkeyTest(unittest.TestCase):
         host = monkeyutil.havoc.config.nodes.rabbitmq.ip
         username = monkeyutil.havoc.config.nodes.rabbitmq.user
 
-        pscmd = "ssh %s@%s 'ps -ef|grep rabbitmq|grep -v grep'" % (username, host)
+        pscmd = "ssh %s@%s 'ps -ef|grep bin/rabbitmq-server|grep -v grep'" % (username, host)
         self.assertRaises(subprocess.CalledProcessError,
             subprocess.check_call, pscmd,
                       shell=True)

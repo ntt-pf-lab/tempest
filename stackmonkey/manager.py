@@ -45,19 +45,21 @@ class HavocManager(object):
     def _run_cmd(self, command=None):
         """Execute remote shell command, return output if successful"""
         try:
-            if self.deploy_mode == 'devstack-local' or not hasattr(self,'client'):
-                p = subprocess.Popen(command, shell=True, env=self.shell_env, stdout=subprocess.PIPE)
+            if self.deploy_mode in ('pkg-multi', 'devstack-remote'):
+                status, output = self.client.exec_command(command)
+                if not status and output:
+                    return output.strip()
+                else:
+                    return False
+
+            elif self.deploy_mode == 'devstack-local' \
+                    or not hasattr(self,'client'):
+                p = subprocess.Popen(command, shell=True, env=self.shell_env,\
+                        stdout=subprocess.PIPE)
                 if p.returncode is None:
                     return p.stdout.read()
                 return False
 
-            elif self.deploy_mode in ('pkg-multi', 'devstack-remote'):
-                output = self.client.exec_command(command)
-                exit_code = self.client.exec_command('echo $?')
-                if exit_code:
-                    return output.strip()
-                else:
-                    return False
             else:
                 return False
         except:
@@ -136,6 +138,20 @@ class HavocManager(object):
                        for module, patch in patches
         ])
 
+    def _run_service_cmd(self, is_running, service, action):
+        if action == 'start':
+            if is_running:
+                return
+        elif action in ('stop', 'restart', 'reload', 'force-reload'):
+            if not is_running:
+                return
+
+        elif action == 'status':
+            return is_running
+
+        command = 'sudo service %s %s' % (service, action)
+        return self._run_cmd(command)
+
     def service_action(self, service, action, config_file=None):
         """Perform the requested action on a service on remote host"""
 
@@ -146,8 +162,17 @@ class HavocManager(object):
         else:
             config_label = '--config-file'
 
+        # Configure call to action for a multi-node remote setup
+        if self.deploy_mode == 'devstack-remote' and service\
+            in ('mysql', 'rabbitmq-server'):
+                return self._run_service_cmd(is_running, service, action)
+
+        elif self.deploy_mode == 'pkg-multi':
+
+            return self._run_service_cmd(is_running, service, action)
+
         # Configure call to action for a local devstack setup
-        if self.deploy_mode in ('devstack-local', 'devstack-remote'):
+        elif self.deploy_mode in ('devstack-local', 'devstack-remote'):
             self.service_root = self._get_service_root(service)
 
             if self.python_path:
@@ -182,7 +207,7 @@ class HavocManager(object):
                         service)
 
                 command = command + ' 2> /dev/null &'
-                self._run_cmd(command=command)
+                return self._run_cmd(command=command)
 
             elif action == 'stop':
                 if not is_running:
@@ -191,27 +216,9 @@ class HavocManager(object):
                 else:
                     for pid in is_running:
                         command = 'sudo kill -9 %s' % pid
-                        self._run_cmd(command=command)
-
-        # Configure call to action for a multi-node remote setup
-        elif self.deploy_mode == 'pkg-multi':
-            if action == 'start':
-                if is_running:
-                    return
-
-            elif action in ('stop', 'restart', 'reload', 'force-reload'):
-                if not is_running:
-                    return
-
-            elif action == 'status':
-                    return is_running
-
-            command = 'sudo service %s %s' % (service, action)
-            return self._run_cmd(command)
-
-        # Configure call to action for a remote devstack setup
-        elif self.deploy_mode == 'devstack-remote':
-            pass
+                        return self._run_cmd(command=command)
+        else:
+            return False
 
     def process_action(self,process, action):
         if action == 'killall' and self._is_process_running(process):
