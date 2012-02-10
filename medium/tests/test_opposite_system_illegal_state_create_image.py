@@ -6,6 +6,7 @@ import time
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 
+from kong import tests
 from storm import openstack
 import storm.config
 from storm import exceptions
@@ -113,7 +114,7 @@ class QuantumFunctionalTest(unittest.TestCase):
                               self.config.mysql.user,
                               self.config.mysql.password),
                           shell=True)
-        silent_check_call('/opt/openstack/nova/bin/nova-manage db sync',
+        silent_check_call('bin/nova-manage db sync',
                           cwd=self.config.nova.directory, shell=True)
 
         for process in self.testing_processes:
@@ -127,11 +128,11 @@ class QuantumFunctionalTest(unittest.TestCase):
         self.img_client = self.os.images_client
 
         # create users.
-        silent_check_call('/opt/openstack/nova/bin/nova-manage user create '
+        silent_check_call('bin/nova-manage user create '
                           '--name=admin --access=secrete --secret=secrete',
                           cwd=self.config.nova.directory, shell=True)
         # create projects.
-        silent_check_call('/opt/openstack/nova/bin/nova-manage project create '
+        silent_check_call('bin/nova-manage project create '
                           '--project=1 --user=admin',
                           cwd=self.config.nova.directory, shell=True)
 
@@ -139,13 +140,16 @@ class QuantumFunctionalTest(unittest.TestCase):
         self.addCleanup(cleanup_processes, self.testing_processes)
 
     def check_create_network(self, retcode):
-        self.assertEqual(subprocess.call('/opt/openstack/nova/bin/nova-manage network create '
-                                             '--label=private_1-1 '
-                                             '--project_id=1 '
-                                             '--fixed_range_v4=10.0.0.0/24 '
-                                             '--bridge_interface=br-int '
-                                             '--num_networks=1 '
-                                             '--network_size=32 ',
+        self.assertEqual(subprocess.call('bin/nova-manage '
+                                         '--flagfile=%s '
+                                         'network create '
+                                         '--label=private_1-1 '
+                                         '--project_id=1 '
+                                         '--fixed_range_v4=10.0.0.0/24 '
+                                         '--bridge_interface=br-int '
+                                         '--num_networks=1 '
+                                         '--network_size=32 '
+                                         % self.config.nova.config,
                                          cwd=self.config.nova.directory,
                                          shell=True), retcode)
 
@@ -222,21 +226,22 @@ class QuantumFunctionalTest(unittest.TestCase):
     def _test_show_port_attachment(self, status_code):
         self._execute_fake_and_wait_for_error(show_port_attachment=status_code)
 
-    @attr(kind='large')
+    @tests.skip_test("Skip this testcase. This will be tested in large test")
+    @attr(kind='medium')
     def test_d02_412(self):
         self._execute_and_wait_for_error(delete_vif_db=True)
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_413(self):
         """show_port_attachment_forbidden"""
         self._test_show_port_attachment(403)
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_414(self):
         """show_port_attachment_network_not_found"""
         self._test_show_port_attachment(420)
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_415(self):
         """show_port_attachment_port_not_found"""
         self._test_show_port_attachment(430)
@@ -311,7 +316,7 @@ class LibvirtFunctionalTest(unittest.TestCase):
                               self.config.mysql.user,
                               self.config.mysql.password),
                           shell=True)
-        silent_check_call('/opt/openstack/nova/bin/nova-manage db sync',
+        silent_check_call('bin/nova-manage db sync',
                           cwd=self.config.nova.directory, shell=True)
 
         for process in self.testing_processes:
@@ -319,22 +324,25 @@ class LibvirtFunctionalTest(unittest.TestCase):
         time.sleep(10)
 
         # create users.
-        silent_check_call('/opt/openstack/nova/bin/nova-manage user create '
+        silent_check_call('bin/nova-manage user create '
                           '--name=admin --access=secrete --secret=secrete',
                           cwd=self.config.nova.directory, shell=True)
         # create projects.
-        silent_check_call('/opt/openstack/nova/bin/nova-manage project create '
+        silent_check_call('bin/nova-manage project create '
                           '--project=1 --user=admin',
                           cwd=self.config.nova.directory, shell=True)
 
         # allocate networks.
-        silent_check_call('/opt/openstack/nova/bin/nova-manage network create '
+        silent_check_call('bin/nova-manage '
+                          '--flagfile=%s '
+                          'network create '
                           '--label=private_1-1 '
                           '--project_id=1 '
                           '--fixed_range_v4=10.0.0.0/24 '
                           '--bridge_interface=br-int '
                           '--num_networks=1 '
-                          '--network_size=32 ',
+                          '--network_size=32 '
+                          % self.config.nova.config,
                           cwd=self.config.nova.directory, shell=True)
 
         self.addCleanup(cleanup_virtual_instances)
@@ -401,94 +409,94 @@ class LibvirtSnapshotErrorTest(LibvirtFunctionalTest):
                           self.ss_client.wait_for_server_status,
                           server['id'], 'ERROR')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_405(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'lookup-error',
                                     'fake_libvirt.libvirt_patch', 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_406(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'lookup-error',
                             'fake_libvirt.libvirt_patch_no_domain', 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_407(self):
         self._snapshot_image_with_fake_libvirt('nova.db.api',
                             'create-image-error',
                             'fake.instance_get_libvirt_stop_patch', 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_420(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'lookup-error',
                                 'fake_libvirt.libvirt_patch', 'ACTIVE', True)
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_421(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'lookup-error',
                     'fake_libvirt.libvirt_patch_no_domain', 'ACTIVE', True)
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_422(self):
         self._snapshot_image_with_fake_libvirt('nova.db.api',
                 'create-image-error',
                 'fake.virtual_interface_get_by_instance_libvirt_stop_patch',
                 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_423(self):
         self._snapshot_image_with_fake_libvirt('nova.image.glance',
                 'virconn-error', 'fake_libvirt.libvirt_glance_show_patch',
                 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_425(self):
         self._snapshot_image_with_fake_libvirt('nova.image.glance',
                 'virconn-error', 'fake_libvirt.libvirt_image_not_found_patch',
                  'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_426(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'virdomain-error',
                         'fake_libvirt.libvirt_snap_createxml_patch', 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_428(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'virdomain-error',
                          'fake_libvirt.libvirt_snap_xmldesc_patch', 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_430(self):
         self._snapshot_image_with_fake_libvirt('tempfile',
                         'general-error', 'fake.mkdtemp_patch', 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_432(self):
         self._snapshot_image_with_fake_libvirt('nova.utils',
                         'general-error', 'fake.execute_patch', 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_433(self):
         self._snapshot_image_with_fake_libvirt('nova.image.glance',
                 'virconn-error', 'fake_libvirt.libvirt_glance_update_patch',
                 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_435(self):
         self._snapshot_image_with_fake_libvirt('nova.image.glance',
                 'virconn-error', 'fake_libvirt.libvirt_update_not_found_patch',
                 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_436(self):
         self._snapshot_image_with_fake_libvirt('shutil', 'general-error',
                                                'fake.rmtree_patch', 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_437(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'virdomain-error',
                     'fake_libvirt.libvirt_snap_delete_patch', 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_438(self):
         self._snapshot_image_with_fake_libvirt('shutil', 'general-error',
                                        'fake.shutil_rmtree_libvirt_stop_patch',
@@ -501,8 +509,8 @@ class GlanceErrorTest(unittest.TestCase):
 
     def tearDown(self):
         self._dumpdb()
-        for index, process in enumerate(environ_processes):
-            if process.command.find('glance-') >= 0:
+        for process in environ_processes[:]:
+            if isinstance(process, GlanceApiProcess):
                 process.start()
         time.sleep(10)
 
@@ -555,7 +563,7 @@ class GlanceErrorTest(unittest.TestCase):
                               self.config.mysql.user,
                               self.config.mysql.password),
                           shell=True)
-        silent_check_call('/opt/openstack/nova/bin/nova-manage db sync',
+        silent_check_call('bin/nova-manage db sync',
                           cwd=self.config.nova.directory, shell=True)
 
         for process in self.testing_processes:
@@ -563,22 +571,25 @@ class GlanceErrorTest(unittest.TestCase):
         time.sleep(10)
 
         # create users.
-        silent_check_call('/opt/openstack/nova/bin/nova-manage user create '
+        silent_check_call('bin/nova-manage user create '
                           '--name=admin --access=secrete --secret=secrete',
                           cwd=self.config.nova.directory, shell=True)
         # create projects.
-        silent_check_call('/opt/openstack/nova/bin/nova-manage project create '
+        silent_check_call('bin/nova-manage project create '
                           '--project=1 --user=admin',
                           cwd=self.config.nova.directory, shell=True)
 
         # allocate networks.
-        silent_check_call('/opt/openstack/nova/bin/nova-manage network create '
+        silent_check_call('bin/nova-manage '
+                          '--flagfile=%s '
+                          'network create '
                           '--label=private_1-1 '
                           '--project_id=1 '
                           '--fixed_range_v4=10.0.0.0/24 '
                           '--bridge_interface=br-int '
                           '--num_networks=1 '
-                          '--network_size=32 ',
+                          '--network_size=32 '
+                          % self.config.nova.config,
                           cwd=self.config.nova.directory, shell=True)
 
         self.addCleanup(cleanup_virtual_instances)
@@ -613,10 +624,9 @@ class GlanceErrorTest(unittest.TestCase):
                           server['id'], 'ACTIVE')
 
         # stop glance service
-        for index, process in enumerate(environ_processes):
-            if process.command.find('glance-') >= 0:
+        for process in environ_processes[:]:
+            if isinstance(process, GlanceApiProcess):
                 process.stop()
-#                environ_processes.pop(index)
         time.sleep(10)
 
         self.ss_client.create_image(server['id'], 'test_snapshot_image_name')
@@ -624,7 +634,7 @@ class GlanceErrorTest(unittest.TestCase):
         self.ss_client.wait_for_server_status(
                           server['id'], 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_401(self):
         self._snapshot_with_glance_error('', '', '')
 
@@ -721,13 +731,16 @@ class DBErrorTest(unittest.TestCase):
                           cwd=self.config.nova.directory, shell=True)
 
         # allocate networks.
-        silent_check_call('bin/nova-manage network create '
+        silent_check_call('bin/nova-manage '
+                          '--flagfile=%s '
+                          'network create '
                           '--label=private_1-1 '
                           '--project_id=1 '
                           '--fixed_range_v4=10.0.0.0/24 '
                           '--bridge_interface=br-int '
                           '--num_networks=1 '
-                          '--network_size=32 ',
+                          '--network_size=32 '
+                          % self.config.nova.config,
                           cwd=self.config.nova.directory, shell=True)
 
         self.addCleanup(cleanup_virtual_instances)
@@ -739,10 +752,10 @@ class DBErrorTest(unittest.TestCase):
                 'fakes',
                 name)
 
-    def get_tests_path(self, name):
-        p = os.path.dirname(__file__)
-        p = p.split(os.path.sep)[0:-2]
-        return os.path.join(os.path.sep.join(p), name)
+    #def get_tests_path(self, name):
+    #    p = os.path.dirname(__file__)
+    #    p = p.split(os.path.sep)[0:-2]
+    #    return os.path.join(os.path.sep.join(p), name)
 
     def mysql_start(self):
         try:
@@ -786,8 +799,9 @@ class DBErrorTest(unittest.TestCase):
             patches.append(other_module_patchs)
 
         env = os.environ.copy()
-        env['PYTHONPATH'] = self.get_fake_path(fakepath) +\
-            ':' + self.get_tests_path('stackmonkey')
+        env['PYTHONPATH'] = self.get_fake_path(fakepath)
+        #env['PYTHONPATH'] = self.get_fake_path(fakepath) +\
+        #    ':' + self.get_tests_path('stackmonkey')
         compute = NovaComputeProcess(self.config.nova.directory,
                                      patches=patches,
                                      env=env,
@@ -800,7 +814,11 @@ class DBErrorTest(unittest.TestCase):
         # execute
         image_name = rand_name('image')
         print 'image_name=' + image_name
-        self.ss_client.create_image(server['id'], image_name)
+        resp, _ = self.ss_client.create_image(server['id'], image_name)
+        #alt_img_url = resp['location']
+        #match = re.search('/images/(?P<image_id>.+)', alt_img_url)
+        #self.assertIsNotNone(match)
+        #image_id = match.groupdict()['image_id']
         time.sleep(10)
 
         # assert
@@ -810,10 +828,10 @@ class DBErrorTest(unittest.TestCase):
         print 'body(ss_client.get_server)=' + str(server)
         self.assertEqual(status, server['status'])
 
-        resp, image = self.img_client.get_image(image_name)
-        print 'resp(img_client.get_image)=' + str(resp)
-        print 'body(img_client.get_image)=' + str(image)
-        self.assertEqual('404', resp['status'])
+        #resp, image = self.img_client.get_image(image_id)
+        #print 'resp(img_client.get_image)=' + str(resp)
+        #print 'body(img_client.get_image)=' + str(image)
+        #self.assertEqual('404', resp['status'])
 
         self._dumpdb()
 
@@ -832,54 +850,54 @@ class DBErrorTest(unittest.TestCase):
                                   server['id']),
                               shell=True)
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_403(self):
         self._create_image_with_fake_db('nova.db.api',
                             'create-image-error', 'fake.db_stop_patch',
                             [], 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_404(self):
         self._create_image_with_fake_db('nova.db.api',
                             'create-image-error', 'fake.db_exception_patch',
                             [], 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_408(self):
         self._create_image_with_fake_db('nova.compute.manager',
                     'create-image-error',
                     'fake.instance_update_stop_patch_at_first_update',
                     [], 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_409(self):
         self._create_image_with_fake_db('nova.compute.manager',
                 'create-image-error',
                 'fake.instance_update_except_patch_at_first_update',
                 [], 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_410(self):
         self._create_image_with_fake_db('nova.db.api',
                 'create-image-error',
                 'fake.virtual_interface_get_by_instance_stop_patch',
                 [], 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_411(self):
         self._create_image_with_fake_db('nova.db.api',
                 'create-image-error',
                 'fake.virtual_interface_get_by_instance_except_patch',
                 [], 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_440(self):
         self._create_image_with_fake_db('nova.compute.manager',
                     'create-image-error',
                     'fake.instance_update_stop_patch_at_last_update',
                     [], 'ACTIVE')
 
-    @attr(kind='large')
+    @attr(kind='medium')
     def test_d02_441(self):
         self._create_image_with_fake_db('nova.compute.manager',
                 'create-image-error',
