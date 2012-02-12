@@ -52,9 +52,63 @@ class QuantumClient(object):
         body = json.loads(body)
         return resp, body
 
+    def detail_networks(self):
+        resp, body = self.client.get('networks/detail.josn')
+        body = json_loads(body)
+        return resp, body
+
     def delete_network(self, uuid):
         resp, body = self.client.delete('networks/%s.json' % uuid)
         return resp, body
+
+    def create_port(self, network_id, zone):
+        post = {
+            'port': {
+                'state': 'ACTIVE',
+                'nova_id': zone
+            }
+        }
+        headers = {'Content-Type': 'application/json'}
+        body = json.dumps(post)
+        resp, body = self.client.post('networks/%s/ports.json' % network_id ,headers=headers, body=body)
+        body = json.loads(body)
+        return resp, body
+
+    def delete_port(self, network_id, port_id):
+        resp, body = self.client.delete('networks/%s/ports/%s.json' % (network_id, port_id))
+        return resp, body
+
+    def list_ports(self, network_id):
+        resp, body = self.client.get('networks/%s/ports.json' % network_id)
+        body = json_loads(body)
+        return resp, body
+
+    def list_port_details(self, network_id):
+        resp, body = self.client.get('networks/%s/ports/detail.json' % network_id)
+        body = json_loads(body)
+        return resp, body
+
+    def attach_port(self, network_id, port_id, interface_id):
+        post = {
+            'attachment': {
+                'id': interface_id
+            }
+        }
+        headers = {'Content-Type': 'application/json'}
+        body = json.dumps(post)
+        resp, body = self.client.put('networks/%s/ports/%s/attachment.json' 
+                % (network_id, port_id), headers=headers, body=body)
+        return resp, body
+
+    def detach_port(self, network_id, port_id):
+        resp, body = self.client.delete('networks/%s/ports/%s/attachment.json' % (network_id, port_id))
+        return resp, body
+
+    def list_port_attachment(self, network_id, port_id):
+        resp, body = self.client.get('networks/%s/ports/%s/attachment.json' % (network_id, port_id))
+        body = json_loads(body)
+        return resp, body
+
 
 class QuantumRestClient(RestClient):
     
@@ -66,4 +120,4 @@ class QuantumRestClient(RestClient):
         endpoints = catalog[0]['endpoints']
         mgmt_url = endpoints[0]['publicURL']
         return token, mgmt_url
-    
+
