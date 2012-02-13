@@ -211,7 +211,6 @@ class HavocConfig(object):
             self.DEFAULT_CONFIG_FILE)
 
         path = os.path.join(conf_dir, conf_file)
-        print path
 
         if not os.path.exists(path):
             msg = "Config file %(path)s not found" % locals()
