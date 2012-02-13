@@ -6,7 +6,7 @@
 #mysql -uroot -pnova ovs_quantum -e "delete from networks;"
 source /opt/openstack/os-inst-m2/install.conf
 flags=$NOVA_ETC_DIR/nova.conf
-cmd=$NOVA_HOME/bin/nova-manage --flagfile=$flags
+cmd="$NOVA_HOME/bin/nova-manage --flagfile=$flags"
 $cmd network create --label=private_1-1 --project_id=1 --fixed_range_v4=10.0.0.0/24 --bridge_interface=br-int --num_networks= --network_size=32
 $cmd network create --label=private_1-2 --project_id=1 --fixed_range_v4=10.0.1.0/24 --bridge_interface=br-int --num_networks= --network_size=32
 $cmd network create --label=private_1-3 --project_id=1 --fixed_range_v4=10.0.2.0/24 --bridge_interface=br-int --num_networks= --network_size=32
