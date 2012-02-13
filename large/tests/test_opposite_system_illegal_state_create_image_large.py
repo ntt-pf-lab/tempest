@@ -72,13 +72,13 @@ class FunctionalTest(unittest.TestCase):
     def tearDown(self):
         self._dumpdb()
 
-    def get_fake_path(self, name):
-        return os.path.join(
-                os.path.dirname(__file__),
-                'fakes',
-                name)
+    #def get_fake_path(self, name):
+    #    return os.path.join(
+    #            os.path.dirname(__file__),
+    #            'fakes',
+    #            name)
 
-    def get_tests_path(self, name):
+    def _get_tests_path(self, name):
         p = os.path.dirname(__file__)
         p = p.split(os.path.sep)[0:-2]
         return os.path.join(os.path.sep.join(p), name)
@@ -127,94 +127,57 @@ class FunctionalTest(unittest.TestCase):
                                   self.config.mysql.host),
                               shell=True)
 
-    def assert_instance(self, server_id, status):
-        if status == 'ACTIVE':
-            self.assert_instance_active(server_id)
-        elif status == 'ERROR':
-            self.assert_instance_error(server_id)
+    def assert_instance(self, server_id, vm_state, task_state):
+        if vm_state == 'active':
+            self._assert_instance(server_id, 'running', '0', vm_state,
+                                  task_state, '1', True)
         else:
             raise
 
     def assert_image(self, image_id, image_name, status):
         if status == 'active':
-            self.assert_image_active(image_id, image_name)
-        elif status == 'error':
-            self.assert_image_error(image_id, image_name)
+            self._assert_image(image_id, image_name, '0', status, True)
+        elif status == 'queued':
+            self._assert_image(image_id, image_name, '0', status, False)
+        elif status == 'killed':
+            self._assert_image(image_id, image_name, '1', status, False)
         elif status is None:
-            self.assert_image_not_exist(image_id, image_name)
+            self._assert_image(image_id, image_name, '1', status, False)
         else:
             raise
 
-    def assert_instance_active(self, server_id):
+    def _assert_instance(self, server_id, vm_state_in_virsh, deleted, vm_state,
+                         task_state, power_state, exist_path):
         # assert virsh
-        self.assertTrue(utils.exist_vm_in_virsh(server_id))
-        self.assertEqual('running', utils.get_vm_state_in_virsh(server_id))
+        self.assertEqual(vm_state_in_virsh, utils.get_vm_state_in_virsh(
+                                                                server_id))
         # assert db
         self.assertTrue(utils.exist_instance_in_db(self.config, server_id))
-        self.assertEqual('0', utils.get_instance_deleted_in_db(
-                                                    self.config, server_id))
-        self.assertEqual('active', utils.get_instance_vm_state_in_db(
-                                                    self.config, server_id))
-        self.assertEqual('NULL', utils.get_instance_task_state_in_db(
-                                                    self.config, server_id))
-        self.assertEqual('1', utils.get_instance_power_state_in_db(
-                                                    self.config, server_id))
-        # assert path
-        self.assertTrue(utils.exist_instance_path(self.config, server_id))
-
-    def assert_instance_error(self, server_id, vm_state='error',
-                              task_state='NULL'):
-        # assert virsh
-        self.assertFalse(utils.exist_vm_in_virsh(server_id))
-        # assert db
-        self.assertTrue(utils.exist_instance_in_db(self.config, server_id))
-        self.assertEqual('1', utils.get_instance_deleted_in_db(
+        self.assertEqual(deleted, utils.get_instance_deleted_in_db(
                                                     self.config, server_id))
         self.assertEqual(vm_state, utils.get_instance_vm_state_in_db(
                                                     self.config, server_id))
         self.assertEqual(task_state, utils.get_instance_task_state_in_db(
                                                     self.config, server_id))
-        self.assertEqual('0', utils.get_instance_power_state_in_db(
+        self.assertEqual(power_state, utils.get_instance_power_state_in_db(
                                                     self.config, server_id))
         # assert path
-        self.assertTrue(utils.exist_instance_path(self.config, server_id))
+        self.assertEqual(exist_path, utils.exist_instance_path(
+                                                    self.config, server_id))
 
-    def assert_image_active(self, image_id=None, image_name=None):
+    def _assert_image(self, image_id, image_name, deleted, status, exist_path):
         if not image_name:
             image_id = utils.get_image_id_by_image_name_in_db(
                                                     self.config, image_name)
         # assert db
-        self.assertTrue(utils.exist_image_in_db(self.config, image_id))
-        self.assertEqual('0', utils.get_image_deleted_in_db(
+        if not status:
+            self.assertEqual(deleted, utils.get_image_deleted_in_db(
                                                     self.config, image_id))
-        self.assertEqual('active', utils.get_image_status_in_db(
-                                                    self.config, image_id))
-        # assert path
-        self.assertTrue(utils.exist_image_path(self.config, image_id))
-
-    def assert_image_error(self, image_id=None, image_name=None,
-                           state='error'):
-        if not image_name:
-            image_id = utils.get_image_id_by_image_name_in_db(
-                                                    self.config, image_name)
-        # assert db
-        self.assertTrue(utils.exist_image_in_db(self.config, image_id))
-        self.assertEqual('1', utils.get_image_deleted_in_db(
-                                                    self.config, image_id))
-        self.assertEqual(state, utils.get_image_status_in_db(
+            self.assertEqual(status, utils.get_image_status_in_db(
                                                     self.config, image_id))
         # assert path
-        self.assertFalse(utils.exist_image_path(self.config, image_id))
-
-    def assert_image_not_exist(self, image_id=None, image_name=None):
-        # assert db
-        if not image_id:
-            self.assertFalse(utils.exist_image_in_db(self.config, image_id))
-        if not image_name:
-            self.assertFalse(utils.exist_image_by_image_name_in_db(
-                                                    self.config, image_name))
-        # assert path
-        self.assertFalse(utils.exist_image_path(self.config, image_id))
+        self.assertEqual(exist_path, utils.exist_image_path(
+                                                    self.config, image_id))
 
 
 class GlanceErrorTest(FunctionalTest):
@@ -284,7 +247,8 @@ class GlanceErrorTest(FunctionalTest):
         super(GlanceErrorTest, self).tearDown()
 
     def _create_image_with_fake_glance(self, monkey_module, fakepath,
-                fake_patch_name, other_module_patchs, vm_status, image_status):
+                fake_patch_name, other_module_patchs, vm_state, task_state,
+                image_status):
 
         # glance
         glance = GlanceApiProcess(self.config.glance.directory,
@@ -330,10 +294,11 @@ class GlanceErrorTest(FunctionalTest):
         time.sleep(10)
 
         # assert
-        self.assert_instance(server_id, vm_status)
+        self.assert_instance(server_id, vm_state, task_state)
         self.assert_image(None, image_name, image_status)
 
-    def _create_image_when_ref_image_is_deleted(self, vm_status, image_status):
+    def _create_image_when_ref_image_is_deleted(self, vm_state, task_state,
+                                                image_status):
         """
         1. create server
         2. glance delete
@@ -388,7 +353,7 @@ class GlanceErrorTest(FunctionalTest):
         time.sleep(10)
 
         # assert
-        self.assert_instance(server_id, vm_status)
+        self.assert_instance(server_id, vm_state, task_state)
         self.assert_image(None, image_name, image_status)
 
     @test.skip_test('Not yet implemented')
@@ -401,7 +366,8 @@ class GlanceErrorTest(FunctionalTest):
             image_service.create(context, sent_meta)
         """
         #TODO
-        self._create_image_with_fake_glance('', '', '', [], 'ACTIVE', None)
+        self._create_image_with_fake_glance('', '', '', [],
+                                            'active', None, None)
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
@@ -412,7 +378,8 @@ class GlanceErrorTest(FunctionalTest):
         at nova.compute.api.py:API._create_image
             image_service.create(context, sent_meta)
         """
-        self._create_image_with_fake_glance('', '', '', [], 'ACTIVE', None)
+        self._create_image_with_fake_glance('', '', '', [],
+                                            'active', None, None)
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
@@ -423,7 +390,8 @@ class GlanceErrorTest(FunctionalTest):
         at nova.virt.libvirt.connection.py:LibvirtConnection.snapshot
             image_service.show(context, image_id)
         """
-        self._create_image_with_fake_glance('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_glance('', '', '', [],
+                                            'active', 'NULL', 'killed')
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
@@ -434,7 +402,8 @@ class GlanceErrorTest(FunctionalTest):
         at nova.virt.libvirt.connection.py:LibvirtConnection.snapshot
             image_service.show(context, image_id)
         """
-        self._create_image_with_fake_glance('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_glance('', '', '', [],
+                                            'active', 'NULL', 'killed')
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
@@ -445,7 +414,8 @@ class GlanceErrorTest(FunctionalTest):
         at nova.virt.libvirt.connection.py:LibvirtConnection.snapshot
             image_service.show(context, image_id)
         """
-        self._create_image_with_fake_glance('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_glance('', '', '', [],
+                                            'active', 'NULL', 'killed')
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
@@ -456,7 +426,8 @@ class GlanceErrorTest(FunctionalTest):
         at nova.virt.libvirt.connection.py:LibvirtConnection.snapshot
             image_service.update(context, image_href, metadata, image_file)
         """
-        self._create_image_with_fake_glance('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_glance('', '', '', [],
+                                            'active', 'NULL', 'killed')
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
@@ -467,7 +438,8 @@ class GlanceErrorTest(FunctionalTest):
         at nova.virt.libvirt.connection.py:LibvirtConnection.snapshot
             image_service.update(context, image_href, metadata, image_file)
         """
-        self._create_image_with_fake_glance('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_glance('', '', '', [],
+                                            'active', 'NULL', 'killed')
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
@@ -478,7 +450,8 @@ class GlanceErrorTest(FunctionalTest):
         at nova.virt.libvirt.connection.py:LibvirtConnection.snapshot
             image_service.update(context, image_href, metadata, image_file)
         """
-        self._create_image_with_fake_glance('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_glance('', '', '', [],
+                                            'active', 'NULL', 'killed')
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
@@ -486,7 +459,8 @@ class GlanceErrorTest(FunctionalTest):
         """
         Create image when the image referred by server is deleted
         """
-        self._create_image_when_ref_image_is_deleted('ACTIVE', 'error')
+        self._create_image_when_ref_image_is_deleted('active', 'NULL',
+                                                     'killed')
 
 
 class LibvirtErrorTest(FunctionalTest):
@@ -556,7 +530,8 @@ class LibvirtErrorTest(FunctionalTest):
         super(LibvirtErrorTest, self).tearDown()
 
     def _create_image_with_fake_libvirt(self, monkey_module, fakepath,
-            fake_patch_name, vm_status, image_status, pass_get_info=False):
+            fake_patch_name, vm_state, task_state, image_status,
+            pass_get_info=False):
 
         # nova-compute
         compute = NovaComputeProcess(self.config.nova.directory)
@@ -597,7 +572,7 @@ class LibvirtErrorTest(FunctionalTest):
         time.sleep(10)
 
         # assert
-        self.assert_instance(server_id, vm_status)
+        self.assert_instance(server_id, vm_state, task_state)
         self.assert_image(None, image_name, image_status)
 
     @test.skip_test('Not yet implemented')
@@ -611,9 +586,10 @@ class LibvirtErrorTest(FunctionalTest):
         """
         #TODO
         # lookupByName is called in nova-compute start. What should I do?
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'killed')
 #        self._snapshot_image_with_libvirt_error('libvirt', 'lookup-error',
-#                            'fake_libvirt.libvirt_patch', 'ACTIVE', 'error')
+#                            'fake_libvirt.libvirt_patch', 'active', 'killed')
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
@@ -626,7 +602,8 @@ class LibvirtErrorTest(FunctionalTest):
         """
         #TODO
         # lookupByName is called in nova-compute start. What should I do?
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'killed')
 #        self._snapshot_image_with_libvirt_error('libvirt', 'lookup-error',
 #                            'fake_libvirt.libvirt_patch_no_domain', 'ACTIVE')
 
@@ -641,7 +618,8 @@ class LibvirtErrorTest(FunctionalTest):
         """
         #TODO
         # lookupByName is called in nova-compute start. What should I do?
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'killed')
 #        self._snapshot_image_with_libvirt_error('nova.db.api',
 #                            'create-image-error',
 #                            'fake.instance_get_libvirt_stop_patch', 'ACTIVE')
@@ -657,7 +635,8 @@ class LibvirtErrorTest(FunctionalTest):
         """
         #TODO
         # replace lookupByName by fake when it is 2nd called
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'killed')
 #        self._snapshot_image_with_libvirt_error('libvirt', 'lookup-error',
 #                                'fake_libvirt.libvirt_patch', 'ACTIVE', True)
 
@@ -672,7 +651,8 @@ class LibvirtErrorTest(FunctionalTest):
         """
         #TODO
         # replace lookupByName by fake when it is 2nd called
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'killed')
 #        self._snapshot_image_with_libvirt_error('libvirt', 'lookup-error',
 #                    'fake_libvirt.libvirt_patch_no_domain', 'ACTIVE', True)
 
@@ -687,7 +667,8 @@ class LibvirtErrorTest(FunctionalTest):
         """
         #TODO
         # replace lookupByName by fake when it is 2nd called
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'killed')
 #        self._snapshot_image_with_libvirt_error('nova.db.api',
 #                'create-image-error',
 #                'fake.virtual_interface_get_by_instance_libvirt_stop_patch',
@@ -715,7 +696,8 @@ class LibvirtErrorTest(FunctionalTest):
             virt_dom.snapshotCreateXML(snapshot_xml, 0)
         """
         #TODO
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'killed')
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
@@ -727,7 +709,8 @@ class LibvirtErrorTest(FunctionalTest):
             virt_dom.snapshotCreateXML(snapshot_xml, 0)
         """
         #TODO
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'killed')
 #        self._snapshot_image_with_libvirt_error('libvirt', 'virdomain-error',
 #                        'fake_libvirt.libvirt_snap_createxml_patch', 'ACTIVE')
 
@@ -741,7 +724,8 @@ class LibvirtErrorTest(FunctionalTest):
             virt_dom.XMLDesc(0)
         """
         #TODO
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'killed')
 #        self._snapshot_image_with_libvirt_error('libvirt', 'virdomain-error',
 #                         'fake_libvirt.libvirt_snap_xmldesc_patch', 'ACTIVE')
 
@@ -755,7 +739,8 @@ class LibvirtErrorTest(FunctionalTest):
             virt_dom.XMLDesc(0)
         """
         #TODO
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'killed')
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
@@ -766,7 +751,8 @@ class LibvirtErrorTest(FunctionalTest):
         at nova.virt.libvirt.connection.py:LibvirtConnection.snapshot
             tempfile.mkdtemp()
         """
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'killed')
 #        self._snapshot_image_with_libvirt_error('tempfile',
 #                        'general-error', 'fake.mkdtemp_patch', 'ACTIVE')
 
@@ -779,7 +765,8 @@ class LibvirtErrorTest(FunctionalTest):
         at nova.virt.libvirt.connection.py:LibvirtConnection.snapshot
             utils.execute(*qemu_img_cmd)
         """
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'killed')
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
@@ -790,7 +777,8 @@ class LibvirtErrorTest(FunctionalTest):
         at nova.virt.libvirt.connection.py:LibvirtConnection.snapshot
             utils.execute(*qemu_img_cmd)
         """
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'killed')
 #        self._snapshot_image_with_libvirt_error('nova.utils',
 #                        'general-error', 'fake.execute_patch', 'ACTIVE')
 
@@ -817,7 +805,7 @@ class LibvirtErrorTest(FunctionalTest):
             image_service.update(context,image_href,metadata,image_file)
         """
         self._create_image_with_fake_libvirt('', '', '', [],
-                                             'ACTIVE', 'error')
+                                             'active', 'NULL', 'active')
 #        self._snapshot_image_with_libvirt_error('shutil', 'general-error',
 #                                               'fake.rmtree_patch', 'ACTIVE')
 
@@ -830,7 +818,8 @@ class LibvirtErrorTest(FunctionalTest):
         at nova.virt.libvirt.connection.py:LibvirtConnection.snapshot
             shutil.rmtree(temp_dir)
         """
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'active')
 #        self._snapshot_image_with_libvirt_error('libvirt', 'virdomain-error',
 #                    'fake_libvirt.libvirt_snap_delete_patch', 'ACTIVE')
 
@@ -843,7 +832,8 @@ class LibvirtErrorTest(FunctionalTest):
         at nova.virt.libvirt.connection.py:LibvirtConnection.snapshot
             snapshot_ptr.delete(0)
         """
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'active')
 #        self._snapshot_image_with_libvirt_error('shutil', 'general-error',
 #                                   'fake.shutil_rmtree_libvirt_stop_patch',
 #                                   'ACTIVE')
@@ -857,181 +847,199 @@ class LibvirtErrorTest(FunctionalTest):
         at nova.virt.libvirt.connection.py:LibvirtConnection.snapshot
             snapshot_ptr.delete(0)
         """
-        self._create_image_with_fake_libvirt('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_libvirt('', '', '', [],
+                                             'active', 'NULL', 'active')
 
 
-#class QuantumErrorTest(FunctionalTest):
-#
-#    config = config
-#
-#    def setUp(self):
-#        super(QuantumErrorTest, self).setUp()
-#
-#        # nova
-#        self.testing_processes.append(NovaApiProcess(
-#                self.config.nova.directory,
-#                self.config.nova.host,
-#                self.config.nova.port))
-#        self.testing_processes.append(NovaNetworkProcess(
-#                self.config.nova.directory))
-#        self.testing_processes.append(NovaSchedulerProcess(
-#                self.config.nova.directory))
-#        self.testing_processes.append(NovaComputeProcess(
-#                self.config.nova.directory))
-#
-#        # glance
-#        self.testing_processes.append(GlanceRegistryProcess(
-#                self.config.glance.directory,
-#                self.config.glance.registry_config))
-#        self.testing_processes.append(GlanceApiProcess(
-#                self.config.glance.directory,
-#                self.config.glance.api_config,
-#                self.config.glance.host,
-#                self.config.glance.port))
-#
-#        # reset db
-#        self.reset_db()
-#
-#        for process in self.testing_processes:
-#            process.start()
-#        time.sleep(10)
-#
-#        # create users
-#        silent_check_call('bin/nova-manage user create '
-#                          '--name=admin --access=secrete --secret=secrete',
-#                          cwd=self.config.nova.directory, shell=True)
-#        # create projects
-#        silent_check_call('bin/nova-manage project create '
-#                          '--project=1 --user=admin',
-#                          cwd=self.config.nova.directory, shell=True)
-#
-#        self.addCleanup(cleanup_virtual_instances)
-#        self.addCleanup(cleanup_processes, self.testing_processes)
-#
-#    def tearDown(self):
-#        super(QuantumErrorTest, self).tearDown()
-#
-#    def check_create_network(self, retcode):
-#        self.assertEqual(subprocess.call('bin/nova-manage '
-#                                         '--flagfile=%s '
-#                                         'network create '
-#                                         '--label=private_1-1 '
-#                                         '--project_id=1 '
-#                                         '--fixed_range_v4=10.0.0.0/24 '
-#                                         '--bridge_interface=br-int '
-#                                         '--num_networks=1 '
-#                                         '--network_size=32 '
-#                                         % self.config.nova.config,
-#                                         cwd=self.config.nova.directory,
-#                                         shell=True), retcode)
-#
-#    def _create_image_with_quantum(self, vm_status, image_status, **param):
-#        # quantum
-#        quantum = QuantumProcess(self.config.quantum.directory,
-#                        self.config.quantum.config)
-#        quantum_plugin = QuantumPluginOvsAgentProcess(
-#                        self.config.quantum.directory,
-#                        self.config.quantum.agent_config)
-#
-#        self.testing_processes.append(quantum)
-#        self.testing_processes.append(quantum_plugin)
-#        quantum.start()
-#        quantum_plugin.start()
-#
-#        self.check_create_network(0)
-#
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        server_name = rand_name(self._testMethodName)
-#        _, server = self.ss_client.create_server(server_name,
-#                                                 self.image_ref,
-#                                                 self.flavor_ref,
-#                                                 accessIPv4=accessIPv4,
-#                                                 accessIPv6=accessIPv6)
-#        server_id = server['id']
-#        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
-#
-#        emphasised_print('Start testing %s' % self.id())
-#
-#        if param['delete_vif_db']:
-#            subprocess.check_call('mysql -u%s -p%s -h%s -e "'
-#                                  'connect nova;'
-#                                  'delete from fixed_ips;'
-#                                  'delete from virtual_interfaces;'
-#                                  '"' % (
-#                                      self.config.mysql.user,
-#                                      self.config.mysql.password,
-#                                      self.config.mysql.host),
-#                                  shell=True)
-#
-#        # execute
-#        image_name = rand_name(self._testMethodName)
-#        self.ss_client.create_image(server_id, image_name)
-#        time.sleep(10)
-#
-#        # assert
-#        self.assert_instance(server_id, vm_status)
-#        self.assert_image(None, image_name, image_status)
-#
-#    def _create_image_with_fake_quantum(self, vm_status, image_status,
-#                                        **param):
-#        # quantum
-#        quantum = FakeQuantumProcess('1', **param)
-#        self.testing_processes.append(quantum)
-#        quantum.start()
-#
-#        self.check_create_network(0)
-#
-#        accessIPv4 = '1.1.1.1'
-#        accessIPv6 = '::babe:220.12.22.2'
-#        server_name = rand_name(self._testMethodName)
-#        _, server = self.ss_client.create_server(server_name,
-#                                                 self.image_ref,
-#                                                 self.flavor_ref,
-#                                                 accessIPv4=accessIPv4,
-#                                                 accessIPv6=accessIPv6)
-#        server_id = server['id']
-#        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
-#
-#        emphasised_print('Start testing %s' % self.id())
-#        quantum.set_test(True)
-#
-#        # execute
-#        image_name = rand_name(self._testMethodName)
-#        self.ss_client.create_image(server_id, image_name)
-#        time.sleep(10)
-#
-#        # assert
-#        self.assert_instance(server_id, vm_status)
-#        self.assert_image(None, image_name, image_status)
-#
-#    def _test_show_port_attachment(self, vm_status, image_status,
-#                                   status_code):
-#        self._create_image_with_fake_quantum(vm_status, image_status,
-#                                         show_port_attachment=status_code)
-#
+class QuantumErrorTest(FunctionalTest):
+
+    config = config
+
+    def setUp(self):
+        super(QuantumErrorTest, self).setUp()
+
+        # nova
+        self.testing_processes.append(NovaApiProcess(
+                self.config.nova.directory,
+                self.config.nova.host,
+                self.config.nova.port))
+        self.testing_processes.append(NovaNetworkProcess(
+                self.config.nova.directory))
+        self.testing_processes.append(NovaSchedulerProcess(
+                self.config.nova.directory))
+        self.testing_processes.append(NovaComputeProcess(
+                self.config.nova.directory))
+
+        # glance
+        self.testing_processes.append(GlanceRegistryProcess(
+                self.config.glance.directory,
+                self.config.glance.registry_config))
+        self.testing_processes.append(GlanceApiProcess(
+                self.config.glance.directory,
+                self.config.glance.api_config,
+                self.config.glance.host,
+                self.config.glance.port))
+
+        # reset db
+        self.reset_db()
+
+        for process in self.testing_processes:
+            process.start()
+        time.sleep(10)
+
+        # create users
+        silent_check_call('bin/nova-manage user create '
+                          '--name=admin --access=secrete --secret=secrete',
+                          cwd=self.config.nova.directory, shell=True)
+        # create projects
+        silent_check_call('bin/nova-manage project create '
+                          '--project=1 --user=admin',
+                          cwd=self.config.nova.directory, shell=True)
+
+        self.addCleanup(cleanup_virtual_instances)
+        self.addCleanup(cleanup_processes, self.testing_processes)
+
+    def tearDown(self):
+        super(QuantumErrorTest, self).tearDown()
+
+    def check_create_network(self, retcode):
+        self.assertEqual(subprocess.call('bin/nova-manage '
+                                         '--flagfile=%s '
+                                         'network create '
+                                         '--label=private_1-1 '
+                                         '--project_id=1 '
+                                         '--fixed_range_v4=10.0.0.0/24 '
+                                         '--bridge_interface=br-int '
+                                         '--num_networks=1 '
+                                         '--network_size=32 '
+                                         % self.config.nova.config,
+                                         cwd=self.config.nova.directory,
+                                         shell=True), retcode)
+
+    def _create_image_with_quantum(self, vm_state, task_state, image_status, **param):
+        # quantum
+        quantum = QuantumProcess(self.config.quantum.directory,
+                        self.config.quantum.config)
+        quantum_plugin = QuantumPluginOvsAgentProcess(
+                        self.config.quantum.directory,
+                        self.config.quantum.agent_config)
+
+        self.testing_processes.append(quantum)
+        self.testing_processes.append(quantum_plugin)
+        quantum.start()
+        quantum_plugin.start()
+
+        self.check_create_network(0)
+
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        server_name = rand_name(self._testMethodName)
+        _, server = self.ss_client.create_server(server_name,
+                                                 self.image_ref,
+                                                 self.flavor_ref,
+                                                 accessIPv4=accessIPv4,
+                                                 accessIPv6=accessIPv6)
+        server_id = server['id']
+        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+
+        emphasised_print('Start testing %s' % self.id())
+
+        if param['delete_vif_db']:
+            subprocess.check_call('mysql -u%s -p%s -h%s -e "'
+                                  'connect nova;'
+                                  'delete from fixed_ips;'
+                                  'delete from virtual_interfaces;'
+                                  '"' % (
+                                      self.config.mysql.user,
+                                      self.config.mysql.password,
+                                      self.config.mysql.host),
+                                  shell=True)
+
+        # execute
+        image_name = rand_name(self._testMethodName)
+        self.ss_client.create_image(server_id, image_name)
+        time.sleep(10)
+
+        # assert
+        self.assert_instance(server_id, vm_state, task_state)
+        self.assert_image(None, image_name, image_status)
+
+    def _create_image_with_fake_quantum(self, vm_state, task_state,
+                                        image_status, **param):
+        # quantum
+        quantum = FakeQuantumProcess('1', **param)
+        self.testing_processes.append(quantum)
+        quantum.start()
+
+        self.check_create_network(0)
+
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        server_name = rand_name(self._testMethodName)
+        _, server = self.ss_client.create_server(server_name,
+                                                 self.image_ref,
+                                                 self.flavor_ref,
+                                                 accessIPv4=accessIPv4,
+                                                 accessIPv6=accessIPv6)
+        server_id = server['id']
+        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+
+        emphasised_print('Start testing %s' % self.id())
+        quantum.set_test(True)
+
+        # execute
+        image_name = rand_name(self._testMethodName)
+        self.ss_client.create_image(server_id, image_name)
+        time.sleep(10)
+
+        # assert
+        self.assert_instance(server_id, vm_state)
+        self.assert_image(None, image_name, image_status)
+
+    def _test_show_port_attachment(self, vm_state, task_state, image_status,
+                                   status_code):
+        self._create_image_with_fake_quantum(vm_state, task_state,
+                                             image_status,
+                                             show_port_attachment=status_code)
+
 #    @test.skip_test('Not yet implemented')
 #    @attr(kind='large')
 #    def test_d02_412(self):
-#        self._create_image_with_quantum('ACTIVE', 'error', delete_vif_db=True)
-#
-#    @test.skip_test('Not yet implemented')
-#    @attr(kind='large')
-#    def test_d02_413(self):
-#        """show_port_attachment_forbidden"""
-#        self._test_show_port_attachment('ACTIVE', 'error', 403)
-#
-#    @test.skip_test('Not yet implemented')
-#    @attr(kind='large')
-#    def test_d02_414(self):
-#        """show_port_attachment_network_not_found"""
-#        self._test_show_port_attachment('ACTIVE', 'error', 420)
-#
-#    @test.skip_test('Not yet implemented')
-#    @attr(kind='large')
-#    def test_d02_415(self):
-#        """show_port_attachment_port_not_found"""
-#        self._test_show_port_attachment('ACTIVE', 'error', 430)
+#        self._create_image_with_quantum('active', 'killed', delete_vif_db=True)
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_413(self):
+        """
+        Forbidden(403) in port attachment from Quantum
+
+
+        at nova.xxxxx
+            GET /tenants/{tenant-id}/networks/{network-id}/ports/ {port-id}/attachment
+        """
+        self._test_show_port_attachment('active', 'NULL', 'killed', 403)
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_414(self):
+        """
+        NetworkNotFound(420) in port attachment from Quantum
+
+        at nova.xxxxx
+            GET /tenants/{tenant-id}/networks/{network-id}/ports/ {port-id}/attachment
+        """
+        self._test_show_port_attachment('active', 'NULL', 'killed', 420)
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_415(self):
+        """
+        PortNotFound(430) in port attachment from Quantum
+
+        at nova.xxxxx
+            GET /tenants/{tenant-id}/networks/{network-id}/ports/ {port-id}/attachment
+        """
+        self._test_show_port_attachment('active', 'NULL', 'killed', 430)
 
 
 class DBErrorTest(FunctionalTest):
@@ -1103,7 +1111,8 @@ class DBErrorTest(FunctionalTest):
         super(DBErrorTest, self).tearDown()
 
     def _create_image_with_fake_db(self, monkey_module, fakepath,
-                fake_patch_name, other_module_patchs, vm_status, image_status):
+                fake_patch_name, other_module_patchs,
+                vm_state, task_state, image_status):
 
         # nova-compute
         compute = NovaComputeProcess(self.config.nova.directory)
@@ -1115,10 +1124,10 @@ class DBErrorTest(FunctionalTest):
         accessIPv6 = '::babe:220.12.22.2'
         name = rand_name('server')
         _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6)
+                                                 self.image_ref,
+                                                 self.flavor_ref,
+                                                 accessIPv4=accessIPv4,
+                                                 accessIPv6=accessIPv6)
         server_id = server['id']
         self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
 
@@ -1129,8 +1138,9 @@ class DBErrorTest(FunctionalTest):
         if other_module_patchs:
             patches.append(other_module_patchs)
         env = os.environ.copy()
-        env['PYTHONPATH'] = self.get_fake_path(fakepath) +\
-            ':' + self.get_tests_path('stackmonkey')
+        env['PYTHONPATH'] = self.get_fake_path(fakepath)
+        #env['PYTHONPATH'] = self.get_fake_path(fakepath) +\
+        #    ':' + self._get_tests_path('stackmonkey')
         compute = NovaComputeProcess(self.config.nova.directory,
                                      patches=patches,
                                      env=env,
@@ -1148,7 +1158,7 @@ class DBErrorTest(FunctionalTest):
         self.mysql_start()
 
         # assert
-        self.assert_instance(server_id, vm_status)
+        self.assert_instance(server_id, vm_state, task_state)
         self.assert_image(None, image_name, image_status)
 
         self._dumpdb()
@@ -1177,7 +1187,8 @@ class DBErrorTest(FunctionalTest):
         at nova.compute.api.py:API._create_image
             db.instance_get(context, instance_id)
         """
-        self._create_image_with_fake_db('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_db('', '', '', [],
+                                        'active', 'NULL', 'queued')
 #        self._create_image_with_fake_db('nova.db.api',
 #                            'create-image-error', 'fake.db_stop_patch',
 #                            [], 'ACTIVE')
@@ -1191,7 +1202,8 @@ class DBErrorTest(FunctionalTest):
         at nova.compute.api.py:API._create_image
             db.instance_get(context, instance_id)
         """
-        self._create_image_with_fake_db('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_db('', '', '', [],
+                                        'active', 'NULL', 'killed')
 #        self._create_image_with_fake_db('nova.db.api',
 #                            'create-image-error', 'fake.db_exception_patch',
 #                            [], 'ACTIVE')
@@ -1207,7 +1219,8 @@ class DBErrorTest(FunctionalTest):
 
             when value of arg 'task_state' == IMAGE_SNAPSHOT
         """
-        self._create_image_with_fake_db('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_db('', '', '', [],
+                                        'active', 'NULL', 'queued')
 #        self._create_image_with_fake_db('nova.compute.manager',
 #                    'create-image-error',
 #                    'fake.instance_update_stop_patch_at_first_update',
@@ -1224,25 +1237,56 @@ class DBErrorTest(FunctionalTest):
 
             when value of arg 'task_state' == IMAGE_SNAPSHOT
         """
-        self._create_image_with_fake_db('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_db('', '', '', [],
+                                        'active', 'NULL', 'killed')
 #        self._create_image_with_fake_db('nova.compute.manager',
 #                'create-image-error',
 #                'fake.instance_update_except_patch_at_first_update',
 #                [], 'ACTIVE')
 
-#    @attr(kind='large')
-#    def test_d02_410(self):
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_410(self):
+        """
+        DB stopped
+
+        at nova.xxxxx
+            db.virtual_interface_get_by_instance(context, instance_id)
+        """
+        self._create_image_with_fake_db('', '', '', [],
+                                        'active', 'image_snapshot', 'queued')
 #        self._create_image_with_fake_db('nova.db.api',
 #                'create-image-error',
 #                'fake.virtual_interface_get_by_instance_stop_patch',
 #                [], 'ACTIVE')
-#
-#    @attr(kind='large')
-#    def test_d02_411(self):
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_411(self):
+        """
+        VIF not found
+
+        at nova.xxxxx
+            db.virtual_interface_get_by_instance(context, instance_id)
+        """
+        self._create_image_with_fake_db('', '', '', [],
+                                        'active', 'NULL', 'killed')
 #        self._create_image_with_fake_db('nova.db.api',
 #                'create-image-error',
 #                'fake.virtual_interface_get_by_instance_except_patch',
 #                [], 'ACTIVE')
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_412(self):
+        """
+        VIF not found
+
+        at nova.xxxxx
+            db.virtual_interface_get_by_instance(context, instance_id)
+        """
+        self._create_image_with_fake_db('', '', '', [],
+                                        'active', 'NULL', 'killed')
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
@@ -1255,7 +1299,7 @@ class DBErrorTest(FunctionalTest):
 
             when value of arg 'task_state' is None
         """
-        self._create_image_with_fake_db('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_db('', '', '', [], 'active', 'killed')
 #        self._create_image_with_fake_db('nova.compute.manager',
 #                    'create-image-error',
 #                    'fake.instance_update_stop_patch_at_last_update',
@@ -1272,7 +1316,7 @@ class DBErrorTest(FunctionalTest):
 
             when value of arg 'task_state' is None
         """
-        self._create_image_with_fake_db('', '', '', [], 'ACTIVE', 'error')
+        self._create_image_with_fake_db('', '', '', [], 'active', 'killed')
 #        self._create_image_with_fake_db('nova.compute.manager',
 #                'create-image-error',
 #                'fake.instance_update_except_patch_at_last_update',
@@ -1352,7 +1396,8 @@ class RabbitMQErrorTest(FunctionalTest):
         super(RabbitMQErrorTest, self).tearDown()
 
     def _create_image_with_rabbitmq_stopped(self, monkey_module, fakepath,
-                fake_patch_name, other_module_patchs, vm_status, image_status):
+                fake_patch_name, other_module_patchs, vm_state, task_state,
+                image_status):
 
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -1375,7 +1420,7 @@ class RabbitMQErrorTest(FunctionalTest):
         time.sleep(10)
 
         # assert
-        self.assert_instance(server_id, vm_status)
+        self.assert_instance(server_id, vm_state, task_state)
         self.assert_image(None, image_name, image_status)
 
     @test.skip_test('Not yet implemented')
@@ -1389,4 +1434,145 @@ class RabbitMQErrorTest(FunctionalTest):
         """
         #TODO
         self._create_image_with_rabbitmq_stopped('', '', '', [],
-                                                 'ACTIVE', 'error')
+                                                 'active', 'NULL', 'killed')
+
+
+class MelangeErrorTest(FunctionalTest):
+
+    config = config
+
+    def setUp(self):
+        super(MelangeErrorTest, self).setUp()
+
+        # nova
+        self.testing_processes.append(NovaApiProcess(
+                self.config.nova.directory,
+                self.config.nova.host,
+                self.config.nova.port))
+        self.testing_processes.append(NovaNetworkProcess(
+                self.config.nova.directory))
+        self.testing_processes.append(NovaSchedulerProcess(
+                self.config.nova.directory))
+
+        # glance
+        self.testing_processes.append(GlanceRegistryProcess(
+                self.config.glance.directory,
+                self.config.glance.registry_config))
+        self.testing_processes.append(GlanceApiProcess(
+                self.config.glance.directory,
+                self.config.glance.api_config,
+                self.config.glance.host,
+                self.config.glance.port))
+
+        # quantum
+        self.testing_processes.append(FakeQuantumProcess('1'))
+
+        # reset db
+        self.reset_db()
+
+        for process in self.testing_processes:
+            process.start()
+        time.sleep(10)
+
+        # create users
+        silent_check_call('bin/nova-manage user create '
+                          '--name=admin --access=secrete --secret=secrete',
+                          cwd=self.config.nova.directory, shell=True)
+        # create projects
+        silent_check_call('bin/nova-manage project create '
+                          '--project=1 --user=admin',
+                          cwd=self.config.nova.directory, shell=True)
+        # allocate networks
+        silent_check_call('bin/nova-manage '
+                          '--flagfile=%s '
+                          'network create '
+                          '--label=private_1-1 '
+                          '--project_id=1 '
+                          '--fixed_range_v4=10.0.0.0/24 '
+                          '--bridge_interface=br-int '
+                          '--num_networks=1 '
+                          '--network_size=32 '
+                          % self.config.nova.config,
+                          cwd=self.config.nova.directory, shell=True)
+
+        self.addCleanup(cleanup_virtual_instances)
+        self.addCleanup(cleanup_processes, self.testing_processes)
+
+    def tearDown(self):
+        self.mysql_start()
+        super(MelangeErrorTest, self).tearDown()
+
+    def _create_image_with_fake_melange(self, monkey_module, fakepath,
+                fake_patch_name, other_module_patchs, vm_state, task_state,
+                image_status):
+
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        _, server = self.ss_client.create_server(name,
+                                                 self.image_ref,
+                                                 self.flavor_ref,
+                                                 accessIPv4=accessIPv4,
+                                                 accessIPv6=accessIPv6)
+        server_id = server['id']
+        self.ss_client.wait_for_server_status(server_id, 'ACTIVE')
+
+        # replace Melange by fake
+        #TODO
+
+        # execute
+        image_name = rand_name(self._testMethodName)
+        self.ss_client.create_image(server_id, image_name)
+        time.sleep(10)
+
+        # assert
+        self.assert_instance(server_id, vm_state, task_state)
+        self.assert_image(None, image_name, image_status)
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_416(self):
+        """
+        500 Response from Melange
+
+        at nova.xxxxx
+            GET ipam%(tenant_scope)s/ip_blocks % locals()
+        """
+        self._create_image_with_fake_melange('', '', '', [],
+                                             'active', 'NULL', 'killed')
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_417(self):
+        """
+        No response from Melange
+
+        at nova.xxxxx
+            GET ipam%(tenant_scope)s/ip_blocks % locals()
+        """
+        self._create_image_with_fake_melange('', '', '', [],
+                                             'active', 'NULL', 'killed')
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_418(self):
+        """
+        500 Response from Melange
+
+        at nova.xxxxx
+            GET ipam%(tenant_scope)s/networks/%(network_id)s/interfaces/%(vif_id)s/ip_allocations % locals()
+        """
+        self._create_image_with_fake_melange('', '', '', [],
+                                             'active', 'NULL', 'killed')
+
+    @test.skip_test('Not yet implemented')
+    @attr(kind='large')
+    def test_d02_419(self):
+        """
+        No response from Melange
+
+        at nova.xxxxx
+            GET ipam%(tenant_scope)s/networks/%(network_id)s/interfaces/%(vif_id)s/ip_allocations % locals()
+        """
+        self._create_image_with_fake_melange('', '', '', [],
+                                             'active', 'NULL', 'killed')

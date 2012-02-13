@@ -45,10 +45,10 @@ class Manager(object):
                                                   self.config.keystone.auth_url,
                                                   self.config.keystone.tenant_name,
                                                   config=config)
-            self.quantum_client = QuantumClient(self.config.nova.username,
-                                                self.config.nova.api_key,
-                                                self.config.nova.auth_url,
-                                                self.config.nova.tenant_name,
+            self.quantum_client = QuantumClient(self.config.keystone.user,
+                                                self.config.keystone.password,
+                                                self.config.keystone.auth_url,
+                                                self.config.keystone.tenant_name,
                                                 config=config)
         else:
             #Assuming basic/native authentication
