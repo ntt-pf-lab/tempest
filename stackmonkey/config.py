@@ -72,7 +72,11 @@ class NodesConfig(object):
 
     @property
     def quantum(self):
-        return self.get_node_list("quantum")
+        return self.get_node_list("quantum_server")
+
+    @property
+    def quantum_plugin(self):
+        return self.get_node_list("quantum_plugin_server")
 
     @property
     def swift(self):
@@ -88,8 +92,11 @@ class NodesConfig(object):
 
     @property
     def ssh_timeout(self):
-        return self.get("ssh_timeout")
+        return self.get("ssh_timeout", 300)
 
+    @property
+    def cmd_timeout(self):
+        return self.get("ssh_cmd_timeout", 10)
 
 class ServicesConfig(object):
     """Provides configuration information for dependent services"""
@@ -103,6 +110,43 @@ class ServicesConfig(object):
             return self.conf.get("services", item_name)
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
             return default_value
+
+    @property
+    def nova_api_service(self):
+        return self.get("nova_api_service", "nova-api")
+
+    @property
+    def nova_scheduler_service(self):
+        return self.get("nova_scheduler_service", "nova-scheduler")
+
+    @property
+    def nova_compute_service(self):
+        return self.get("nova_compute_service", "nova-compute")
+
+    @property
+    def nova_network_service(self):
+        return self.get("nova_network_service", "nova-network")
+
+    @property
+    def glance_api_service(self):
+        return self.get("glance_api_service", "glance-api")
+
+    @property
+    def glance_registry_service(self):
+        return self.get("glance_registry_service", "glance-registry")
+
+    @property
+    def keystone_service(self):
+        return self.get("keystone_service", "keystone")
+
+    @property
+    def quantum_service(self):
+        return self.get("quantum_service", "quantum")
+
+    @property
+    def quantum_plugin_service(self):
+        return self.get("quantum_plugin_service", \
+                "quantum/plugins/openvswitch/agent/ovs_quantum_agent.py")
 
     @property
     def mysql_user(self):
@@ -167,6 +211,7 @@ class HavocConfig(object):
             self.DEFAULT_CONFIG_FILE)
 
         path = os.path.join(conf_dir, conf_file)
+        print path
 
         if not os.path.exists(path):
             msg = "Config file %(path)s not found" % locals()
