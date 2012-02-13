@@ -1,17 +1,15 @@
 from nose.plugins.attrib import attr
-from datetime import datetime, timedelta
+from datetime import timedelta
 import os
-import re
 import shutil
 from stackmonkey import manager
 from stackmonkey import config
 from storm import openstack
 from storm import exceptions
 import storm.config
-from storm.common.log_parser import CustomLogParser
 from storm.common.utils.data_utils import rand_name
 from storm.common import sftp
-from storm.stress_tests.utils import RequestThread
+from storm.stress_tests import utils
 import sys
 import time
 import unittest2 as unittest
@@ -21,14 +19,8 @@ CONFIG_PATH = os.path.dirname(__file__)
 DEFAULT_NOVA_CONF = "nova.conf"
 API_PASTE_WITH_DEBUGLOG = "nova-api-paste-with-debuglog.ini"
 API_PASTE = "nova-api-paste-without-debuglog.ini"
-#service start up wait period (in seconds)
-WAIT_TIME = 3
-LIST_SERVER_TIMEOUT = 2
-CREATE_SERVER_TIMEOUT = 2
 #temporary file to which request specific logs are written.
 TIME_BREAKDOWN_LOGFILE = "nova_api_time_breakdown_result.log"
-#file containing server logs (to read from )
-SERVER_LOGFILE = "/var/log/user.log"
 DATETIME_REGEX = '(?P<date_time>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})'
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S,%f"
 
@@ -39,12 +31,9 @@ class NovaPerfTimeBreakdownTests(unittest.TestCase):
     def setUpClass(cls):
         cls.config = storm.config.StormConfig()
         cls.havoc_config = config.HavocConfig()
-        cls.image_ref = cls.config.env.image_ref
-        cls.flavor_ref = cls.config.env.flavor_ref
-        cls.ssh_timeout = cls.config.nova.ssh_timeout
-        #fetch the debuglogger_enabled status.
-        cls.debuglogger_enabled = bool(cls.config.env.get(
-            'debuglogger_enabled', True))
+
+        #fetch the Perf test configuration parameters
+        cls._fetch_config_params()
 
         #create Nova conf file with debuglogger setting as specified in conf.
         nova_conf = cls._create_nova_conf(cls.debuglogger_enabled)
@@ -52,28 +41,56 @@ class NovaPerfTimeBreakdownTests(unittest.TestCase):
         #start Nova services using the above Nova conf file.
         cls._start_services(nova_conf)
 
-        #fetch the number of times an API should be hit.
-        try:
-            cls.perf_api_hit_count = int(cls.config.env.get(
-                'perf_api_hit_count', 10))
-        except ValueError:
-            print "Invalid 'perf_api_hit_count=%s' specified!" % \
-                  cls.config.env.get('perf_api_hit_count', None)
-            sys.exit(1)
-        #fetch the thread count.
-        try:
-            cls.perf_thread_count = int(cls.config.env.get(
-                'perf_thread_count', 1))
-        except ValueError:
-            print "Invalid 'perf_thread_count=%s' specified!" % \
-                  cls.config.env.get('perf_thread_count', None)
-            sys.exit(1)
         #remove the last run results.
         if os.path.exists(TIME_BREAKDOWN_LOGFILE):
             os.remove(TIME_BREAKDOWN_LOGFILE)
         #create 2 instances so that list servers API has some results
         cls._instance_ids = []
-        cls._start_instances()
+        #cls._start_instances()
+
+    @classmethod
+    def _fetch_param_value(cls, param, type, default_value):
+        try:
+            value = type(cls.config.env.get(param, default_value))
+        except ValueError:
+            value = cls.config.env.get(param, None)
+            print "Invalid configuration value '%(value)s' specified for "\
+                  "%(param)s!" % locals()
+            sys.exit(1)
+        return value
+
+    @classmethod
+    def _fetch_config_params(cls):
+        """Fetch the configuration parameters"""
+        cls.image_ref = cls._fetch_param_value('image_ref', str, '2')
+        cls.flavor_ref = cls._fetch_param_value('flavor_ref', str, '1')
+        #fetch the debuglogger_enabled status.
+        cls.debuglogger_enabled = cls._fetch_param_value(
+            'debuglogger_enabled', bool, True)
+        #the number of times an API should be hit.
+        cls.perf_api_hit_count = cls._fetch_param_value(
+            'perf_api_hit_count', int, 10)
+        #number of threads to create.
+        cls.perf_thread_count = cls._fetch_param_value(
+            'perf_thread_count', int, 1)
+        #List server API call timeout
+        cls.list_server_timeout = cls._fetch_param_value(
+            'list_server_timeout', int, 2)
+        #Create server API call timeout
+        cls.create_server_timeout = cls._fetch_param_value(
+            'create_server_timeout', int, 3)
+        #Delete server API call timeout
+        cls.delete_server_timeout = cls._fetch_param_value(
+            'delete_server_timeout', int, 2)
+        #Service start up time
+        cls.service_startup_time = cls._fetch_param_value(
+            'service_startup_time', int, 3)
+        #fetch the Nova service logs from this file.
+        cls.server_logfile = cls._fetch_param_value(
+            'server_logfile', str, '/var/log/user.log')
+        #Nova configuration file path.
+        cls.nova_conf_file = cls._fetch_param_value(
+            'nova_conf_file', str, '/etc/nova/nova.conf')
 
     @classmethod
     def tearDownClass(cls):
@@ -141,7 +158,7 @@ class NovaPerfTimeBreakdownTests(unittest.TestCase):
             compute_mgr = manager.ComputeHavoc()
             new_compute_mgr = manager.ComputeHavoc(config_file=nova_conf)
             network_mgr = manager.NetworkHavoc()
-            network_mgr = manager.NetworkHavoc(config_file=nova_conf)
+            new_network_mgr = manager.NetworkHavoc(config_file=nova_conf)
 
         #start all the Nova services.
         scheduler_mgr.start_nova_scheduler()
@@ -163,23 +180,17 @@ class NovaPerfTimeBreakdownTests(unittest.TestCase):
         conf_fp = open(os.path.join(CONFIG_PATH, DEFAULT_NOVA_CONF))
         for line in conf_fp.readlines():
             if line.startswith("--network_manager"):
-                if line.find("QuantumManager") != -1:
-                    quantum_mgr.start_quantum()
-                else:
+                if line.find("QuantumManager") == -1:
                     network_mgr.stop_nova_network()
                     new_network_mgr.start_nova_network()
                 break
         conf_fp.close()
 
-        #determine if Keystone service should be started.
-        if cls.config.env.authentication.find("keystone") != -1:
-            keystone_mgr.start_keystone()
-
         if not run_tests:
             print "Failed to start the services required for executing tests."
             sys.exit()
         #wait for the services to start completely
-        time.sleep(WAIT_TIME)
+        time.sleep(cls.service_startup_time)
 
     @classmethod
     def _start_instances(cls):
@@ -249,7 +260,7 @@ class NovaPerfTimeBreakdownTests(unittest.TestCase):
         #copy updated (log level and api-paste config) nova.conf to API server.
         if cls.havoc_config.env.deploy_mode in ('pkg-multi',
                                                 'devstack-remote'):
-            dest_config_name = "/etc/nova/nova.conf"
+            dest_config_name = cls.nova_conf_file
             status = cls._copy_file_to_api_server(config_name,
                                                     dest_config_name)
             if not status:
@@ -285,144 +296,91 @@ class NovaPerfTimeBreakdownTests(unittest.TestCase):
         fp.write(result_str)
         fp.close()
 
-    def _get_time_breakdown(self, request_logs, log_list):
-        """Fetch the time taken for each log msg from log_list """
-        mObj = re.search(DATETIME_REGEX, request_logs[0])
-        self.assertNotEqual(mObj, None, "Server date format unknown")
-        start_time = datetime.strptime(mObj.group('date_time'), DATE_FORMAT)
-
-        mObj = re.search(DATETIME_REGEX, request_logs[-1])
-        self.assertNotEqual(mObj, None, "Server date format unknown")
-        end_time = datetime.strptime(mObj.group('date_time'), DATE_FORMAT)
-
-        task_time = []
-        last_time = start_time
-        start_index = 0
-        for log_msg in log_list:
-            found = False
-            for index in range(start_index, len(request_logs)):
-                mObj = re.search(log_msg % DATETIME_REGEX, request_logs[index])
-                if mObj:
-                    #log found.
-                    current_time = datetime.strptime(mObj.group('date_time'),
-                                        DATE_FORMAT)
-                    time_taken = current_time - last_time
-                    last_time = current_time
-                    task_time.append(time_taken)
-                    found = True
-                    start_index = index
-                    break
-            self.assertTrue(found, "Expected log message %s not found" %
-                                   log_msg)
-        task_time.append(end_time - last_time)
-        return (task_time, start_time, end_time)
-
-    def _convert_timedelta_to_milliseconds(self, td):
-        """convert timedelta to milliseconds"""
-        ms = td.days * 86400 * 1E3 + td.seconds * 1E3 + td.microseconds / 1E3
-        return ms
-
-    def _verify_list_servers_api_perf(self):
-        """Verified list servers API and fetch the perf breakdown."""
+    def _fetch_list_servers_api_response(self):
+        """Call list servers API and fetch the response time."""
         request_serve_time = {}
 
         #hit the API
         request_threads = []
         for index in range(self.perf_thread_count):
-            request_threads.append(RequestThread(self.call_list_servers_api))
+            request_threads.append(utils.RequestThread(
+                self.call_list_servers_api))
             request_threads[index].start()  # start making the API requests
 
         #wait for all the threads to finish requesting.
-        thread_timeout = float(LIST_SERVER_TIMEOUT)
+        thread_timeout = float(self.list_server_timeout)
         for a_thread in request_threads:
             a_thread.join(thread_timeout)
             if a_thread.isAlive():
-                self.fail("List server API %d calls did not complete in %.2f "\
-                            "seconds" % (self.perf_api_hit_count,
-                            thread_timeout))
+                self.fail(_("List server API %(perf_api_hit_count)d calls "\
+                            "did not complete in %(list_server_timeout).2f "\
+                            "seconds") % self.__dict__)
             resp = a_thread.get_response()
 
             if not resp['status']:
-                self.fail("List servers API call failed")
+                self.fail(_("List servers API call failed: %s") % resp)
             temp_results = zip(resp['request_id'], resp['response_time'])
             request_serve_time.update(temp_results)
+        return request_serve_time
 
-        #fetch the API request logs.
-        log_parser = CustomLogParser(SERVER_LOGFILE)
-        log_list = ['%s nova-api INFO [\s\S]+ GET [\S]+\/servers$',
-                    '%s nova-api DEBUG [\s\S]+ get_all',
-                    '%s nova-api INFO [\s\S]+ returned with HTTP']
-        test_time = {'routing': 0, 'db_look_up': 0, 'total_time': 0,
-                     'max_routing_time': 0, 'max_db_lookup_time': 0,
-                     'max_request_time': 0, 'min_routing_time': 9999,
-                     'min_db_lookup_time': 9999, 'min_request_time': 9999}
-        log_str = "\nList Servers API Test Results\n"\
-            "Request Routing Time\tDB look up Time\t\tTotal time\n"
-
+    def fetch_list_server_metrics(self, request_serve_time):
+        """Fetch the metrics per request and summary metrics"""
+        task_logs = [('routing', '%s nova-api INFO [\s\S]+ GET [\S]+\/'
+                                 'servers$'),
+                    ('fetch_options', '%s nova-api DEBUG [\s\S]+get_all'),
+                    ('db_lookup', '%s nova-api INFO [\s\S]+ returned with '
+                                  'HTTP')]
+        api_results = []
+        log_analyzer = utils.LogAnalyzer(self.server_logfile,
+                                   DATETIME_REGEX,
+                                   DATE_FORMAT)
         for request_id, response_time in request_serve_time.iteritems():
-            filtered_logs = log_parser.fetch_request_logs(request_id)
-            if not filtered_logs:
+            metrics = log_analyzer.fetch_request_metrics(request_id, task_logs)
+            if not metrics:
                 self.fail("Failed to fetch logs for request %(request_id)s" %
                           locals())
-            (opt_time, start_time, end_time) = self._get_time_breakdown(
-                                                    filtered_logs, log_list)
-            routing_time = self._convert_timedelta_to_milliseconds(
-                            opt_time[0])
-            db_lookup_time = self._convert_timedelta_to_milliseconds(
-                                        opt_time[2])
-            test_time['routing'] += routing_time
-            if test_time['max_routing_time'] < routing_time:
-                test_time['max_routing_time'] = routing_time
-            if test_time['min_routing_time'] > routing_time:
-                test_time['min_routing_time'] = routing_time
-            test_time['db_look_up'] += db_lookup_time
-            if test_time['max_db_lookup_time'] < db_lookup_time:
-                test_time['max_db_lookup_time'] = db_lookup_time
-            if test_time['min_db_lookup_time'] > db_lookup_time:
-                test_time['min_db_lookup_time'] = db_lookup_time
             secs, msecs = response_time.split('.')
-            total_time = self._convert_timedelta_to_milliseconds(timedelta(
-                                seconds=int(secs), microseconds=int(msecs)))
-            test_time['total_time'] += total_time
-            if test_time['max_request_time'] < total_time:
-                test_time['max_request_time'] = total_time
-            if test_time['min_request_time'] < total_time:
-                test_time['min_request_time'] = total_time
+            metrics['task_time']['total_time'] = \
+                utils.convert_timedelta_to_milliseconds(
+                    timedelta(seconds=int(secs), microseconds=int(msecs)))
+            api_results.append(metrics)
 
-            log_str += "%(routing_time)d\t\t\t%(db_lookup_time)d\t\t\t"\
-                        "%(total_time)d\n" % locals()
-        #log individual request results
-        self._log_testcase_results(log_str)
-        return test_time
+        #fetch summary metrics.
+        summary_fields = ['routing', 'db_lookup', 'total_time']
+        results_summary = log_analyzer.fetch_metrics_summary(api_results,
+                                                            summary_fields)
+        results_summary['total_requests'] = len(api_results)
+        return api_results, results_summary
 
     def test_list_servers_performance_breakdown(self):
         """Call List Servers API and record time for each activity."""
-        test_time = self._verify_list_servers_api_perf()
+        request_serve_time = self._fetch_list_servers_api_response()
 
-        #write the summary results to output file.
-        total_requests = self.perf_thread_count * self.perf_api_hit_count
-        avg_routing_time = test_time['routing'] / total_requests
-        avg_dblookup_time = test_time['db_look_up'] / total_requests
-        avg_response_time = test_time['total_time'] / total_requests
-        result_str = "*" * 50 + "\n"\
+        api_metrics, results_summary = self.fetch_list_server_metrics(
+            request_serve_time)
+
+        log_str = "\nList Servers API Test Results\n"\
+            "Request Routing Time\tDB look up Time\t\tTotal time\n"
+        for request_metric in api_metrics:
+            log_str += "%(routing)d\t\t\t%(db_lookup)d\t\t\t"\
+                        "%(total_time)d\n" % request_metric['task_time']
+
+        #fetch the summary metrics.
+        log_str += "*" * 50 + "\n"\
             "Total API requests: %(total_requests)d\n"\
-            "\nAverage Request routing time:\t%(avg_routing_time)d "\
+            "Average Request routing time:\t%(avg_routing)d milliseconds\n"\
+            "Minimum request routing time:\t%(min_routing)d milliseconds\n"\
+            "Maximum request routing time:\t%(max_routing)d milliseconds\n\n"\
+            "Average DB lookup time:\t\t%(avg_db_lookup)d milliseconds\n"\
+            "Minimum DB lookup time:\t\t%(min_db_lookup)d milliseconds\n"\
+            "Maximum DB lookup time:\t\t%(max_db_lookup)d milliseconds\n\n"\
+            "Average request serve time:\t%(avg_total_time)d "\
             "milliseconds\n"\
-            "Average DB lookup time:\t\t%(avg_dblookup_time)d milliseconds\n"\
-            "Average request serve time:\t%(avg_response_time)d "\
-            "milliseconds\n\n" % locals()
-
-        result_str += "Minimum request routing time:\t%(min_routing_time)d "\
+            "Minimum request serve time:\t%(min_total_time)d "\
             "milliseconds\n"\
-            "Minimum DB lookup time:\t\t%(min_db_lookup_time)d milliseconds\n"\
-            "Minimum request serve time:\t%(min_request_time)d "\
-            "milliseconds\n\n"\
-            "Maximum request routing time:\t%(max_routing_time)d "\
-            "milliseconds\n"\
-            "Maximum DB lookup time:\t\t%(max_db_lookup_time)d milliseconds\n"\
-            "Maximum request serve time:\t%(max_request_time)d "\
-            "milliseconds\n" % test_time
-        self._log_testcase_results(result_str)
+            "Maximum request serve time:\t%(max_total_time)d "\
+            "milliseconds\n" % results_summary
+        self._log_testcase_results(log_str)
 
     def call_create_servers_api(self):
         """Call the Create servers API and return response"""
@@ -449,8 +407,8 @@ class NovaPerfTimeBreakdownTests(unittest.TestCase):
             response['request_id'].append(resp['request_id'])
         return response
 
-    def _verify_create_servers_api_perf(self):
-        """Verified create servers API and fetch the perf breakdown."""
+    def _fetch_create_servers_api_response(self):
+        """Call create servers API and fetch the response time."""
         request_serve_time = {}
 
         #hit the API
@@ -458,11 +416,12 @@ class NovaPerfTimeBreakdownTests(unittest.TestCase):
         client = os.servers_client
         request_threads = []
         for index in range(self.perf_thread_count):
-            request_threads.append(RequestThread(self.call_create_servers_api))
+            request_threads.append(utils.RequestThread(
+                self.call_create_servers_api))
             request_threads[index].start()  # start making the API requests
 
         #wait for all the threads to finish requesting.
-        thread_timeout = float(CREATE_SERVER_TIMEOUT)
+        thread_timeout = float(self.create_server_timeout)
         for a_thread in request_threads:
             a_thread.join(thread_timeout)
             if a_thread.isAlive():
@@ -478,242 +437,169 @@ class NovaPerfTimeBreakdownTests(unittest.TestCase):
             # wait for all the instances to become ACTIVE.
             for instance_id in resp['server_ids']:
                 client.wait_for_server_status(instance_id, 'ACTIVE')
+        return request_serve_time
 
-        #fetch the API request logs.
-        log_parser = CustomLogParser(SERVER_LOGFILE)
-        log_list = [
-            '%s nova-api INFO [\s\S]+ POST [\S]+\/servers$',
-            '%s nova-api DEBUG [\s\S]+ Using Kernel=',
-            '%s nova-api DEBUG [\s\S]+ Going to run 1 instances',
-            '%s nova-api DEBUG [\s\S]+ block_device_mapping',
-            '%s nova-api DEBUG [\s\S]+ _ask_scheduler_to_create_instance',
-            '%s nova-compute AUDIT [\s\S]+ instance \d+: starting',
-            '%s nova-compute DEBUG [\s\S]+ Making asynchronous call on '\
-                'network',
-            '%s nova-network DEBUG [\s\S]+ floating IP allocation for '\
-                'instance',
-            '%s nova-compute DEBUG [\s\S]+ instance network_info',
-            '%s nova-compute DEBUG [\s\S]+ starting toXML method',
-            '%s nova-compute DEBUG [\s\S]+ finished toXML method',
-            '%s nova-compute INFO [\s\S]+ called setup_basic_filtering in '\
-                'nwfilter',
-            '%s nova-compute INFO [\s\S]+ Creating image',
-            '%s nova-compute DEBUG [\s\S]+ Creating kernel image',
-            '%s nova-compute DEBUG [\s\S]+ Fetching image',
-            '%s nova-compute DEBUG [\s\S]+ Fetched image',
-            '%s nova-compute DEBUG [\s\S]+ Created kernel image',
-            # TODO: provide optional log message support and then uncomment.
-            #'%s nova-compute DEBUG [\s\S]+ Creating ramdisk image',
-            #'%s nova-compute DEBUG [\s\S]+ Fetching image',
-            #'%s nova-compute DEBUG [\s\S]+ Fetched image',
-            #'%s nova-compute DEBUG [\s\S]+ Created ramdisk image',
-            '%s nova-compute DEBUG [\s\S]+ Creating disk image',
-            '%s nova-compute DEBUG [\s\S]+ Fetching image',
-            '%s nova-compute DEBUG [\s\S]+ Fetched image',
-            '%s nova-compute DEBUG [\s\S]+ Created disk image',
-            '%s nova-compute DEBUG [\s\S]+ instance \S+: is running',
-            '%s nova-compute INFO [\s\S]+ Instance \S+ spawned successfully']
+    def _fetch_create_server_compute_time(self, task_time):
+        """Calculates the time taken by Nova Compute for a Create
+        Server API call"""
+        return task_time['start_instance'] +\
+               task_time['xml_gen'] +\
+               task_time['firewall_setup'] +\
+               task_time['img_fetch'] + \
+               task_time['img_create'] +\
+               task_time['boot']
 
-        #test results dict.
-        test_time = {'routing': 0, 'check_params': 0, 'block_device': 0,
-                     'scheduling': 0, 'api_response_time': 0,
-                     'starting_instance': 0, 'networking': 0,
-                     'xml_generation': 0, 'firewall': 0,
-                     'image_fetch_time': 0, 'image_create_time': 0,
-                     'create_kernel_img': 0, 'create_ramdisk_img': 0,
-                     'create_disk_img': 0,
-                     'start_instance': 0, 'boot_instance': 0,
-                     'api_response_time': 0, 'total_time': 0,
-                     'nova_api': 0, 'nova_scheduler': 0, 'nova_compute': 0,
-                     'nova_network': 0,
-                     'max_network_time': 0, 'max_boot_time': 0,
-                     'max_start_instance': 0, 'max_request_time': 0,
-                     'max_img_fetch_time': 0, 'max_img_create_time': 0,
-                     'min_network_time': 9999, 'min_boot_time': 9999,
-                     'min_start_instance': 9999, 'min_request_time': 9999,
-                     'min_img_fetch_time': 9999, 'min_img_create_time': 9999,
-                     }
+    def _fetch_create_server_nova_api_time(self, task_time):
+        """Calculates the time taken by Nova API for a Create Server API
+        call"""
+        return task_time['routing'] +\
+               task_time['check_params'] +\
+               task_time['start_bdm'] +\
+               task_time['block_device_mapping']
+
+    def _fetch_create_server_img_fetch_time(self, task_time):
+        return task_time['krn_img_fetch'] +\
+               task_time['rd_img_fetch'] +\
+               task_time['disk_img_fetch']
+
+    def _fetch_create_server_img_create_time(self, task_time):
+        return task_time['krn_img_create'] +\
+               task_time['rd_img_create'] +\
+               task_time['disk_img_create']
+
+    def fetch_create_server_metrics(self, request_serve_time):
+        """Fetch the metrics per request and summary metrics"""
+        task_logs = [
+            ('routing', '%s nova-api INFO [\s\S]+ POST [\S]+\/servers$'),
+            ('check_params', '%s nova-api DEBUG [\s\S]+ Going to run 1 '
+                             'instances'),
+            ('start_bdm', '%s nova-api DEBUG [\s\S]+ block_device_mapping'),
+            ('block_device_mapping', '%s nova-api DEBUG [\s\S]+ '\
+                '_ask_scheduler_to_create_instance'),
+            ('starting_instance', '%s nova-compute AUDIT [\s\S]+ instance '\
+                                  '\d+: starting'),
+            ('start_instance', '%s nova-compute DEBUG [\s\S]+ Making '\
+                              'asynchronous call on network'),
+            ('network_schedule', '%s nova-network DEBUG [\s\S]+ floating IP '\
+                                'allocation for instance'),
+            ('ip_allocation', '%s nova-compute DEBUG [\s\S]+ instance '\
+                             'network_info'),
+            ('start_xml_gen', '%s nova-compute DEBUG [\s\S]+ starting toXML'),
+            ('xml_gen', '%s nova-compute DEBUG [\s\S]+ finished toXML'),
+            ('start_firewall_setup', '%s nova-compute INFO [\s\S]+ called '\
+                                    'setup_basic_filtering in nwfilter'),
+            ('firewall_setup', '%s nova-compute INFO [\s\S]+ Creating image'),
+            ('start_krn_img_fetch', '%s nova-compute DEBUG [\s\S]+ Fetching '\
+                                   '\S+kernel image'),
+            ('krn_img_fetch', '%s nova-compute DEBUG [\s\S]+ Fetched '\
+                             '\S+kernel image'),
+            ('krn_img_create', '%s nova-compute DEBUG [\s\S]+ Created kernel '\
+                              'image'),
+            ('start_rd_img_fetch', '%s nova-compute DEBUG [\s\S]+ Fetching '\
+                                  '\S+ramdisk image'),
+            ('rd_img_fetch', '%s nova-compute DEBUG [\s\S]+ Fetched image'),
+            ('rd_img_create', '%s nova-compute DEBUG [\s\S]+ Created ramdisk '\
+                             'image'),
+            ('start_disk_img_fetch', '%s nova-compute DEBUG [\s\S]+ Fetching '\
+                                    '\S+disk image'),
+            ('disk_img_fetch', '%s nova-compute DEBUG [\s\S]+ Fetched image'),
+            ('disk_img_create', '%s nova-compute DEBUG [\s\S]+ Created disk '\
+                               'image'),
+            ('boot', '%s nova-compute INFO [\s\S]+ Instance \S+ spawned '\
+                    'successfully')]
+
+        api_results = []
+        log_analyzer = utils.LogAnalyzer(self.server_logfile,
+                                   DATETIME_REGEX,
+                                   DATE_FORMAT)
+        for request_id, response_time in request_serve_time.iteritems():
+            metrics = log_analyzer.fetch_request_metrics(request_id, task_logs)
+            if not metrics:
+                self.fail("Failed to fetch logs for request %(request_id)s" %
+                          locals())
+            secs, msecs = response_time.split('.')
+            metrics['task_time']['api_response_time'] = \
+                utils.convert_timedelta_to_milliseconds(
+                    timedelta(seconds=int(secs), microseconds=int(msecs)))
+
+            metrics['task_time']['img_fetch'] = \
+                self._fetch_create_server_img_fetch_time(metrics['task_time'])
+            metrics['task_time']['img_create'] = \
+                self._fetch_create_server_img_create_time(metrics['task_time'])
+            metrics['task_time']['compute_time'] = \
+                self._fetch_create_server_compute_time(metrics['task_time'])
+            metrics['task_time']['nova_api_time'] = \
+                self._fetch_create_server_nova_api_time(metrics['task_time'])
+            total_time = utils.convert_timedelta_to_milliseconds(
+                metrics['end_time'] - metrics['start_time'])
+            metrics['task_time']['total_time'] = total_time
+            api_results.append(metrics)
+
+        #fetch summary metrics.
+        summary_fields = metrics['task_time'].keys()
+        summary_fields.extend(['compute_time', 'nova_api_time',
+                               'api_response_time', 'img_fetch', 'img_create'])
+        results_summary = log_analyzer.fetch_metrics_summary(api_results,
+                                                            summary_fields)
+        results_summary['total_requests'] = len(api_results)
+        return api_results, results_summary
+
+    def test_create_servers_performance_breakdown(self):
+        """Call Create Servers API and record time for each activity."""
+        request_serve_time = self._fetch_create_servers_api_response()
+
+        api_metrics, results_summary = self.fetch_create_server_metrics(
+            request_serve_time)
+
         #fields logged for each API request.
         log_str = "\nCreate Servers API Test Results\n"\
             "Routing\tParam Check\tBlock Device Mapping\tScheduling\t"\
             "Networking\tCompute\t\tKernel Image Fetch\tKernel Image Create"\
+            "\tRamdisk Image Fetch\tRamdisk Image Create\t"\
             "\tDisk Image Fetch\tDisk Image Create\t"\
             "Image Creation\tInstance Boot\tAPI Response\tTotal time\n"
+        for request_metric in api_metrics:
+            log_str += "%(routing)d\t%(check_params)d\t\t"\
+                "%(block_device_mapping)d\t\t\t%(network_schedule)d\t\t"\
+                "%(ip_allocation)d\t\t%(compute_time)d"\
+                "\t\t%(krn_img_fetch)d\t%(krn_img_create)d\t"\
+                "\t\t%(rd_img_fetch)d\t%(rd_img_create)d\t"\
+                "%(disk_img_fetch)d\t%(disk_img_create)d"\
+                "\t\t%(boot)d\t\t%(api_response_time)d\t\t"\
+                "%(total_time)d\n" % request_metric['task_time']
 
-        for request_id, response_time in request_serve_time.iteritems():
-            filtered_logs = log_parser.fetch_request_logs(request_id)
-            if not filtered_logs:
-                self.fail("Failed to fetch logs for request %(request_id)s" %
-                          locals())
-
-            (opt_time, start_time, end_time) = self._get_time_breakdown(
-                                                    filtered_logs, log_list)
-
-            routing_time = self._convert_timedelta_to_milliseconds(
-                            opt_time[0])
-            check_parameters_time = self._convert_timedelta_to_milliseconds(
-                            opt_time[2])
-            block_device_mapping = self._convert_timedelta_to_milliseconds(
-                                        opt_time[4])
-
-            secs, msecs = response_time.split('.')
-            api_response_time = self._convert_timedelta_to_milliseconds(
-                timedelta(seconds=int(secs), microseconds=int(msecs)))
-
-            schedule_time = self._convert_timedelta_to_milliseconds(
-                                        opt_time[5])
-            start_instance_time = self._convert_timedelta_to_milliseconds(
-                                        opt_time[6])
-            network_floating_ip_allocation_time = \
-                self._convert_timedelta_to_milliseconds(opt_time[8])
-            compute_xml_generation_time = \
-                self._convert_timedelta_to_milliseconds(opt_time[10])
-            compute_instance_firewall_setup = \
-                self._convert_timedelta_to_milliseconds(opt_time[12])
-
-            compute_kernel_img_fetch = \
-                self._convert_timedelta_to_milliseconds(opt_time[15])
-            compute_kernel_img_create = compute_kernel_img_fetch +\
-                self._convert_timedelta_to_milliseconds(opt_time[16])
-            #TODO: uncomment once optional log message support is added.
-            #compute_ramdisk_img_fetch = \
-            #    self._convert_timedelta_to_milliseconds(opt_time[19])
-            #compute_ramdisk_img_create = compute_ramdisk_img_fetch +\
-            #    self._convert_timedelta_to_milliseconds(opt_time[20])
-            compute_disk_img_fetch = \
-                self._convert_timedelta_to_milliseconds(opt_time[19])
-            compute_disk_img_create = compute_disk_img_fetch +\
-                self._convert_timedelta_to_milliseconds(opt_time[20])
-
-            compute_start_instance = \
-                self._convert_timedelta_to_milliseconds(opt_time[21])
-            compute_boot_instance = \
-                self._convert_timedelta_to_milliseconds(opt_time[22])
-
-            # total time right from API call was hit to instance status is
-            # ACTIVE.
-            active_instance_creation_time = \
-                self._convert_timedelta_to_milliseconds(end_time - start_time)
-
-            img_fetch_time = compute_kernel_img_fetch + compute_disk_img_fetch
-            img_create_time = compute_kernel_img_create +\
-                              compute_disk_img_create
-
-            test_time['routing'] += routing_time
-            test_time['check_params'] += check_parameters_time
-            test_time['block_device'] += block_device_mapping
-            test_time['scheduling'] += schedule_time
-            test_time['image_fetch_time'] += img_fetch_time
-            test_time['create_kernel_img'] += compute_kernel_img_create
-            #TODO: uncomment once optional log message support is added.
-            #test_time['create_ramdisk_img'] +=
-            test_time['create_disk_img'] += compute_disk_img_create
-            test_time['image_create_time'] += img_create_time
-            test_time['starting_instance'] += start_instance_time
-            test_time['networking'] += network_floating_ip_allocation_time
-            test_time['xml_generation'] += compute_xml_generation_time
-            test_time['firewall'] += compute_instance_firewall_setup
-            test_time['start_instance'] += \
-                compute_start_instance
-            test_time['boot_instance'] += compute_boot_instance
-            test_time['api_response_time'] += api_response_time
-            test_time['total_time'] += active_instance_creation_time
-
-            test_time['nova_api'] += routing_time + check_parameters_time +\
-                                     block_device_mapping
-            test_time['nova_scheduler'] += schedule_time
-            compute_time = compute_kernel_img_fetch +\
-                           compute_disk_img_fetch +\
-                           start_instance_time +\
-                           compute_xml_generation_time +\
-                           compute_instance_firewall_setup +\
-                           compute_start_instance
-            test_time['nova_compute'] += compute_time
-            test_time['nova_network'] += network_floating_ip_allocation_time
-
-            if test_time['max_boot_time'] < compute_boot_instance:
-                test_time['max_boot_time'] = compute_boot_instance
-            if test_time['min_boot_time'] > compute_boot_instance:
-                test_time['min_boot_time'] = compute_boot_instance
-            if test_time['max_img_fetch_time'] < img_fetch_time:
-                test_time['max_img_fetch_time'] = img_fetch_time
-            if test_time['min_img_fetch_time'] > img_fetch_time:
-                test_time['min_img_fetch_time'] = img_fetch_time
-            if test_time['max_img_create_time'] < img_create_time:
-                test_time['max_img_create_time'] = img_create_time
-            if test_time['min_img_create_time'] > img_create_time:
-                test_time['min_img_create_time'] = img_create_time
-
-            if test_time['max_network_time'] < \
-                network_floating_ip_allocation_time:
-                test_time['max_network_time'] = \
-                    network_floating_ip_allocation_time
-            if test_time['min_network_time'] > \
-                network_floating_ip_allocation_time:
-                test_time['min_network_time'] = \
-                    network_floating_ip_allocation_time
-            if test_time['max_start_instance'] < \
-                compute_start_instance:
-                test_time['max_start_instance'] = \
-                    compute_start_instance
-            if test_time['min_start_instance'] > \
-                compute_start_instance:
-                test_time['min_start_instance'] = \
-                    compute_start_instance
-            if test_time['max_request_time'] < api_response_time:
-                test_time['max_request_time'] = api_response_time
-            if test_time['min_request_time'] > api_response_time:
-                test_time['min_request_time'] = api_response_time
-
-            log_str += "%(routing_time)d\t%(check_parameters_time)d\t\t"\
-                "%(block_device_mapping)d\t\t\t%(schedule_time)d\t\t"\
-                "%(network_floating_ip_allocation_time)d\t\t%(compute_time)d"\
-                "\t\t%(compute_kernel_img_fetch)d\t"\
-                "%(compute_kernel_img_create)d\t%(compute_disk_img_fetch)d"\
-                "\t%(compute_disk_img_create)d"\
-                "\t\t%(compute_boot_instance)d\t\t%(api_response_time)d\t\t"\
-                "%(active_instance_creation_time)d\n" % locals()
-        #log individual request results
-        self._log_testcase_results(log_str + "\n")
-        return test_time
-
-    def test_create_servers_performance_breakdown(self):
-        """Call Create Servers API and record time for each activity."""
-        test_time = self._verify_create_servers_api_perf()
-
-        #write the summary results to output file.
-        total_requests = self.perf_thread_count * self.perf_api_hit_count
-        avg_nova_api = test_time['nova_api'] / total_requests
-        avg_nova_nova_network = test_time['nova_network'] / total_requests
-        avg_nova_compute = test_time['nova_compute'] / total_requests
-        avg_nova_scheduler = test_time['nova_scheduler'] / total_requests
-
-        result_str = "*" * 50 + "\n"\
+        log_str += "*" * 50 + "\n"\
             "Total API requests: %(total_requests)d\n"\
-            "Average Nova API time: %(avg_nova_api)d milliseconds\n"\
-            "Average Nova Scheduler time: %(avg_nova_scheduler)d "\
+            "Average Active Instance creation time: %(avg_total_time)d "\
             "milliseconds\n"\
-            "Average Nova Compute time: %(avg_nova_compute)d milliseconds\n"\
-            "Average Nova Network time: %(avg_nova_nova_network)d "\
-            "milliseconds\n\n" % locals()
+            "Average API Response time: %(avg_api_response_time)d "\
+            "milliseconds\n"\
+            "Average Nova API time: %(avg_nova_api_time)d milliseconds\n"\
+            "Average Nova Scheduler time: %(avg_network_schedule)d "\
+            "milliseconds\n"\
+            "Average Nova Compute time: %(avg_compute_time)d milliseconds\n"\
+            "Average Nova Network time: %(avg_ip_allocation)d "\
+            "milliseconds\n\n"\
+            "Minimum Active Instance creation time: %(min_total_time)d "\
+            "milliseconds\n"\
+            "Minimum API Response time: %(min_api_response_time)d "\
+            "milliseconds\n"\
+            "Minimum image fetching time: %(min_img_fetch)d "\
+            "milliseconds\n"\
+            "Minimum image creation time: %(min_img_create)d "\
+            "milliseconds\n"\
+            "Minimum instance boot time: %(min_boot)d milliseconds\n"\
+            "Minimum networking time: %(min_ip_allocation)d milliseconds\n\n"\
+            "Maximum Active Instance creation time: %(max_total_time)d "\
+            "milliseconds\n"\
+            "Maximum API Response time: %(max_api_response_time)d "\
+            "milliseconds\n"\
+            "Maximum image fetching time: %(max_img_fetch)d "\
+            "milliseconds\n"\
+            "Maximum image creation time: %(max_img_create)d "\
+            "milliseconds\n"\
+            "Maximum instance boot time: %(max_boot)d milliseconds\n"\
+            "Maximum networking time: %(max_ip_allocation)d "\
+            "milliseconds\n" % results_summary
 
-        result_str += "Minimum Request Serve time: %(min_request_time)d "\
-            "milliseconds\n"\
-            "Minimum image fetching time: %(min_img_fetch_time)d "\
-            "milliseconds\n"\
-            "Minimum image creation time: %(min_img_create_time)d "\
-            "milliseconds\n"\
-            "Minimum start time: %(min_start_instance)d milliseconds\n"\
-            "Minimum instance boot time: %(min_boot_time)d milliseconds\n"\
-            "Minimum networking time: %(min_network_time)d milliseconds\n\n"\
-            "Maximum Request Serve time: %(max_request_time)d milliseconds\n"\
-            "Maximum image fetching time: %(max_img_fetch_time)d "\
-            "milliseconds\n"\
-            "Maximum image creation time: %(max_img_create_time)d "\
-            "milliseconds\n"\
-            "Maximum start time: %(max_start_instance)d milliseconds\n"\
-            "Maximum instance boot time: %(max_boot_time)d milliseconds\n"\
-            "Maximum networking time: %(max_network_time)d "\
-            "milliseconds\n" % test_time
-
-        self._log_testcase_results(result_str)
+        self._log_testcase_results(log_str)
