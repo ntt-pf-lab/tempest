@@ -30,7 +30,8 @@ keystone = KeystoneProcess(
 
 glance_reg = GlanceRegistryProcess(
                     config.glance.directory,
-                    config.glance.registry_config)
+                    config.glance.registry_config,
+                    config.glance.host)
 
 
 glance_api = GlanceApiProcess(

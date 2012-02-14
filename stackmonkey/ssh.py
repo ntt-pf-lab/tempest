@@ -9,11 +9,12 @@ with warnings.catch_warnings():
 
 class Client(object):
 
-    def __init__(self, host, username, password, timeout=30):
+    def __init__(self, host, username, password, timeout=30, cmd_timeout=10):
         self.host = host
         self.username = username
         self.password = password
         self.timeout = int(timeout)
+        self.cmd_timeout = int(cmd_timeout)
 
     def _get_ssh_connection(self):
         """Returns an ssh connection to the specified host"""
@@ -66,7 +67,7 @@ class Client(object):
             ssh = self._get_ssh_connection()
             stdin, stdout, stderr = ssh.exec_command(cmd)
             status = stdout.channel.recv_exit_status()
-            stdout.channel.settimeout(10)
+            stdout.channel.settimeout(self.cmd_timeout)
             try:
                 output = stdout.read()
             except socket.timeout:
