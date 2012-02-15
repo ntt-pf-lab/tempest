@@ -548,7 +548,7 @@ class ServersActionTest(FunctionalTest):
         resp, _ = self.ss_client.create_image(test_server_id, alt_name)
         self.assertEquals('404', resp['status'])
 
-    @test.skip_test('Skip this case for bug #678')
+#    @test.skip_test('Skip this case for bug #678')
     @attr(kind='medium')
     def test_create_image_when_other_image_is_during_saving_process(self):
 
@@ -595,6 +595,7 @@ class ServersActionTest(FunctionalTest):
         alt_name = rand_name('server')
         resp1, _ = self.ss_client.create_image(test_server_id, alt_name)
         self.assertEquals('202', resp1['status'])
+        time.sleep(2)
 
         print """
 
