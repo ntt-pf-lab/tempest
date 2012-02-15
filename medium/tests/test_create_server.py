@@ -353,10 +353,10 @@ class CreateServerTest(FunctionalTest):
 
         print "resp=", resp
         print "body=", server
-        self.assertEqual('200', resp['status'])
+        self.assertEqual('202', resp['status'])
 
         # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+        resp, server = self.ss_client.get_server(server['id'])
         self.assertEqual('200', resp['status'])
         self.assertEqual(name, server['name'])
 

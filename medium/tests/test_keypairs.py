@@ -303,6 +303,14 @@ class KeypairsTest(FunctionalTest):
         resp, body = self.kp_client.create_keypair(keyname)
         self.assertEqual('400', resp['status'])
 
+    @attr(kind='large')
+    def test_create_keypair_when_keypair_name_is_illegal(self):
+        """Returns 400 response"""
+        # execute and assert
+        keyname = 'key_/.\@:' + self._testMethodName
+        resp, body = self.kp_client.create_keypair(keyname)
+        self.assertEqual('400', resp['status'])
+
     @attr(kind='medium')
     def test_create_keypair_when_public_key_is_specified(self):
         """Returns 200 response with information of the created keypair"""
@@ -448,26 +456,6 @@ class KeypairsTest(FunctionalTest):
         # execute and assert
         resp, body = self.kp_client_for_user1.delete_keypair(keyname)
         self.assertEqual('202', resp['status'])
-
-        # reset db
-        subprocess.check_call('mysql -u%s -p%s -h%s -D nova -e "'
-                              'DELETE FROM key_pairs;'
-                              '"' % (
-                                  self.config.mysql.user,
-                                  self.config.mysql.password,
-                                  self.config.mysql.host),
-                              shell=True)
-
-    @attr(kind='medium')
-    def test_delete_keypair_when_keypair_name_is_illegal(self):
-        """Returns 404 response"""
-        # create a keypair for test
-        keyname = 'key_/.\@:' + self._testMethodName
-        resp, body = self.kp_client.create_keypair(keyname)
-
-        # execute and assert
-        resp, _ = self.kp_client.delete_keypair(keyname)
-        self.assertEqual('404', resp['status'])
 
         # reset db
         subprocess.check_call('mysql -u%s -p%s -h%s -D nova -e "'

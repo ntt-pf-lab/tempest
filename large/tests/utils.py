@@ -67,7 +67,7 @@ def exist_vm_in_virsh(vm_id):
     for line in subprocess.check_output('virsh list --all',
                                         shell=True).split('\n')[2:-2]:
         (id, name, state) = line.split(None, 2)
-        if id == str(vm_id):
+        if name == _id_to_instance_id(int(vm_id)):
             return True
     else:
         return False
@@ -77,7 +77,7 @@ def get_vm_state_in_virsh(vm_id):
     for line in subprocess.check_output('virsh list --all',
                                         shell=True).split('\n')[2:-2]:
         (id, name, state) = line.split(None, 2)
-        if id == str(vm_id):
+        if name == _id_to_instance_id(int(vm_id)):
             return state
     else:
         raise Exception('VM could not be found by virsh.')

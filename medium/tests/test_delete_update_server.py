@@ -109,11 +109,19 @@ class DeleteServerTest(FunctionalTest):
         self.kp_client = self.os.keypairs_client
 
     def update_status(self, server_id, vm_state, task_state, deleted=0):
-        sql = ("UPDATE instances SET "
-               "deleted = %s, "
-               "vm_state = '%s', "
-               "task_state = '%s' "
-               "WHERE id = %s;") % (deleted, vm_state, task_state, server_id)
+        if task_state is not None:
+            sql = ("UPDATE instances SET "
+                   "deleted = %s, "
+                   "vm_state = '%s', "
+                   "task_state = '%s' "
+                   "WHERE id = %s;") \
+                   % (deleted, vm_state, task_state, server_id)
+        else:
+            sql = ("UPDATE instances SET "
+                   "deleted = %s, "
+                   "vm_state = '%s', "
+                   "task_state = NULL "
+                   "WHERE id = %s;") % (deleted, vm_state, server_id)
         self.exec_sql(sql)
 
     @attr(kind='medium')
@@ -445,6 +453,34 @@ class DeleteServerTest(FunctionalTest):
         self._test_delete_server_base('error', 'building')
 
     @attr(kind='medium')
+    def test_delete_server_instance_vm_resizing_task_resize_prep(self):
+        self._test_delete_server_403_base('resizing', 'resize_prep')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_resizing_task_resize_migrating(self):
+        self._test_delete_server_403_base('resizing', 'resize_migrating')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_resizing_task_resize_migrated(self):
+        self._test_delete_server_403_base('resizing', 'resize_migrated')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_resizing_task_resize_finish(self):
+        self._test_delete_server_403_base('resizing', 'resize_finish')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_resizing_task_resize_reverting(self):
+        self._test_delete_server_403_base('resizing', 'resize_reverting')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_resizing_task_resize_confirming(self):
+        self._test_delete_server_403_base('resizing', 'resize_confirming')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_active_task_resize_verify(self):
+        self._test_delete_server_403_base('active', 'resize_verify')
+
+    @attr(kind='medium')
     def test_delete_server_instance_vm_active_task_rebooting(self):
         self._test_delete_server_403_base('active', 'rebooting')
 
@@ -455,6 +491,22 @@ class DeleteServerTest(FunctionalTest):
     @attr(kind='medium')
     def test_delete_server_instance_vm_active_task_deleting(self):
         self._test_delete_server_403_base('active', 'deleting')
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_error_task_none(self):
+        self._test_delete_server_403_base('error', None)
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_migrating_task_none(self):
+        self._test_delete_server_403_base('migrating', None)
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_resizing_task_none(self):
+        self._test_delete_server_403_base('resizing', None)
+
+    @attr(kind='medium')
+    def test_delete_server_instance_vm_error_task_resize_prep(self):
+        self._test_delete_server_403_base('error', 'resize_prep')
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_error_task_error(self):
