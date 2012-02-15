@@ -84,17 +84,19 @@ class FunctionalTest(unittest.TestCase):
         """
 
     def exec_sql(self, sql):
-        exec_sql = 'mysql -u %s -p%s nova -e "' + sql + '"'
+        exec_sql = 'mysql -u %s -p%s nova -h%s -e "' + sql + '"'
         subprocess.check_call(exec_sql % (
                               self.config.mysql.user,
-                              self.config.mysql.password),
+                              self.config.mysql.password,
+                              self.config.mysql.host),
                               shell=True)
 
     def get_data_from_mysql(self, sql):
-        exec_sql = 'mysql -u %s -p%s nova -Ns -e "' + sql + '"'
+        exec_sql = 'mysql -u %s -p%s nova -h%s -Ns -e "' + sql + '"'
         result = subprocess.check_output(exec_sql % (
                                          self.config.mysql.user,
-                                         self.config.mysql.password),
+                                         self.config.mysql.password,
+                                         self.config.mysql.host),
                                          shell=True)
 
         return result
