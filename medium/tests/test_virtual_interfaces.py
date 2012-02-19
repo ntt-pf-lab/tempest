@@ -115,6 +115,7 @@ class VirtualInterfacesTest(FunctionalTest):
         # create a network for test
         networks = []
         cidr = '10.0.10.0/24'
+        gw = '10.0.10.1'
         subprocess.check_call('bin/nova-manage '
                               '--flagfile=%s '
                               'network create '
@@ -124,7 +125,8 @@ class VirtualInterfacesTest(FunctionalTest):
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
                               '--network_size=32 '
-                              % (self.config.nova.config, cidr),
+                              '--gateway=%s '
+                              % (self.config.nova.config, cidr, gw),
                               cwd=self.config.nova.directory, shell=True)
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
@@ -167,6 +169,7 @@ class VirtualInterfacesTest(FunctionalTest):
         # create a network for test
         networks = []
         cidr = '10.0.4.0/24'
+        gw = '10.0.4.1'
         subprocess.check_call('bin/nova-manage '
                               '--flagfile=%s '
                               'network create '
@@ -176,7 +179,8 @@ class VirtualInterfacesTest(FunctionalTest):
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
                               '--network_size=32 '
-                              % (self.config.nova.config, cidr),
+                              '--gateway=%s '
+                              % (self.config.nova.config, cidr, gw),
                               cwd=self.config.nova.directory, shell=True)
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
@@ -323,6 +327,7 @@ class VirtualInterfacesTest(FunctionalTest):
         # create a network for test
         networks = []
         cidr = '10.0.5.0/24'
+        gw = '10.0.5.1'
         subprocess.check_call('bin/nova-manage '
                               '--flagfile=%s '
                               'network create '
@@ -332,7 +337,8 @@ class VirtualInterfacesTest(FunctionalTest):
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
                               '--network_size=32 '
-                              % (self.config.nova.config, cidr),
+                              '--gateway=%s '
+                              % (self.config.nova.config, cidr, gw),
                               cwd=self.config.nova.directory, shell=True)
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
@@ -375,7 +381,9 @@ class VirtualInterfacesTest(FunctionalTest):
         # create three networks for test
         cidrs = ['10.0.6.0/24', '10.0.7.0/24', '10.0.8.0/24']
         networks = []
-        for cidr in cidrs:
+        for i in [6, 7, 8]:
+            cidr = '10.0.%s.0/24' % i
+            gw = '10.0.%s.1/24' % i
             subprocess.check_call('bin/nova-manage '
                                   '--flagfile=%s '
                                   'network create '
@@ -385,7 +393,8 @@ class VirtualInterfacesTest(FunctionalTest):
                                   '--bridge_interface=br-int '
                                   '--num_networks=1 '
                                   '--network_size=32 '
-                                  % (self.config.nova.config, cidr),
+                                  '--gateway=%s '
+                                  % (self.config.nova.config, cidr, gw),
                                   cwd=self.config.nova.directory, shell=True)
             sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
                   'WHERE cidr = \'%s\';' % cidr
