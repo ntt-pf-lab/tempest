@@ -383,7 +383,7 @@ class VirtualInterfacesTest(FunctionalTest):
         networks = []
         for i in [6, 7, 8]:
             cidr = '10.0.%s.0/24' % i
-            gw = '10.0.%s.1/24' % i
+            gw = '10.0.%s.1' % i
             subprocess.check_call('bin/nova-manage '
                                   '--flagfile=%s '
                                   'network create '
