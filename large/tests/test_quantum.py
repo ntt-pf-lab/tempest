@@ -37,13 +37,16 @@ from nose.plugins import skip
 LOG = logging.getLogger("large.tests.test_keystone")
 messages = []
 
+
 def setUpModule(module):
     rest_client.logging = QuantumLogging()
+
 
 def tearDownModule(module):
     print "\nAll Quantum tests done. Dump message infos."
     for m in messages:
         print "Test: %s\nMessages %s" % m
+
 
 class QuantumLogging(LoggingFeature):
 
@@ -59,6 +62,7 @@ class QuantumLogging(LoggingFeature):
         LOG.info("<<< Receive Response %s" % resp)
         LOG.debug("<<< Response Body %s" % body)
 
+
 class FunctionalTest(unittest.TestCase):
 
     def setUp(self):
@@ -69,7 +73,8 @@ class FunctionalTest(unittest.TestCase):
         self.token_client = TokenClient(default_config)
         self.data = DataGenerator(self.keystone_client, self.client)
         self.data.setup_one_user()
-        self.swap_user('test_quantum_user1', 'password', 'test_quantum_tenant1')
+        self.swap_user('test_quantum_user1', 'password',
+                       'test_quantum_tenant1')
 
     def tearDown(self):
         self.data.teardown_all()
@@ -97,8 +102,11 @@ class DataGenerator(object):
         self.role_name = None
 
     def setup_one_user(self):
-        _, tenant = self.client.create_tenant("test_quantum_tenant1", "tenant_for_test")
-        _, user = self.client.create_user("test_quantum_user1", "password", tenant['tenant']['id'], "user_quantum1@mail.com")
+        _, tenant = self.client.create_tenant("test_quantum_tenant1",
+                                              "tenant_for_test")
+        _, user = self.client.create_user("test_quantum_user1", "password",
+                                          tenant['tenant']['id'],
+                                          "user_quantum1@mail.com")
         self.tenants.append(tenant['tenant'])
         self.users.append(user['user'])
 
@@ -107,7 +115,8 @@ class DataGenerator(object):
         services = services['OS-KSADM:services']
         service_name = services[0]['name']
         service_id = services[0]['id']
-        _, roles = self.client.create_role(service_name + ':test1' , 'Test role', service_id)
+        _, roles = self.client.create_role(service_name + ':test1',
+                                           'Test role', service_id)
         self.role_name = service_name + ':test1'
         self.roles.append(roles['role'])
 
@@ -142,7 +151,7 @@ class QuantumTest(FunctionalTest):
 
     @attr(kind='large')
     def test_create_network_over_40(self):
-        _, body = self.client.create_network('A'*40 + 'B', 'nova_id')
+        _, body = self.client.create_network('A' * 40 + 'B', 'nova_id')
         nw = body['network']
         self.data.add_network(nw)
         self.assertTrue(nw['id'] is not None)
@@ -284,7 +293,7 @@ class QuantumTest(FunctionalTest):
         _, body = self.client.create_port(nw['id'], 'nova')
         resp, body = self.client.list_port_details('none_exist_network')
         self.assertEqual('420', resp['status'])
-        messages.append(('test_list_port_details_with_not_exist_network', body))
+        messages.append('test_list_port_details_with_not_exist_network', body)
 
     @attr(kind='large')
     def test_attach_port(self):
@@ -366,3 +375,13 @@ class QuantumTest(FunctionalTest):
         self.assertEqual({}, attachment)
         messages.append(('test_list_attach_port_with_no_attach', body))
 
+    @attr(kind='large')
+    def test_list_attach_port_with_non_exist_port(self):
+        _, body = self.client.create_network('new_network', 'nova_id')
+        nw = body['network']
+        self.data.add_network(nw)
+        _, body = self.client.create_port(nw['id'], 'nova')
+        resp, body = self.client.list_port_attachment(nw['id'],
+                                                      'non_exist_port')
+        self.assertEqual('430', resp['status'])
+        messages.append(('test_list_attach_port_with_non_exist_port', body))
