@@ -77,6 +77,11 @@ class NovaConfig(object):
         "/bin/nova-manage"
         return nova_manage_path
 
+    def config(self):
+        """path of nova.conf. Defaults to /opt/openstack/nova/etc/nova.conf"""
+        return self.get("config", "/opt/openstack/nova/etc/nova.conf")
+dd>>>>>>> ci-env
+
 
 class EnvironmentConfig(object):
     def __init__(self, conf):

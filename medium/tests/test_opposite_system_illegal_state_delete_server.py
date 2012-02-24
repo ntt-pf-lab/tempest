@@ -61,7 +61,7 @@ def tearDownModule(module):
     del module.environ_processes[:]
 
 
-class QuantumFunctionalTest(unittest.TestCase):
+class QuantumFunctionalTestBase(unittest.TestCase):
 
     config = config
 
@@ -119,6 +119,7 @@ class QuantumFunctionalTest(unittest.TestCase):
 
     def check_create_network(self, retcode):
         self.assertEqual(subprocess.call('%s network create '
+                                             'network create '
                                              '--label=private_1-1 '
                                              '--project_id=1 '
                                              '--fixed_range_v4=10.0.0.0/24 '
@@ -129,6 +130,8 @@ class QuantumFunctionalTest(unittest.TestCase):
                                          cwd=self.config.nova.directory,
                                          shell=True), retcode)
 
+
+class QuantumFunctionalTest(QuantumFunctionalTestBase):
     def _execute_fake_and_wait_for_error(self, **param):
         # quantum.
         quantum = FakeQuantumProcess('1', **param)
@@ -207,6 +210,54 @@ class QuantumFunctionalTest(unittest.TestCase):
     @attr(kind='medium')
     def test_delete_port_port_in_use(self):
         self._test_delete_port(432)
+
+
+class QuantumInternalServerErrorFunctionalTest(QuantumFunctionalTestBase):
+    def _execute_fake_and_wait_for_error(self, **param):
+        # quantum.
+        quantum = FakeQuantumProcess('1', **param)
+        self.testing_processes.append(quantum)
+        quantum.start()
+
+        self.check_create_network(0)
+
+        accessIPv4 = '1.1.1.1'
+        accessIPv6 = '::babe:220.12.22.2'
+        name = rand_name('server')
+        resp, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6)
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+
+        emphasised_print('Start testing %s' % self.id())
+        quantum.set_test(True)
+
+        self.ss_client.delete_server(server['id'])
+        self.ss_client.wait_for_server_status(server['id'], 'ERROR')
+
+    def _test_show_port_attachment(self, status_code):
+        self._execute_fake_and_wait_for_error(show_port_attachment=status_code)
+
+    @attr(kind='medium')
+    def test_show_port_attachment_internal_server_error(self):
+        self._test_show_port_attachment(500)
+
+    def _test_unplug_port_attachment(self, status_code):
+        self._execute_fake_and_wait_for_error(
+                unplug_port_attachment=status_code)
+
+    @attr(kind='medium')
+    def test_unplug_port_attachment_internal_server_error(self):
+        self._test_unplug_port_attachment(500)
+
+    def _test_delete_port(self, status_code):
+        self._execute_fake_and_wait_for_error(delete_port=status_code)
+
+    @attr(kind='medium')
+    def test_delete_port_internal_server_error(self):
+        self._test_delete_port(500)
 
 
 class LibvirtFunctionalTest(unittest.TestCase):

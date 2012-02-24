@@ -10,6 +10,7 @@ from storm import openstack
 import storm.config
 from storm import exceptions
 from storm.common.utils.data_utils import rand_name
+import stackmonkey.manager as ssh_manager
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -64,6 +65,22 @@ class LibvirtFunctionalTest(unittest.TestCase):
 
     def setUp(self):
         emphasised_print(self.id())
+
+        self.havoc = ssh_manager.HavocManager()
+        self.ssh_con = self.havoc.connect('127.0.0.1', 'openstack',
+                        'openstack', self.havoc.config.nodes.ssh_timeout)
+
+        self.glance_havoc = ssh_manager.GlanceHavoc(host='127.0.0.1',
+            username='openstack', password='openstack',
+            api_config_file=os.path.join(self.config.glance.directory, self.config.glance.api_config),
+            registry_config_file=os.path.join(self.config.glance.directory, self.config.glance.registry_config))
+            
+        self.glance_ssh_con = self.glance_havoc.connect('127.0.0.1', 'openstack',
+                            'openstack', self.glance_havoc.config.nodes.ssh_timeout)
+
+        self.compute_havoc = ssh_manager.ComputeHavoc()
+        self.compute_ssh_con = self.compute_havoc.connect('127.0.0.1', 'openstack',
+                            'openstack', self.compute_havoc.config.nodes.ssh_timeout)
 
         self.os = openstack.Manager(config=self.config)
         self.image_ref = self.config.env.image_ref
@@ -133,17 +150,27 @@ class LibvirtFunctionalTest(unittest.TestCase):
                 name)
 
 
+    def get_nova_path(self, name):
+        p = os.path.dirname(__file__)
+        p = p.split(os.path.sep)[0:-2]
+        return os.path.join(os.path.sep.join(p), name)
+
+
 class LibvirtLaunchErrorTest(LibvirtFunctionalTest):
     @attr(kind='medium')
     def test_it(self):
         patches = [('libvirt', 'fake_libvirt.libvirt_patch')]
         env = os.environ.copy()
-        env['PYTHONPATH'] = self.get_fake_path('launch-error')
+        env['PYTHONPATH'] = self.get_fake_path('launch-error') +\
+            ':' + self.get_nova_path('stackmonkey')
         compute = NovaComputeProcess(self.config.nova.directory,
                                      patches=patches,
-                                     env=env)
+                                     env=env,
+                    config_file=self.config.nova.directory + '/bin/nova.conf')
+
         compute.start()
         self.testing_processes.append(compute)
+        time.sleep(10)
 
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -165,12 +192,16 @@ class LibvirtLookupErrorTest(LibvirtFunctionalTest):
     def test_it(self):
         patches = [('libvirt', 'fake_libvirt.libvirt_patch')]
         env = os.environ.copy()
-        env['PYTHONPATH'] = self.get_fake_path('lookup-error')
+        env['PYTHONPATH'] = self.get_fake_path('lookup-error') +\
+            ':' + self.get_nova_path('stackmonkey')
         compute = NovaComputeProcess(self.config.nova.directory,
                                      patches=patches,
-                                     env=env)
+                                     env=env,
+                    config_file=self.config.nova.directory + '/bin/nova.conf')
+
         compute.start()
         self.testing_processes.append(compute)
+        time.sleep(10)
 
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -196,12 +227,16 @@ class LibvirtOpenVswitchDriverPlugErrorTest(LibvirtOpenVswitchDriverTest):
     def test_it(self):
         patches = [('nova.virt.libvirt.vif', 'fake_libvirt_vif.vif_patch')]
         env = os.environ.copy()
-        env['PYTHONPATH'] = self.get_fake_path('vif-plug-error')
+        env['PYTHONPATH'] = self.get_fake_path('vif-plug-error') +\
+            ':' + self.get_nova_path('stackmonkey')
         compute = NovaComputeProcess(self.config.nova.directory,
                                      patches=patches,
-                                     env=env)
+                                     env=env,
+                    config_file=self.config.nova.directory + '/bin/nova.conf')
+
         compute.start()
         self.testing_processes.append(compute)
+        time.sleep(10)
 
         accessIPv4 = '1.1.1.1'
         accessIPv6 = '::babe:220.12.22.2'
@@ -236,8 +271,8 @@ class QuantumFunctionalTest(unittest.TestCase):
                 self.config.nova.directory))
         self.testing_processes.append(NovaSchedulerProcess(
                 self.config.nova.directory))
-        self.testing_processes.append(NovaComputeProcess(
-                self.config.nova.directory))
+        self.testing_processes.append(NovaComputeProcess(self.config.nova.directory,
+                    config_file=self.config.nova.directory + '/bin/nova.conf'))
 
         # reset db.
         silent_check_call('mysql -u%s -p%s -e "'

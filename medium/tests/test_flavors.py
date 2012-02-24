@@ -78,17 +78,19 @@ class FunctionalTest(unittest.TestCase):
         """
 
     def exec_sql(self, sql):
-        exec_sql = 'mysql -u %s -p%s nova -e "' + sql + '"'
+        exec_sql = 'mysql -u %s -p%s -h%s nova -e "' + sql + '"'
         subprocess.check_call(exec_sql % (
                               self.config.mysql.user,
-                              self.config.mysql.password),
+                              self.config.mysql.password,
+                              self.config.mysql.host),
                               shell=True)
 
     def get_data_from_mysql(self, sql):
-        exec_sql = 'mysql -u %s -p%s nova -Ns -e "' + sql + '"'
+        exec_sql = 'mysql -u %s -p%s -h%s nova -Ns -e "' + sql + '"'
         result = subprocess.check_output(exec_sql % (
                                          self.config.mysql.user,
-                                         self.config.mysql.password),
+                                         self.config.mysql.password,
+                                         self.config.mysql.host),
                                          shell=True)
 
         return result
@@ -386,7 +388,6 @@ class FlavorsTest(FunctionalTest):
                "DROP TABLE IF EXISTS instance_types_bk;")
         self.exec_sql(sql)
 
-    @test.skip_test('Skip this case for bug #697')
     @attr(kind='medium')
     def test_get_flavor_details_when_specify_invalid_id(self):
         """ Return error because way to specify is inappropriate """

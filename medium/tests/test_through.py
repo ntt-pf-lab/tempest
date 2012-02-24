@@ -109,6 +109,7 @@ class ServersTest(FunctionalTest):
         self.assertIsNotNone(match)
         alt_img_id = match.groupdict()['image_id']
         self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
+        time.sleep(10)
 
         emphasised_print("deleting server.")
         # Delete the server

@@ -15,7 +15,8 @@ class RestClient(object):
             self.token, self.base_url = self.keystone_v2_auth(user,
                                                               key,
                                                               auth_url,
-                                                              tenant_name)
+                                                              tenant_name,
+                                                              service)
         else:
             self.token, self.base_url = self.basic_auth(user,
                                                         key,

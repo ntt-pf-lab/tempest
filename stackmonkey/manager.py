@@ -61,7 +61,6 @@ class HavocManager(object):
                     return p.stdout.read()
                 return False
 
-            else:
                 return False
         except:
             raise
