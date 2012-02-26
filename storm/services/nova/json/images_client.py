@@ -100,6 +100,9 @@ class ImagesClient(object):
         while image['status'] != status:
             time.sleep(self.build_interval)
             resp, image = self.get_image(image_id)
+            if resp['status'] != '200':
+                print resp
+                raise exceptions.BuildErrorException
 
             if image['status'] == 'ERROR':
                 raise exceptions.TimeoutException

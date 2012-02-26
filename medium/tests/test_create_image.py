@@ -43,10 +43,35 @@ def setUpModule(module):
     config = module.config
 
 
+def tearDownModule(module):
+    os = openstack.Manager(config=default_config)
+    print """
+
+    Terminate All Instances
+
+    """
+    try:
+        _, servers = os.servers_client.list_servers()
+        print "Servers : %s" % servers
+        for s in servers['servers']:
+            try:
+                print "Find existing instance %s" % s['id']
+                resp, _ = os.servers_client.delete_server(s['id'])
+                print "Delete Server Response %s" % resp['status']
+                if resp['status'] == '204' or resp['status'] == '202':
+                    print "Wait for stop %d" % s['id']
+                    os.servers_client.wait_for_server_not_exists(s['id'])
+            except Exception as e:
+                print e
+    except Exception:
+        pass
+
+
 class FunctionalTest(unittest.TestCase):
 
     config = default_config
     config2 = test_config
+    servers = []
 
     def setUp(self):
         # for admin tenant
@@ -58,21 +83,18 @@ class FunctionalTest(unittest.TestCase):
     def tearDown(self):
         print """
 
-        Terminate All Instances
+        Terminate Active Instances
 
         """
         try:
-            _, servers = self.os.servers_client.list_servers()
-            print "Servers : %s" % servers
-            for s in servers['servers']:
+            for s in self.servers:
                 try:
                     print "Find existing instance %s" % s
-                    resp, _ = self.os.servers_client.delete_server(s['id'])
-                    print "Delete Server Response %s" % resp
+                    resp, _ = self.os.servers_client.delete_server(s)
+                    print "Delete Server Response %s" % resp['status']
                     if resp['status'] == '204' or resp['status'] == '202':
-                        print "Wait for stop %s" % s['id']
-                        self.os.servers_client.wait_for_server_not_exists(
-                                                                    s['id'])
+                        print "Wait for stop %d" % s
+                        self.os.servers_client.wait_for_server_not_exists(s)
                 except Exception as e:
                     print e
         except Exception:
@@ -82,6 +104,7 @@ class FunctionalTest(unittest.TestCase):
         Cleanup DB
 
         """
+        self.servers[:] = []
 
     def exec_sql(self, sql):
         exec_sql = 'mysql -u %s -p%s nova -h%s -e "' + sql + '"'
@@ -143,19 +166,32 @@ class ServersActionTest(FunctionalTest):
 
         return server['id']
 
-    @attr(kind='medium')
-    def test_create_image(self):
+    def get_instance(self):
+        _, servers = self.ss_client.list_servers_with_detail()
+        server = servers['servers']
+        server = [s for s in server if s['status'] == 'ACTIVE']
+        if server:
+            self.wait_for_enable_snapshot(server[0]['id'])
+            return server[0]
+        return self.create_instance(self._testMethodName)
 
-        print """
+    def wait_for_enable_snapshot(self, server_id):
+        # if task_state became none, can accept next api.
+        db_result = 'server_state'
+        while db_result != 'NULL':
+            sql = ("SELECT task_state FROM instances WHERE id = %s;")\
+                                                        % (server_id)
+            db_result = (self.get_data_from_mysql(sql))[:-1]
+            if db_result == 'NULL':
+                break
+        return
 
-        creating server.
-
-        """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
+    def create_instance(self, server_name):
+        meta = {'hello': 'opst'}
+        accessIPv4 = '2.2.2.2'
+        accessIPv6 = '::babe:330.23.33.3'
+        name = server_name
+        file_contents = 'This is a test_file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
         _, server = self.ss_client.create_server(name,
@@ -165,17 +201,19 @@ class ServersActionTest(FunctionalTest):
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
+
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+        return server
 
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(server['id'])
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
+    @attr(kind='medium')
+    def test_create_image(self):
+        print """
 
+        creating server.
+
+        """
+        server = self.get_instance()
         print """
 
         creating snapshot.
@@ -191,25 +229,17 @@ class ServersActionTest(FunctionalTest):
         self.assertIsNotNone(match)
         alt_img_id = match.groupdict()['image_id']
         self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
-        resp, _ = self.ss_client.list_servers_with_detail()
 
         print """
 
         creating server from snapshot.
 
         """
-        resp, server = self.ss_client.create_server(name,
-                                                    alt_img_id,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
+        snap = self.create_instance(alt_name)
+        self.servers.append(snap['id'])
 
         # Verify the specified attributes are set correctly
-        resp, server = self.ss_client.get_server(test_id)
+        resp, server = self.ss_client.get_server(snap['id'])
         self.assertEquals('ACTIVE', server['status'])
 
     @attr(kind='medium')
@@ -220,31 +250,7 @@ class ServersActionTest(FunctionalTest):
         creating server.
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(server['id'])
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-
+        server = self.get_instance()
         print """
 
         creating snapshot.
@@ -258,6 +264,7 @@ class ServersActionTest(FunctionalTest):
         match = re.search('/images/(?P<image_id>.+)', alt_img_url)
         self.assertIsNotNone(match)
         alt_img_id = match.groupdict()['image_id']
+        print alt_img_id
         self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
         resp, _ = self.img_client.get_image(alt_img_id)
         self.assertEquals('200', resp['status'])
@@ -267,19 +274,11 @@ class ServersActionTest(FunctionalTest):
         creating server from snapshot.
 
         """
-        resp, server = self.ss_client.create_server(name,
-                                                    alt_img_id,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-        # Wait for the server to become active
-        uuid_ss_server_id = server['id']
-        self.ss_client.wait_for_server_status(uuid_ss_server_id, 'ACTIVE')
+        snap = self.create_instance(alt_name)
+        self.servers.append(snap['id'])
 
         # Verify the specified attributes are set correctly
-        resp, server = self.ss_client.get_server(uuid_ss_server_id)
+        resp, server = self.ss_client.get_server(snap['id'])
         self.assertEquals('ACTIVE', server['status'])
 
     @attr(kind='medium')
@@ -287,34 +286,9 @@ class ServersActionTest(FunctionalTest):
 
         print """
 
-        creating server.
+        Not creating server.
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(server['id'])
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-
         print """
 
         creating snapshot.
@@ -332,28 +306,7 @@ class ServersActionTest(FunctionalTest):
         creating server of admin(is admin).
 
         """
-
-        meta = {'aaa': 'bbb'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-        test_server_id = server['id']
-        resp, server = self.ss_client.get_server(test_server_id)
-        self.assertEquals('200', resp['status'])
-
+        server = self.get_instance()
         print """
 
         creating snapshot of admin's instance by not admin.
@@ -362,7 +315,7 @@ class ServersActionTest(FunctionalTest):
 
         # Make snapshot of the instance.
         alt_name = rand_name('ss_test')
-        resp, _ = self.s2_client.create_image(test_server_id, alt_name)
+        resp, _ = self.s2_client.create_image(server['id'], alt_name)
         self.assertEquals('403', resp['status'])
 
     @attr(kind='medium')
@@ -388,6 +341,7 @@ class ServersActionTest(FunctionalTest):
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
         test_id = server['id']
+        self.servers.append(test_id)
 
         print """
 
@@ -407,24 +361,9 @@ class ServersActionTest(FunctionalTest):
         creating server.
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+        server = self.create_instance(self._testMethodName)
         test_id = server['id']
+        self.servers.append(test_id)
 
         print """
 
@@ -440,8 +379,10 @@ class ServersActionTest(FunctionalTest):
         """
         alt_name = rand_name('opst')
         resp, _ = self.ss_client.create_image(test_id, alt_name)
+        # TODO(shida) Is this correct?
         print "resp=", resp
         self.assertEquals('202', resp['status'])
+        
 
     @attr(kind='medium')
     def test_create_image_when_server_is_during_stop_process(self):
@@ -451,33 +392,8 @@ class ServersActionTest(FunctionalTest):
         creating server.
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+        server = self.get_instance()
         test_server_id = server['id']
-
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(test_server_id)
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-
         print """
 
         deleting server.
@@ -493,6 +409,8 @@ class ServersActionTest(FunctionalTest):
         # Make snapshot of the instance without waiting done creating server
         alt_name = rand_name('opst_test')
         resp, _ = self.ss_client.create_image(test_server_id, alt_name)
+        self.ss_client.wait_for_server_not_exists(test_server_id)
+        # TODO(shida) Failed sometime. this is timing problem.
         self.assertEquals('403', resp['status'])
 
     @attr(kind='medium')
@@ -503,42 +421,25 @@ class ServersActionTest(FunctionalTest):
         creating server.
 
         """
-        meta = {'opst': 'testing'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
+        server = self.get_instance()
 
         # Wait for the server to become active
         test_server_id = server['id']
-        self.ss_client.wait_for_server_status(test_server_id, 'ACTIVE')
-
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(test_server_id)
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
 
         print """
 
         deleting server.
 
         """
-        self.ss_client.delete_server(test_server_id)
+        while True:
+            resp, _ = self.ss_client.delete_server(test_server_id)
+            print resp
+            if resp['status'] == '409':
+                time.sleep(2)
+                continue
+            break
+
         self.ss_client.wait_for_server_not_exists(test_server_id)
-        _, servers = self.ss_client.list_servers()
-        self.assertEquals([], servers['servers'])
 
         print """
 
@@ -559,34 +460,9 @@ class ServersActionTest(FunctionalTest):
         creating server.
 
         """
-        meta = {'aaaaa': 'bbbbb'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
+        server = self.get_instance()
         # Wait for the server to become active
         test_server_id = server['id']
-        self.ss_client.wait_for_server_status(test_server_id, 'ACTIVE')
-        _, server = self.ss_client.get_server(test_server_id)
-        self.assertEquals('ACTIVE', server['status'])
-
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(test_server_id)
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
 
         print """
 
@@ -597,7 +473,7 @@ class ServersActionTest(FunctionalTest):
         alt_name = rand_name('server')
         resp1, _ = self.ss_client.create_image(test_server_id, alt_name)
         self.assertEquals('202', resp1['status'])
-        time.sleep(2)
+        time.sleep(1)
 
         print """
 
@@ -631,34 +507,9 @@ class ServersActionTest(FunctionalTest):
         creating server.
 
         """
-        meta = {'aaaaa': 'bbbbb'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
+        server = self.get_instance()
         # Wait for the server to become active
         test_server_id = server['id']
-        self.ss_client.wait_for_server_status(test_server_id, 'ACTIVE')
-        _, server = self.ss_client.get_server(test_server_id)
-        self.assertEquals('ACTIVE', server['status'])
-
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(test_server_id)
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
 
         print """
 
@@ -709,19 +560,12 @@ class ServersActionTest(FunctionalTest):
         creating server from snapshot.
 
         """
-        _, server = self.ss_client.create_server(name,
-                                                    alt_test_img_id,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-        # Wait for the server to become active
-        ss_server_id = server['id']
-        self.ss_client.wait_for_server_status(ss_server_id, 'ACTIVE')
-        _, server = self.ss_client.get_server(ss_server_id)
-        self.assertEquals('ACTIVE', server['status'])
+        snap = self.create_instance(alt_name)
+        self.servers.append(snap['id'])
 
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(snap['id'])
+        self.assertEquals('ACTIVE', server['status'])
         print """
 
         deleting snapshot.
@@ -741,33 +585,9 @@ class ServersActionTest(FunctionalTest):
         creating server.
 
         """
-        meta = {'aaa': 'bbb'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
+        server = self.get_instance()
         # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
         test_id = server['id']
-
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(test_id)
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-
         print """
 
         creating snapshot.
@@ -777,44 +597,14 @@ class ServersActionTest(FunctionalTest):
         alt_name = rand_name('a' * 260)
         resp, body = self.ss_client.create_image(test_id, alt_name)
         self.assertEquals('400', resp['status'])
-        print body
 
     @attr(kind='medium')
     def test_create_image_when_uuid_is_35_characters_or_less(self):
         print """
 
-        creating server.
+        Not creating server.
 
         """
-        meta = {'aaaaa': 'bbbbb'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        test_server_id = server['id']
-        self.ss_client.wait_for_server_status(test_server_id, 'ACTIVE')
-        _, server = self.ss_client.get_server(test_server_id)
-        self.assertEquals('ACTIVE', server['status'])
-
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(test_server_id)
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-
         print """
 
         creating snapshot.
@@ -830,38 +620,9 @@ class ServersActionTest(FunctionalTest):
     def test_create_image_when_uuid_is_more_than_37_characters(self):
         print """
 
-        creating server.
+        Not creating server.
 
         """
-        meta = {'aaaaa': 'bbbbb'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        test_server_id = server['id']
-        self.ss_client.wait_for_server_status(test_server_id, 'ACTIVE')
-        _, server = self.ss_client.get_server(test_server_id)
-        self.assertEquals('ACTIVE', server['status'])
-
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(test_server_id)
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-
         print """
 
         creating snapshot.
@@ -880,35 +641,7 @@ class ServersActionTest(FunctionalTest):
         creating server.
 
         """
-        meta = {'aaaaa': 'bbbbb'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        test_server_id = server['id']
-        self.ss_client.wait_for_server_status(test_server_id, 'ACTIVE')
-        _, server = self.ss_client.get_server(test_server_id)
-        self.assertEquals('ACTIVE', server['status'])
-
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(test_server_id)
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-
+        server = self.get_instance()
         print """
 
         creating snapshot.
@@ -924,26 +657,7 @@ class ServersActionTest(FunctionalTest):
         self.assertIsNotNone(match)
         alt_img_id = match.groupdict()['image_id']
         self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
-        resp, _ = self.ss_client.list_servers_with_detail()
 
-        print """
-
-        creating server from snapshot.
-
-        """
-        resp, server = self.ss_client.create_server(name,
-                                                    alt_img_id,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
-
-        # Verify the specified attributes are set correctly
-        resp, server = self.ss_client.get_server(test_id)
-        self.assertEquals('ACTIVE', server['status'])
 
     @attr(kind='medium')
     def test_create_image_when_name_is_two_byte_code(self):
@@ -952,35 +666,7 @@ class ServersActionTest(FunctionalTest):
         creating server.
 
         """
-        meta = {'aaaaa': 'bbbbb'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        test_server_id = server['id']
-        self.ss_client.wait_for_server_status(test_server_id, 'ACTIVE')
-        _, server = self.ss_client.get_server(test_server_id)
-        self.assertEquals('ACTIVE', server['status'])
-
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(test_server_id)
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
-
+        server = self.get_instance()
         print """
 
         creating snapshot.
@@ -992,31 +678,6 @@ class ServersActionTest(FunctionalTest):
         resp, _ = self.ss_client.create_image(test_id, alt_name)
         print "resp=", resp
         self.assertEquals('500', resp['status'])
-#        alt_img_url = resp['location']
-#        match = re.search('/images/(?P<image_id>.+)', alt_img_url)
-#        self.assertIsNotNone(match)
-#        alt_img_id = match.groupdict()['image_id']
-#        self.img_client.wait_for_image_status(alt_img_id, 'ACTIVE')
-#        resp, _ = self.ss_client.list_servers_with_detail()
-#
-#        print """
-#
-#        creating server from snapshot.
-#
-#        """
-#        resp, server = self.ss_client.create_server(name,
-#                                                    alt_img_id,
-#                                                    self.flavor_ref,
-#                                                    meta=meta,
-#                                                    accessIPv4=accessIPv4,
-#                                                    accessIPv6=accessIPv6,
-#                                                    personality=personality)
-#        # Wait for the server to become active
-#        self.ss_client.wait_for_server_status(test_id, 'ACTIVE')
-#
-#        # Verify the specified attributes are set correctly
-#        resp, server = self.ss_client.get_server(test_id)
-#        self.assertEquals('ACTIVE', server['status'])
 
     @attr(kind='medium')
     def test_create_image_when_metadata_exists(self):
@@ -1026,32 +687,8 @@ class ServersActionTest(FunctionalTest):
         creating server.
 
         """
-        meta = {'aaa': 'bbb'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+        server = self.get_instance()
         test_id = server['id']
-
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(test_id)
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
 
         print """
 
@@ -1077,17 +714,11 @@ class ServersActionTest(FunctionalTest):
         creating server from snapshot.
 
         """
-        resp, server = self.ss_client.create_server(name,
-                                                    alt_img_id,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-        # Wait for the server to become active
-        ss_server_id = server['id']
-        self.ss_client.wait_for_server_status(ss_server_id, 'ACTIVE')
-        resp, server = self.ss_client.get_server(ss_server_id)
+        snap = self.create_instance(alt_name)
+        self.servers.append(snap['id'])
+
+        # Verify the specified attributes are set correctly
+        resp, server = self.ss_client.get_server(snap['id'])
         self.assertEquals('ACTIVE', server['status'])
 
     @attr(kind='medium')
@@ -1098,32 +729,8 @@ class ServersActionTest(FunctionalTest):
         creating server.
 
         """
-        meta = {'aaa': 'bbb'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+        server = self.get_instance()
         test_id = server['id']
-
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(test_id)
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
 
         print """
 
@@ -1148,32 +755,8 @@ class ServersActionTest(FunctionalTest):
         creating server.
 
         """
-        meta = {'aaa': 'bbb'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+        server = self.get_instance()
         test_id = server['id']
-
-        # Verify the specified attributes are set correctly
-        _, server = self.ss_client.get_server(test_id)
-        self.assertEqual('1.1.1.1', server['accessIPv4'])
-        self.assertEqual('::babe:220.12.22.2', server['accessIPv6'])
-        self.assertEqual(name, server['name'])
-        self.assertEqual(str(self.image_ref), server['image']['id'])
-        self.assertEqual(str(self.flavor_ref), server['flavor']['id'])
 
         print """
 
@@ -1191,6 +774,7 @@ class ServersActionTest(FunctionalTest):
     @attr(kind='medium')
     def _test_create_image_403_base(self, vm_state, task_state, deleted=0):
         server_id = self.create_dummy_instance(vm_state, task_state, deleted)
+        self.servers.append(server_id)
         name = rand_name('server')
         resp, _ = self.ss_client.create_image(server_id, name)
         self.assertEquals('403', resp['status'])
