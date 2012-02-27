@@ -32,17 +32,71 @@ from storm import exceptions
 """
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
-
+# Inner L2 network, bridge, gateway, dhcp
+NW1= ('10.0.0.0/24', 'br-int', '10.0.0.1', '10.0.0.2') 
+NW2 = ('10.0.1.0/24', 'br-int', '10.0.1.1', '10.0.1.2') 
 default_config = storm.config.StormConfig('etc/medium.conf')
 test_config = storm.config.StormConfig('etc/medium_test.conf')
 config = default_config
 environ_processes = []
-
+quantum_client = None
+nw_wrapper = None
+nw1_uuid = None
+nw2_uuid = None
+nova_id = 'nova'
+tenant_id = '1'
 
 def setUpModule(module):
 #    environ_processes = module.environ_processes
-    config = module.config
+    print """
 
+    Create networks.
+
+    """
+    config = module.config
+    os = openstack.Manager(config=default_config)
+    quantum_client = os.quantum_client
+    nw_wrapper = NetworkWrapper(default_config)
+    # create network 1.
+    _, body = quantum_client.create_network('mt_network1', nova_id)
+    module.nw1_uuid = body['network']['id']
+    nw_wrapper.create_network('mt_nw1', NW1[0], 255, NW1[1], tenant_id, module.nw1_uuid, NW1[2], NW1[3])
+    _, body = quantum_client.create_network('mt_network2', nova_id)
+    module.nw2_uuid = body['network']['id']
+    nw_wrapper.create_network('mt_nw2', NW2[0], 255, NW2[1], tenant_id, module.nw2_uuid, NW2[2], NW2[3])
+
+
+def tearDownModule(module):
+    print """
+
+    Remove networks.
+
+    """
+    nw_wrapper = NetworkWrapper(default_config)
+    nw_wrapper.delete_network(module.nw1_uuid)
+    nw_wrapper.delete_network(module.nw2_uuid)
+
+
+class NetworkWrapper(object):
+    def __init__(self, config):
+        self.path = config.nova.directory
+
+    def _nova_manage_network(self, action, params):
+        flags = "--flagfile=etc/nova.conf"
+        cmd = "bin/nova-manage %s network %s %s" % (flags, action, params)
+        print "Running command %s" % cmd
+        result = subprocess.check_output(cmd, cwd=self.path, shell=True)
+        return result
+
+    def create_network(self, label, ip_range, size, bridge, tenant, uuid, gw, dhcp):
+        params = "--label=%s --fixed_range_v4=%s --num_networks=1 --network_size=%s\
+ --bridge_interface=%s --project_id=%s --uuid=%s --gateway=%s --dhcp_server=%s" %\
+         (label, ip_range, size, bridge, tenant, uuid, gw, dhcp)
+        return self._nova_manage_network('create', params)
+
+    def delete_network(self, uuid):
+        params = "--uuid=%s" % uuid
+        return self._nova_manage_network('delete', params)
 
 class FunctionalTest(unittest.TestCase):
 
@@ -62,10 +116,9 @@ class FunctionalTest(unittest.TestCase):
         """
         try:
             _, servers = self.os.servers_client.list_servers()
-            print "Servers : %s" % servers
             for s in servers['servers']:
                 try:
-                    print "Find existing instance %s" % s['id']
+                    print "Find existing instance %d" % s['id']
                     resp, _ = self.os.servers_client.delete_server(s['id'])
                     if resp['status'] == '204' or resp['status'] == '202':
                         self.os.servers_client.wait_for_server_not_exists(
@@ -308,6 +361,7 @@ class CreateServerTest(FunctionalTest):
                                                     personality=personality)
 
         # Wait for the server to become active
+        print server
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
         id1 = server['id']
 
@@ -759,16 +813,14 @@ class CreateServerTest(FunctionalTest):
 
         """
 
-        sql = 'select uuid from networks where cidr=\'10.0.0.0/24\' limit 1;'
-        uuid = self.get_data_from_mysql(sql)
-        uuid = uuid[:-1]
+        uuid = nw1_uuid
 
         meta = {'hello': 'world'}
         name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        networks = [{'fixed_ip': '10.0.0.9',
+        networks = [{'fixed_ip': '10.0.0.10',
                      'uuid':uuid}]
         resp, server = self.ss_client.create_server_kw(
                                                 name=name,
@@ -794,22 +846,13 @@ class CreateServerTest(FunctionalTest):
 
         test_create_servers_specify_two_networks
         """
-
-        sql = 'select uuid from networks where project_id = 1 limit 2;'
-        uuids = self.get_data_from_mysql(sql)
-        uuid = []
-        for id in uuids.split('\n'):
-            print "id=", id
-            if id:
-                uuid.append(id)
-
         meta = {'hello': 'world'}
         name = self._testMethodName
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        networks = [{'fixed_ip': '10.0.0.100', 'uuid': uuid[0]},
-                    {'fixed_ip': '10.0.1.100', 'uuid': uuid[1]}]
+        networks = [{'fixed_ip': '10.0.0.100', 'uuid': nw1_uuid},
+                    {'fixed_ip': '10.0.1.100', 'uuid': nw2_uuid}]
         resp, server = self.ss_client.create_server_kw(
                                                    name=name,
                                                    imageRef=self.image_ref,
@@ -838,14 +881,14 @@ class CreateServerTest(FunctionalTest):
         """
         sql = 'select uuid from networks limit 1;'
         uuid = self.get_data_from_mysql(sql)
-        uuid = uuid[:-1]
+        uuid = nw1_uuid
 
         meta = {'hello': 'world'}
         name = self._testMethodName + '1'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        networks = [{'fixed_ip': '10.0.0.1',
+        networks = [{'fixed_ip': '10.0.0.11',
                      'uuid':uuid}]
         resp, server = self.ss_client.create_server_kw(
                                                 name=name,
@@ -867,7 +910,7 @@ class CreateServerTest(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        networks = [{'fixed_ip': '10.0.0.1',
+        networks = [{'fixed_ip': '10.0.0.12',
                      'uuid':uuid}]
         resp, server = self.ss_client.create_server_kw(
                                                 name=name,
@@ -937,6 +980,7 @@ class CreateServerTest(FunctionalTest):
         print "body=", body
         self.assertEqual('400', resp['status'])
 
+    @test.skip_test('ignore this case because of all test broken for this test.')
     @attr(kind='medium')
     def test_create_servers_specify_illegal_host(self):
         print """
@@ -1091,12 +1135,13 @@ class CreateServerTest(FunctionalTest):
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
 
+ 
+        sql = "delete from quotas;"
+        self.exec_sql(sql)
+
         print "resp=", resp
         print "server=", server
         self.assertEqual('413', resp['status'])
-
-        sql = "delete from quotas;"
-        self.exec_sql(sql)
 
     @test.skip_test('ignore this case for bug.619')
     @attr(kind='medium')
