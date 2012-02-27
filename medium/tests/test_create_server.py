@@ -33,8 +33,8 @@ from storm import exceptions
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
 # Inner L2 network, bridge, gateway, dhcp
-NW1= ('10.0.0.0/24', 'br-int', '10.0.0.1', '10.0.0.2') 
-NW2 = ('10.0.1.0/24', 'br-int', '10.0.1.1', '10.0.1.2') 
+NW1= ('10.0.0.0/24', 'br_int', '10.0.0.1', '10.0.0.2') 
+NW2 = ('10.0.1.0/24', 'br_int', '10.0.1.1', '10.0.1.2') 
 default_config = storm.config.StormConfig('etc/medium.conf')
 test_config = storm.config.StormConfig('etc/medium_test.conf')
 config = default_config
@@ -72,6 +72,10 @@ def tearDownModule(module):
     Remove networks.
 
     """
+    os = openstack.Manager(config=default_config)
+    quantum_client = os.quantum_client
+    _, body = quantum_client.delete_network(module.nw1_uuid)
+    _, body = quantum_client.delete_network(module.nw2_uuid)
     nw_wrapper = NetworkWrapper(default_config)
     nw_wrapper.delete_network(module.nw1_uuid)
     nw_wrapper.delete_network(module.nw2_uuid)
