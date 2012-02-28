@@ -16,6 +16,7 @@
 # under the License.
 import base64
 import re
+import socket
 import subprocess
 import time
 import sys
@@ -47,7 +48,7 @@ nova_id = 'nova'
 tenant_id = '1'
 
 def setUpModule(module):
-#    environ_processes = module.environ_processes
+    # environ_processes = module.environ_processes
     print """
 
     Create networks.
@@ -94,8 +95,8 @@ class NetworkWrapper(object):
 
     def create_network(self, label, ip_range, size, bridge, tenant, uuid, gw, dhcp):
         params = "--label=%s --fixed_range_v4=%s --num_networks=1 --network_size=%s\
- --bridge_interface=%s --project_id=%s --uuid=%s --gateway=%s --dhcp_server=%s" %\
-         (label, ip_range, size, bridge, tenant, uuid, gw, dhcp)
+ --bridge_interface=%s --project_id=%s --uuid=%s --gateway=%s --dhcp_server=%s --host=%s" %\
+         (label, ip_range, size, bridge, tenant, uuid, gw, dhcp, socket.gethostname())
         return self._nova_manage_network('create', params)
 
     def delete_network(self, uuid):
@@ -824,7 +825,7 @@ class CreateServerTest(FunctionalTest):
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
                        'contents': base64.b64encode(file_contents)}]
-        networks = [{'fixed_ip': '10.0.0.10',
+        networks = [{'fixed_ip': '10.0.0.150',
                      'uuid':uuid}]
         resp, server = self.ss_client.create_server_kw(
                                                 name=name,
