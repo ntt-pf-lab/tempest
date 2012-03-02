@@ -55,6 +55,8 @@ class FunctionalTest(unittest.TestCase):
         self.os2 = openstack.Manager(config=self.config2)
         self.testing_processes = []
 
+        self.addCleanup(self.kill_virtual_instances)
+
     def tearDown(self):
         print """
 
@@ -101,6 +103,17 @@ class FunctionalTest(unittest.TestCase):
 
         return result
 
+    def kill_virtual_instances(self):
+        for line in subprocess.check_output('virsh list --all',
+                                            shell=True).split('\n')[2:-2]:
+            try:
+                (id, name, state) = line.split(None, 2)
+                if state == 'running':
+                    subprocess.check_call('virsh destroy %s' % id, shell=True)
+                subprocess.check_call('virsh undefine %s' % name, shell=True)
+            except Exception:
+                pass
+
 
 class ServersActionTest(FunctionalTest):
     def setUp(self):
@@ -113,33 +126,51 @@ class ServersActionTest(FunctionalTest):
         self.s2_client = self.os2.servers_client
         self.img_client = self.os.images_client
 
+    def update_status(self, server_id, vm_state, task_state, deleted=0):
+        if task_state is not None:
+            sql = ("UPDATE instances SET "
+                   "deleted = %s, "
+                   "vm_state = '%s', "
+                   "task_state = '%s' "
+                   "WHERE id = %s;") \
+                   % (deleted, vm_state, task_state, server_id)
+        else:
+            sql = ("UPDATE instances SET "
+                   "deleted = %s, "
+                   "vm_state = '%s', "
+                   "task_state = NULL "
+                   "WHERE id = %s;") % (deleted, vm_state, server_id)
+        self.exec_sql(sql)
+
     def create_dummy_instance(self, vm_state, task_state, deleted=0):
 
-        meta = {'hello': 'opst'}
-        accessIPv4 = '2.2.2.2'
-        accessIPv6 = '::babe:330.23.33.3'
-        name = rand_name('dummy')
-        file_contents = 'This is a test_file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        _, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
+        for _ in range(5):
+            try:
+                meta = {'hello': 'opst'}
+                accessIPv4 = '2.2.2.2'
+                accessIPv6 = '::babe:330.23.33.3'
+                name = rand_name('dummy')
+                file_contents = 'This is a test_file.'
+                personality = [{'path': '/etc/test.txt',
+                               'contents': base64.b64encode(file_contents)}]
+                _, server = self.ss_client.create_server(name,
+                                                     self.image_ref,
+                                                     self.flavor_ref,
+                                                     meta=meta,
+                                                     accessIPv4=accessIPv4,
+                                                     accessIPv6=accessIPv6,
+                                                     personality=personality)
+        
+                # Wait for the server to become active
+                self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+                break
+            except Exception:
+                time.sleep(10)
+                continue
+        else:
+            raise Exception("server could not be created.")
 
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        sql = ("UPDATE instances SET "
-               "deleted = %s, "
-               "vm_state = '%s', "
-               "task_state = '%s' "
-               "WHERE id = %s;") % (
-                            deleted, vm_state, task_state, server['id'])
-        self.exec_sql(sql)
+        self.update_status(server['id'], vm_state, task_state, deleted)
 
         return server['id']
 
@@ -537,8 +568,6 @@ class ServersActionTest(FunctionalTest):
         """
         self.ss_client.delete_server(test_server_id)
         self.ss_client.wait_for_server_not_exists(test_server_id)
-        _, servers = self.ss_client.list_servers()
-        self.assertEquals([], servers['servers'])
 
         print """
 
@@ -822,7 +851,7 @@ class ServersActionTest(FunctionalTest):
         """
         # Make snapshot of the instance.
         alt_name = rand_name('server')
-        test_uuid = ('a'*35)
+        test_uuid = ('a' * 35)
         resp, _ = self.ss_client.create_image(test_uuid, alt_name)
         self.assertEquals('400', resp['status'])
 
@@ -869,7 +898,7 @@ class ServersActionTest(FunctionalTest):
         """
         # Make snapshot of the instance.
         alt_name = rand_name('server')
-        test_uuid = ('a'*37)
+        test_uuid = ('a' * 37)
         resp, _ = self.ss_client.create_image(test_uuid, alt_name)
         self.assertEquals('400', resp['status'])
 
@@ -1194,11 +1223,7 @@ class ServersActionTest(FunctionalTest):
         name = rand_name('server')
         resp, _ = self.ss_client.create_image(server_id, name)
         self.assertEquals('403', resp['status'])
-        sql = ("UPDATE instances SET "
-               "vm_state = 'active',"
-               "task_state = null "
-               "WHERE id = %s;") % server_id
-        self.exec_sql(sql)
+        self.update_status(server_id, 'error', None)
 
     @attr(kind='medium')
     def test_create_image_when_vm_eq_building_and_task_eq_scheduling(self):
@@ -1219,6 +1244,34 @@ class ServersActionTest(FunctionalTest):
     @attr(kind='medium')
     def test_create_image_when_vm_eq_active_and_task_eq_image_backup(self):
         self._test_create_image_403_base("active", "image_backup")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_resizing_and_task_eq_resize_prep(self):
+        self._test_create_image_403_base("resizing", "resize_prep")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_resizing_and_task_resize_migrating(self):
+        self._test_create_image_403_base("resizing", "resize_migrating")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_resizing_and_task_resize_migrated(self):
+        self._test_create_image_403_base("resizing", "resize_migrated")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_resizing_and_task_eq_resize_finish(self):
+        self._test_create_image_403_base("resizing", "resize_finish")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_resizing_and_task_resize_reverting(self):
+        self._test_create_image_403_base("resizing", "resize_reverting")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_resizing_and_task_resize_confirming(self):
+        self._test_create_image_403_base("resizing", "resize_confirming")
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_active_and_task_eq_resize_verify(self):
+        self._test_create_image_403_base("active", "resize_verify")
 
     @attr(kind='medium')
     def test_create_image_when_vm_eq_actv_and_task_eq_updating_password(self):
@@ -1245,8 +1298,24 @@ class ServersActionTest(FunctionalTest):
         self._test_create_image_403_base("error", "building")
 
     @attr(kind='medium')
-    def test_create_image_when_vm_eq_error_and_task_eq_error(self):
-        self._test_create_image_403_base("error", "error")
+    def test_create_image_when_vm_eq_error_and_task_eq_none(self):
+        self._test_create_image_403_base("error", None)
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_deleted_and_task_eq_none(self):
+        self._test_create_image_403_base("deleted", None)
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_migrating_and_task_eq_none(self):
+        self._test_create_image_403_base("migrating", None)
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_resizing_and_task_eq_none(self):
+        self._test_create_image_403_base("resizing", None)
+
+    @attr(kind='medium')
+    def test_create_image_when_vm_eq_error_and_task_eq_resize_prep(self):
+        self._test_create_image_403_base("error", "resize_prep")
 
 
 class CreateImageFatTest(FunctionalTest):
@@ -1257,21 +1326,21 @@ class CreateImageFatTest(FunctionalTest):
         self.img_client = self.os.images_client
 
         self.small_flavor_ref = 998
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage flavor create '
+        subprocess.check_call('bin/nova-manage flavor create '
             '--name=small --memory=1024 --cpu=1 --local_gb=1 '
             '--flavor=%d --swap=0' % self.small_flavor_ref,
             cwd=config.nova.directory, shell=True)
 
         self.fat_flavor_ref = 999
-        subprocess.check_call('/opt/openstack/nova/bin/nova-manage flavor create '
+        subprocess.check_call('bin/nova-manage flavor create '
             '--name=fat --memory=1024 --cpu=1 --local_gb=2 '
             '--flavor=%d --swap=0' % self.fat_flavor_ref,
             cwd=config.nova.directory, shell=True)
 
         def flush_flavors():
-            subprocess.call('/opt/openstack/nova/bin/nova-manage flavor delete small --purge',
+            subprocess.call('bin/nova-manage flavor delete small --purge',
                             cwd=config.nova.directory, shell=True)
-            subprocess.call('/opt/openstack/nova/bin/nova-manage flavor delete fat --purge',
+            subprocess.call('bin/nova-manage flavor delete fat --purge',
                             cwd=config.nova.directory, shell=True)
 
         self.addCleanup(flush_flavors)
