@@ -20,7 +20,7 @@ import re
 import subprocess
 import time
 import json
-import logging
+#import logging
 import inspect
 
 import unittest2 as unittest
@@ -34,6 +34,7 @@ from storm.common.rest_client import LoggingFeature
 from storm.services.keystone.json.keystone_client import TokenClient
 from nose.plugins import skip
 import datetime
+from nova import log as logging
 
 # Configuration values for scenario test
 # number of instance to boot up this scenario.
@@ -42,24 +43,35 @@ NUM_OF_INSTANCE = 2
 FLAVORS = {1,2}
 PASSWORD = "password"
 
+logging.setup()
 LOG = logging.getLogger("large.tests.test_long_term")
 messages = []
 
-
-
+test_thread_seq=1
 def setUpModule(module):
     pass
 
 def tearDownModule(module):
     print "\nScenario execution done."
     for m in messages:
-        print "Process: %s\n Result %s" % m
+        LOG.info("Process: %s\n Result %s" % m)
 
 class FunctionalTest(unittest.TestCase):
+    LOG.info(test_thread_seq)
+    try:
+        f = open('test_thread.flag', 'r')
+        test_thread_seq = int(f.readline())
+        f.close()
+        LOG.info('thread %s starting' % test_thread_seq)
+    except Exception:
+        LOG.warn('Can not read test thread seq from test_thread.flag,\
+                  execute test use one thread')
 
+    LOG.info(test_thread_seq)
     def setUp(self):
         self.default_config = storm.config.StormConfig('etc/large.conf')
         self._load_client(self.default_config)
+        LOG.info('wwwwwwwwwwws %s' %self.test_thread_seq)
 
     def swap_user(self, user, password, tenant_name):
         config = storm.config.StormConfig('etc/large.conf')
@@ -99,11 +111,11 @@ class FunctionalTest(unittest.TestCase):
                                   self.glance,
                                   data=data)
 
-    def _run_instance(self, image):
+    def _run_instance(self, image, network):
         meta = {}
         accessIPv4 = ''
         accessIPv6 = ''
-        name = "senario1"
+        name = "senario%s" % self.test_thread_seq
         flavor_ref = '1'
         file_contents = 'This is a test file.'
         personality = [{'path': '/etc/test.txt',
@@ -114,7 +126,8 @@ class FunctionalTest(unittest.TestCase):
                                                     meta=meta,
                                                     accessIPv4=accessIPv4,
                                                     accessIPv6=accessIPv6,
-                                                    personality=personality)
+                                                    personality=personality,
+                                                    networks=network)
 
         # Wait for the server to become active
         self.server_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -171,6 +184,8 @@ class DataGenerator(object):
 
     def setup_one_user(self, name):
         _, tenant = self.keystone_client.create_tenant(name + '_tenant', "tenant_for_test")
+        LOG.info(tenant)
+        LOG.info(name)
         _, user = self.keystone_client.create_user(name, PASSWORD, tenant['tenant']['id'], name + "@mail.com")
         self.tenants.append(tenant['tenant']['id'])
         self.users.append(user['user']['id'])
@@ -236,7 +251,7 @@ class NetworkWrapper(object):
     def _nova_manage_network(self, action, params):
         flags = "--flagfile=etc/nova.conf"
         cmd = "bin/nova-manage %s network %s %s" % (flags, action, params)
-#        print "Running command %s" % cmd
+        LOG.info("Running command %s" % cmd)
         result = subprocess.check_output(cmd, cwd=self.path, shell=True)
         return result
 
@@ -244,6 +259,7 @@ class NetworkWrapper(object):
         params = "--label=%s --fixed_range_v4=%s --num_networks=1 --network_size=%s\
  --bridge_interface=%s --project_id=%s --uuid=%s --gateway=%s --dhcp_server=%s" %\
          (label, ip_range, size, bridge, tenant, uuid, gw, dhcp)
+        LOG.info(params)
         return self._nova_manage_network('create', params)
 
     def delete_network(self, uuid):
@@ -338,7 +354,10 @@ class LongTermTest(FunctionalTest):
         nw = self.data.create_network(scenario)
         results.update({'L2 Network': nw})
         # create IP block.
-        block = self.data.create_ip_block(scenario, '10.1.1.0/24', 255, 'virbr0', results['tenant']['id'], nw, '10.1.1.255', '10.1.1.2')
+        ipblock = '10.1.%s.0/24' % (self.test_thread_seq + 20 * self.error_count)
+        ip1 = '10.1.%s.254' % (self.test_thread_seq + 20 * self.error_count)
+        ip2 = '10.1.%s.2' % (self.test_thread_seq + 20 * self.error_count)
+        block = self.data.create_ip_block(scenario, ipblock, 255, 'virbr0', results['tenant']['id'], nw, ip1, ip2)
         results.update({'IP Block': block})
         return results
 
@@ -352,6 +371,7 @@ class LongTermTest(FunctionalTest):
         3. Create keypair for user
         4. Create network for tenant
         5. Boot 3 instance for user
+        5.1 Create Snapshot
         6. Stop all
         7. Delete network
         8. Delete keypair
@@ -363,34 +383,79 @@ class LongTermTest(FunctionalTest):
         vmserver = '1'
         scenario_start = datetime.datetime.utcnow()
         # TODO(shida) more good loop this flow
-        while True:
+        endFlag = '0'
+        self.error_count = 0
+        while int(endFlag) <= 0: 
+            f = open('endtest.flag', 'r')
+            endFlag = f.readline()
+            f.close() 
+
             start = datetime.datetime.utcnow()
             try:
-                setups = self._application_tenant("count_%s" % str(application_count))
+                setups = self._application_tenant("count_%s" % str(self.test_thread_seq * 10000 + application_count))
                 application_count +=1
-            except:
-                print "Failed to create"
+            except Exception as e:
+                LOG.exception(e)
+                LOG.info("Failed to create application %s" % application_count)
             try:
                 # create instances.
-                vmfw = self._run_instance(setups['FW Image'])
+                nuuid = self.data.nw[-1]
+                ip = '10.1.%s.3' % (self.test_thread_seq + 20 * self.error_count)
+                network=[{'fixed_ip': ip, 'uuid': nuuid}]
+                vmfw = self._run_instance(setups['FW Image'], network)
                 instance_count += 1
-                vmlb = self._run_instance(setups['LB Image'])
+                ip = '10.1.%s.4' % (self.test_thread_seq + 20 * self.error_count)
+                network=[{'fixed_ip': ip, 'uuid': nuuid}]
+                vmlb = self._run_instance(setups['LB Image'], network)
                 instance_count += 1
-                vmserver = self._run_instance(setups['Server Image'])
+                ip = '10.1.%s.5' % (self.test_thread_seq + 20 * self.error_count)
+                network=[{'fixed_ip': ip, 'uuid': nuuid}]
+                vmserver = self._run_instance(setups['Server Image'], network)
                 instance_count += 1
-            except:
-                print "Failed to create"
+                try:
+                    # create snapshot.
+                    resp, _ = self.server_client.create_image(vmserver, 'snapshot')
+                    alt_img_url = resp['location']
+                    match = re.search('/images/(?P<image_id>.+)', alt_img_url)
+                    self.assertIsNotNone(match)
+                    alt_img_id = match.groupdict()['image_id']
+                    self.images_client.wait_for_image_status(alt_img_id, 'ACTIVE')
+                except:
+                    pass
+                finally:
+                    self.glance.delete(alt_img_id)
+            except Exception as e:
+                self.error_count += 1
+                application_count +=1
+                LOG.exception(e)
+                LOG.info("Failed to create instance %s %s" % (instance_count, e))
             finally:
-                self._terminate_instance(vmfw)
-                self._terminate_instance(vmlb)
-                self._terminate_instance(vmserver)
+                try:
+                    self._terminate_instance(vmfw)
+                except Exception as e:
+                    LOG.warn('error when terminate instance %s' % vmfw)
+                    LOG.exception(e)
+                try:
+                    self._terminate_instance(vmlb)
+                except Exception as e:
+                    LOG.warn('error when terminate instance %s' % vmlb)
+                    LOG.exception(e)
+                try:
+                    self._terminate_instance(vmserver)
+                except Exception as e:
+                    LOG.warn('error when terminate instance %s' %vmserver)
+                    LOG.exception(e)
+                if self.error_count > 10:
+                    raise Exception('Create instance error accured 10 times, exit scenario')
             try:
                 self.data.teardown_all()
             except:
-                print "Failed to teaDown"
+                LOG.info("Failed to teaDown")
             end = datetime.datetime.utcnow()
-            print "<LONG_TERM>: All Scenario execution time : %d" % (end - scenario_start).seconds
-            print "<LONG_TERM>: 1 Scenario execution time : %d" % (end - start).seconds
-            print "<LONG_TERM>: Application count %s " % application_count
-            print "<LONG_TERM>: Instance count %s " % instance_count
+            LOG.info("<LONG_TERM>: All Scenario execution time : %d" % (end - scenario_start).seconds)
+            LOG.info("<LONG_TERM>: 1 Scenario execution time : %d" % (end - start).seconds)
+            LOG.info("<LONG_TERM>: Application count %s " % application_count)
+            LOG.info("<LONG_TERM>: Error count %s " % self.error_count)
+            LOG.info("<LONG_TERM>: Instance count %s " % instance_count)
+
 
