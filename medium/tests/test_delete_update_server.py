@@ -480,7 +480,7 @@ class DeleteServerTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_error_task_none(self):
-        self._test_delete_server_403_base('error', None)
+        self._test_delete_server_base('error', None)
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_migrating_task_none(self):
@@ -492,7 +492,7 @@ class DeleteServerTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_error_task_resize_prep(self):
-        self._test_delete_server_403_base('error', 'resize_prep')
+        self._test_delete_server_base('error', 'resize_prep')
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_error_task_error(self):
