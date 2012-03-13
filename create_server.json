@@ -1,0 +1,11 @@
+{
+"server":{
+    "flavorRef": "1",
+    "imageRef": "3",
+    "max_count": "1",
+    "min_count": "1",
+    "name": "test_d02_010_server",
+    "accessIPv4": "1.1.1.1",
+    "accessIPv6": "::babe:220.12.22.2"
+    }
+}

@@ -1,0 +1,52 @@
+openstack@ubuntu:/opt/openstack/quantum$ bin/cli create_net prjAdmin new_network_in_cli
+Created a new Virtual Network with ID: 8465770d-cd55-422a-aa65-3ee809cb46ef
+for Tenant: prjAdmin
+
+
+openstack@ubuntu:/opt/openstack/quantum$ bin/cli delete_net prjAdmin 8465770d-cd55-422a-aa65-3ee809cb46ef
+Deleted Virtual Network with ID: 8465770d-cd55-422a-aa65-3ee809cb46ef
+for Tenant prjAdmin
+
+openstack@ubuntu:/opt/openstack/quantum$ bin/cli list_nets prjAdmin
+Virtual Networks for Tenant prjAdmin
+        Network ID: 4b16b47c-ba3d-475e-bd0e-b0c3803f841b
+
+
+openstack@ubuntu:/opt/openstack/quantum$ bin/cli show_net prjAdmin 4b16b47c-ba3d-475e-bd0e-b0c3803f841b
+Network ID: 4b16b47c-ba3d-475e-bd0e-b0c3803f841b
+network Name: new_network_in_cli
+
+
+openstack@ubuntu:/opt/openstack/quantum$ bin/cli create_port prjAdmin 4b16b47c-ba3d-475e-bd0e-b0c3803f841b
+Created new Logical Port with ID: bc883a33-7fcb-4559-90c5-64ba587b527d
+on Virtual Network: 4b16b47c-ba3d-475e-bd0e-b0c3803f841b
+for Tenant: prjAdmin
+
+openstack@ubuntu:/opt/openstack/quantum$ bin/cli list_ports prjAdmin 4b16b47c-ba3d-475e-bd0e-b0c3803f841b
+Ports on Virtual Network: 4b16b47c-ba3d-475e-bd0e-b0c3803f841b
+for Tenant: prjAdmin
+        Logical Port: bc883a33-7fcb-4559-90c5-64ba587b527d
+
+openstack@ubuntu:/opt/openstack/quantum$ bin/cli plug_iface prjAdmin 4b16b47c-ba3d-475e-bd0e-b0c3803f841b bc883a33-7fcb-4559-90c5-64ba587b527d xxxx-xxxx-xxxx-xxxx
+Plugged interface xxxx-xxxx-xxxx-xxxx
+into Logical Port: bc883a33-7fcb-4559-90c5-64ba587b527d
+on Virtual Network: 4b16b47c-ba3d-475e-bd0e-b0c3803f841b
+for Tenant: prjAdmin
+
+openstack@ubuntu:/opt/openstack/quantum$ bin/cli unplug_iface prjAdmin 4b16b47c-ba3d-475e-bd0e-b0c3803f841b bc883a33-7fcb-4559-90c5-64ba587b527d
+Unplugged interface from Logical Port:bc883a33-7fcb-4559-90c5-64ba587b527d
+on Virtual Network: 4b16b47c-ba3d-475e-bd0e-b0c3803f841b
+for Tenant: prjAdmin
+
+openstack@ubuntu:/opt/openstack/quantum$ bin/cli show_port prjAdmin 4b16b47c-ba3d-475e-bd0e-b0c3803f841b bc883a33-7fcb-4559-90c5-64ba587b527d
+Logical Port ID: bc883a33-7fcb-4559-90c5-64ba587b527d
+administrative State: DOWN
+interface: xxxx-xxxx-xxxx-xxxx
+on Virtual Network: 4b16b47c-ba3d-475e-bd0e-b0c3803f841b
+for Tenant: prjAdmin
+
+openstack@ubuntu:/opt/openstack/quantum$ bin/cli delete_port prjAdmin 4b16b47c-ba3d-475e-bd0e-b0c3803f841b bc883a33-7fcb-4559-90c5-64ba587b527d
+Deleted Logical Port with ID: bc883a33-7fcb-4559-90c5-64ba587b527d
+on Virtual Network: 4b16b47c-ba3d-475e-bd0e-b0c3803f841b
+for Tenant: prjAdmin
+

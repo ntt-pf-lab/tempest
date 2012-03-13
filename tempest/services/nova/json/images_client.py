@@ -1,11 +1,17 @@
+<<<<<<< HEAD
 from tempest.common import rest_client
 from tempest import exceptions
+=======
+from storm import exceptions
+from storm.common import rest_client
+>>>>>>> hpB
 import json
 import time
 
 
 class ImagesClient(object):
 
+<<<<<<< HEAD
     def __init__(self, config, username, password, auth_url, tenant_name=None):
         self.config = config
         catalog_type = self.config.compute.catalog_type
@@ -15,6 +21,18 @@ class ImagesClient(object):
 
         self.build_interval = self.config.compute.build_interval
         self.build_timeout = self.config.compute.build_timeout
+=======
+    def __init__(self, username, key, auth_url, tenant_name, config=None):
+        if config is None:
+            config = storm.config.StormConfig()
+        self.config = config
+
+        self.client = rest_client.RestClient(username, key,
+                                             auth_url, tenant_name,
+                                             config=config)
+        self.build_interval = self.config.nova.build_interval
+        self.build_timeout = self.config.nova.build_timeout
+>>>>>>> hpB
         self.headers = {'Content-Type': 'application/json',
                         'Accept': 'application/json'}
 
@@ -33,6 +51,10 @@ class ImagesClient(object):
         post_body = json.dumps(post_body)
         resp, body = self.client.post('servers/%s/action' %
                                       str(server_id), post_body, self.headers)
+        # Normal response has no content.
+        # XXX duplicate of servers_client.create_image
+        if int(resp['content-length']) > 0:
+            body = json.loads(body)
         return resp, body
 
     def list_images(self, params=None):
@@ -67,7 +89,9 @@ class ImagesClient(object):
         """Returns the details of a single image"""
         resp, body = self.client.get("images/%s" % str(image_id))
         body = json.loads(body)
-        return resp, body['image']
+        if resp['status'] == '404':
+            return resp, body
+        return resp, body.get('image')
 
     def delete_image(self, image_id):
         """Deletes the provided image"""
@@ -89,19 +113,38 @@ class ImagesClient(object):
                 raise exceptions.BuildErrorException
 
     def wait_for_image_status(self, image_id, status):
-        """Waits for an image to reach a given status."""
+        """Waits for an image to reach a given status"""
         resp, image = self.get_image(image_id)
         start = int(time.time())
 
         while image['status'] != status:
             time.sleep(self.build_interval)
             resp, image = self.get_image(image_id)
+            if resp['status'] != '200':
+                print resp
+                raise exceptions.BuildErrorException
 
             if image['status'] == 'ERROR':
                 raise exceptions.TimeoutException
 
             if int(time.time()) - start >= self.build_timeout:
                 raise exceptions.BuildErrorException
+
+    def wait_for_image_not_exists(self, image_id):
+        """Waits for an image to reach not exists"""
+        start = int(time.time())
+
+        while True:
+            resp, image = self.get_image(image_id)
+            if resp['status'] == '404':
+                return
+            elif image['status'] == 'ERROR':
+                raise exceptions.TimeoutException
+
+            if int(time.time()) - start >= self.build_timeout:
+                raise exceptions.BuildErrorException
+
+            time.sleep(self.build_interval)
 
     def list_image_metadata(self, image_id):
         """Lists all metadata items for an image"""

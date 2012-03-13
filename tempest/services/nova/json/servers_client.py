@@ -6,6 +6,7 @@ import time
 
 class ServersClient(object):
 
+<<<<<<< HEAD
     def __init__(self, config, username, password, auth_url, tenant_name=None):
         self.config = config
         catalog_type = self.config.compute.catalog_type
@@ -19,6 +20,40 @@ class ServersClient(object):
                         'Accept': 'application/json'}
 
     def create_server(self, name, image_ref, flavor_ref, **kwargs):
+=======
+    def __init__(self, username, key, auth_url, tenant_name, config=None):
+        if config is None:
+            config = storm.config.StormConfig()
+        self.config = config
+
+        self.client = rest_client.RestClient(username, key,
+                                             auth_url, tenant_name,
+                                             config=config)
+        self.build_interval = self.config.nova.build_interval
+        self.build_timeout = self.config.nova.build_timeout
+        self.headers = {'Content-Type': 'application/json',
+                        'Accept': 'application/json'}
+
+    def create_server_kw(self, *args, **kwargs):
+        """
+        Creates an instance of a server.
+        """
+
+        post_body = {}
+        post_body.update(kwargs)
+        post_body = json.dumps({'server': post_body})
+        print "post_body=", post_body
+        print "self.headers=", self.headers
+        resp, body = self.client.post('servers', post_body, self.headers)
+        if resp['status'] != '202':
+            return resp, body
+        body = json.loads(body)
+        return resp, body['server']
+
+    def create_server(self, name, image_ref, flavor_ref, meta=None,
+                      personality=None, accessIPv4=None, accessIPv6=None,
+                      networks=None, key_name=None, adminPass=None):
+>>>>>>> hpB
         """
         Creates an instance of a server.
         name (Required): The name of the server.
@@ -35,8 +70,13 @@ class ServersClient(object):
         availability_zone: Availability zone in which to launch instance.
         accessIPv4: The IPv4 access address for the server.
         accessIPv6: The IPv6 access address for the server.
+<<<<<<< HEAD
         min_count: Count of minimum number of instances to launch.
         max_count: Count of maximum number of instances to launch.
+=======
+        networks: The networks to be allocated to the server.
+        key_name: The name of the keypair.
+>>>>>>> hpB
         """
         post_body = {
             'name': name,
@@ -55,9 +95,39 @@ class ServersClient(object):
             'max_count': kwargs.get('max_count'),
         }
 
+<<<<<<< HEAD
         post_body = json.dumps({'server': post_body})
         resp, body = self.client.post('servers', post_body, self.headers)
 
+=======
+        if meta != None:
+            post_body['metadata'] = meta
+
+        if personality != None:
+            post_body['personality'] = personality
+
+        if adminPass != None:
+            post_body['adminPass'] = adminPass
+
+        if accessIPv4 != None:
+            post_body['accessIPv4'] = accessIPv4
+
+        if accessIPv6 != None:
+            post_body['accessIPv6'] = accessIPv6
+
+        if networks != None:
+            post_body['networks'] = networks
+
+        if key_name != None:
+            post_body['key_name'] = key_name
+
+        post_body = json.dumps({'server': post_body})
+        resp, body = self.client.post('servers', post_body, self.headers)
+#        body = json.loads(body)
+#        return resp, body['server']
+        if resp['status'] != '202':
+            return resp, body
+>>>>>>> hpB
         body = json.loads(body)
         return resp, body['server']
 
@@ -89,13 +159,22 @@ class ServersClient(object):
         post_body = json.dumps({'server': post_body})
         resp, body = self.client.put("servers/%s" % str(server_id),
                                      post_body, self.headers)
+#        body = json.loads(body)
+#        return resp, body['server']
+        if resp['status'] != '200':
+            return resp, body
         body = json.loads(body)
         return resp, body['server']
 
     def get_server(self, server_id):
         """Returns the details of an existing server"""
         resp, body = self.client.get("servers/%s" % str(server_id))
+#        body = json.loads(body)
+        if resp['status'] != '200' and resp['status'] != '203':
+            return resp, body
         body = json.loads(body)
+#        if resp['status'] == '404':
+#            raise exceptions.ItemNotFoundException(body['itemNotFound'])
         return resp, body['server']
 
     def delete_server(self, server_id):
@@ -114,6 +193,8 @@ class ServersClient(object):
             url = "servers?" + "".join(param_list)
 
         resp, body = self.client.get(url)
+        if resp['status'] != '200' and resp['status'] != '203':
+            return resp, body
         body = json.loads(body)
         return resp, body
 
@@ -135,14 +216,40 @@ class ServersClient(object):
     def wait_for_server_status(self, server_id, status):
         """Waits for a server to reach a given status"""
         resp, body = self.get_server(server_id)
+        if resp['status'] == '404':
+            return
         server_status = body['status']
         start = int(time.time())
 
-        while(server_status != status):
+        while server_status != status:
             time.sleep(self.build_interval)
             resp, body = self.get_server(server_id)
+#            if resp['status'] == '404':
+#                return
             server_status = body['status']
 
+            if server_status == 'ERROR':
+                raise exceptions.BuildErrorException
+
+            if int(time.time()) - start >= self.build_timeout:
+                raise exceptions.TimeoutException
+
+    def wait_for_server_not_exists(self, server_id):
+        """Waits for a server to reach not existing"""
+        start = int(time.time())
+
+        while True:
+#            try:
+#                resp, body = self.get_server(server_id)
+#            except exceptions.ItemNotFoundException:
+#                return
+            resp, body = self.get_server(server_id)
+            if resp['status'] == '404':
+                return
+
+            server_status = body['status']
+
+<<<<<<< HEAD
             if server_status == 'ERROR':
                 raise exceptions.BuildErrorException(server_id=server_id)
 
@@ -154,6 +261,35 @@ class ServersClient(object):
                                           self.build_timeout)
                 message += ' Current status: %s.' % server_status
                 raise exceptions.TimeoutException(message)
+=======
+            if(server_status == 'ERROR'):
+                raise exceptions.TimeoutException
+
+            if (int(time.time()) - start >= self.build_timeout):
+                raise exceptions.BuildErrorException
+
+            time.sleep(self.build_interval)
+
+    def wait_for_server_not_exists_ignore_error(self, server_id):
+        """Waits for a server to reach not existing"""
+        start = int(time.time())
+
+        while True:
+#            try:
+#                resp, body = self.get_server(server_id)
+#            except exceptions.ItemNotFoundException:
+#                return
+            resp, body = self.get_server(server_id)
+            if resp['status'] == '404':
+                return
+
+            server_status = body['status']
+
+            if (int(time.time()) - start >= self.build_timeout):
+                raise exceptions.BuildErrorException
+
+            time.sleep(self.build_interval)
+>>>>>>> hpB
 
     def list_addresses(self, server_id):
         """Lists all addresses for a server"""
@@ -234,7 +370,11 @@ class ServersClient(object):
     def confirm_resize(self, server_id):
         """Confirms the flavor change for a server"""
         post_body = {
+<<<<<<< HEAD
             'confirmResize': None,
+=======
+            'confirmResize': None
+>>>>>>> hpB
         }
 
         post_body = json.dumps(post_body)
@@ -245,7 +385,11 @@ class ServersClient(object):
     def revert_resize(self, server_id):
         """Reverts a server back to its original flavor"""
         post_body = {
+<<<<<<< HEAD
             'revertResize': None,
+=======
+            'revertResize': None
+>>>>>>> hpB
         }
 
         post_body = json.dumps(post_body)
@@ -253,17 +397,46 @@ class ServersClient(object):
                                       str(server_id), post_body, self.headers)
         return resp, body
 
-    def create_image(self, server_id, image_name):
-        """Creates an image of the given server"""
+#    def create_image(self, server_id, image_name):
+#        """Creates an image of the given server"""
+#        post_body = {
+#            'createImage': {
+#                'name': image_name,
+#            }
+#        }
+#
+#        post_body = json.dumps(post_body)
+#        resp, body = self.client.post('servers/%s/action' %
+#                                      str(server_id), post_body, self.headers)
+#        # Normal response has no content.
+#        if int(resp['content-length']) > 0:
+#            body = json.loads(body)
+#        return resp, body
+
+#    create_image from images_client
+
+    def create_image(self, server_id, name, meta=None):
+        """Creates an image of the original server"""
+
         post_body = {
             'createImage': {
-                'name': image_name,
+                'name': name,
             }
         }
+
+        if meta != None:
+            post_body['createImage']['metadata'] = meta
 
         post_body = json.dumps(post_body)
         resp, body = self.client.post('servers/%s/action' %
                                       str(server_id), post_body, self.headers)
+<<<<<<< HEAD
+=======
+        # Normal response has no content.
+        # XXX duplicate of servers_client.create_image
+        if int(resp['content-length']) > 0:
+            body = json.loads(body)
+>>>>>>> hpB
         return resp, body
 
     def list_server_metadata(self, server_id):
@@ -302,4 +475,10 @@ class ServersClient(object):
     def delete_server_metadata_item(self, server_id, key):
         resp, body = self.client.delete("servers/%s/metadata/%s" %
                                     (str(server_id), key))
+        return resp, body
+
+    def list_server_virtual_interfaces(self, server_id):
+        resp, body = self.client.get("servers/%s/os-virtual-interfaces" %
+                                     str(server_id))
+        body = json.loads(body)
         return resp, body
