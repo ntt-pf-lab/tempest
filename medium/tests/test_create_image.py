@@ -80,8 +80,6 @@ class FunctionalTest(unittest.TestCase):
         self.os2 = openstack.Manager(config=self.config2)
         self.testing_processes = []
 
-        self.addCleanup(self.kill_virtual_instances)
-
     def tearDown(self):
         print """
 
@@ -125,17 +123,6 @@ class FunctionalTest(unittest.TestCase):
                                          shell=True)
 
         return result
-
-    def kill_virtual_instances(self):
-        for line in subprocess.check_output('virsh list --all',
-                                            shell=True).split('\n')[2:-2]:
-            try:
-                (id, name, state) = line.split(None, 2)
-                if state == 'running':
-                    subprocess.check_call('virsh destroy %s' % id, shell=True)
-                subprocess.check_call('virsh undefine %s' % name, shell=True)
-            except Exception:
-                pass
 
 
 class ServersActionTest(FunctionalTest):
@@ -183,7 +170,7 @@ class ServersActionTest(FunctionalTest):
                                                      accessIPv4=accessIPv4,
                                                      accessIPv6=accessIPv6,
                                                      personality=personality)
-        
+
                 # Wait for the server to become active
                 self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
                 break
@@ -815,11 +802,7 @@ class ServersActionTest(FunctionalTest):
         name = rand_name('server')
         resp, _ = self.ss_client.create_image(server_id, name)
         self.assertEquals('403', resp['status'])
-<<<<<<< HEAD
-        self.update_status(server_id, 'error', None)
-=======
         self.update_status(server_id, 'active', None)
->>>>>>> 01e9fbf6407bc3082a0aaae777b267ad5ad6a27e
 
     @attr(kind='medium')
     def test_create_image_when_vm_eq_building_and_task_eq_scheduling(self):
@@ -896,53 +879,6 @@ class ServersActionTest(FunctionalTest):
     @attr(kind='medium')
     def test_create_image_when_vm_eq_error_and_task_eq_none(self):
         self._test_create_image_403_base("error", None)
-<<<<<<< HEAD
-
-    @attr(kind='medium')
-    def test_create_image_when_vm_eq_deleted_and_task_eq_none(self):
-        self._test_create_image_403_base("deleted", None)
-
-    @attr(kind='medium')
-    def test_create_image_when_vm_eq_migrating_and_task_eq_none(self):
-        self._test_create_image_403_base("migrating", None)
-
-    @attr(kind='medium')
-    def test_create_image_when_vm_eq_resizing_and_task_eq_none(self):
-        self._test_create_image_403_base("resizing", None)
-
-    @attr(kind='medium')
-    def test_create_image_when_vm_eq_error_and_task_eq_resize_prep(self):
-        self._test_create_image_403_base("error", "resize_prep")
-
-
-class CreateImageFatTest(FunctionalTest):
-    def setUp(self):
-        super(CreateImageFatTest, self).setUp()
-        self.image_ref = self.config.env.image_ref
-        self.ss_client = self.os.servers_client
-        self.img_client = self.os.images_client
-
-        self.small_flavor_ref = 998
-        subprocess.check_call('bin/nova-manage flavor create '
-            '--name=small --memory=1024 --cpu=1 --local_gb=1 '
-            '--flavor=%d --swap=0' % self.small_flavor_ref,
-            cwd=config.nova.directory, shell=True)
-
-        self.fat_flavor_ref = 999
-        subprocess.check_call('bin/nova-manage flavor create '
-            '--name=fat --memory=1024 --cpu=1 --local_gb=2 '
-            '--flavor=%d --swap=0' % self.fat_flavor_ref,
-            cwd=config.nova.directory, shell=True)
-
-        def flush_flavors():
-            subprocess.call('bin/nova-manage flavor delete small --purge',
-                            cwd=config.nova.directory, shell=True)
-            subprocess.call('bin/nova-manage flavor delete fat --purge',
-                            cwd=config.nova.directory, shell=True)
-
-        self.addCleanup(flush_flavors)
-=======
->>>>>>> 01e9fbf6407bc3082a0aaae777b267ad5ad6a27e
 
     @attr(kind='medium')
     def test_create_image_when_vm_eq_deleted_and_task_eq_none(self):
