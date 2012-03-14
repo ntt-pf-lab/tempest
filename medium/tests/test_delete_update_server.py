@@ -42,11 +42,35 @@ def setUpModule(module):
 #    environ_processes = module.environ_processes
     config = module.config
 
+def tearDownModule(module):
+    os = openstack.Manager(config=default_config)
+    print """
+
+    Terminate All Instances
+
+    """
+    try:
+        _, servers = os.servers_client.list_servers()
+        print "Servers : %s" % servers
+        for s in servers['servers']:
+            try:
+                print "Find existing instance %s" % s['id']
+                resp, _ = os.servers_client.delete_server(s['id'])
+                print "Delete Server Response %s" % resp['status']
+                if resp['status'] == '204' or resp['status'] == '202':
+                    print "Wait for stop %d" % s['id']
+                    os.servers_client.wait_for_server_not_exists(s['id'])
+            except Exception as e:
+                print e
+    except Exception:
+        pass
+
 
 class FunctionalTest(unittest.TestCase):
 
     config = default_config
     config2 = test_config
+    servers = []
 
     def setUp(self):
         self.os = openstack.Manager(config=self.config)
@@ -56,19 +80,18 @@ class FunctionalTest(unittest.TestCase):
     def tearDown(self):
         print """
 
-        Terminate All Instances
+        Terminate Active Instances
 
         """
         try:
-            _, servers = self.os.servers_client.list_servers()
-            print "Servers : %s" % servers
-            for s in servers['servers']:
+            for s in self.servers:
                 try:
-                    print "Find existing instance %s" % s['id']
-                    resp, _ = self.os.servers_client.delete_server(s['id'])
+                    print "Find existing instance %s" % s
+                    resp, _ = self.os.servers_client.delete_server(s)
+                    print "Delete Server Response %s" % resp['status']
                     if resp['status'] == '204' or resp['status'] == '202':
-                        self.os.servers_client.wait_for_server_not_exists(
-                                                                    s['id'])
+                        print "Wait for stop %d" % s
+                        self.os.servers_client.wait_for_server_not_exists(s)
                 except Exception as e:
                     print e
         except Exception:
@@ -78,6 +101,35 @@ class FunctionalTest(unittest.TestCase):
         Cleanup DB
 
         """
+        self.servers[:] = []
+
+    def get_instance(self):
+        _, servers = self.ss_client.list_servers_with_detail()
+        server = servers['servers']
+        server = [s for s in server if s['status'] == 'ACTIVE']
+        if server:
+            return server[0]
+        return self.create_instance(self._testMethodName)
+
+    def create_instance(self, server_name):
+        meta = {'hello': 'opst'}
+        accessIPv4 = '2.2.2.2'
+        accessIPv6 = '::babe:330.23.33.3'
+        name = server_name
+        file_contents = 'This is a test_file.'
+        personality = [{'path': '/etc/test.txt',
+                       'contents': base64.b64encode(file_contents)}]
+        _, server = self.ss_client.create_server(name,
+                                                    self.image_ref,
+                                                    self.flavor_ref,
+                                                    meta=meta,
+                                                    accessIPv4=accessIPv4,
+                                                    accessIPv6=accessIPv6,
+                                                    personality=personality)
+
+        # Wait for the server to become active
+        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+        return server
 
     def exec_sql(self, sql, db='nova'):
         exec_sql = 'mysql -u %s -p%s -h%s ' + db + ' -e "' + sql + '"'
@@ -131,24 +183,7 @@ class DeleteServerTest(FunctionalTest):
         test_delete_server
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
+        server = self.get_instance()
         resp, _ = self.ss_client.delete_server(server['id'])
         print "resp=", resp
         self.assertEqual('204', resp['status'])
@@ -203,20 +238,7 @@ class DeleteServerTest(FunctionalTest):
         test_delete_server_when_server_is_deleted
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
+        server = self.get_instance()
 
         # Wait for the server to become active
         self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
@@ -236,25 +258,7 @@ class DeleteServerTest(FunctionalTest):
         test_delete_server_specify_other_tenant_server
 
         """
-
-        # create server => tenant:admin
-        name = self._testMethodName
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
+        server = self.get_instance()
 
         # delete server => tenant:demo
         resp, _ = self.s2_client.delete_server(server['id'])
@@ -311,26 +315,8 @@ class DeleteServerTest(FunctionalTest):
         test_delete_server_specify_uuid
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        resp, body = self.ss_client.get_server(server['id'])
-        uuid = body['uuid']
+        server = self.get_instance()
+        uuid = server['uuid']
         resp, _ = self.ss_client.delete_server(uuid)
         print "resp=", resp
         self.assertEqual('204', resp['status'])
@@ -494,7 +480,7 @@ class DeleteServerTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_error_task_none(self):
-        self._test_delete_server_403_base('error', None)
+        self._test_delete_server_base('error', None)
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_migrating_task_none(self):
@@ -506,7 +492,7 @@ class DeleteServerTest(FunctionalTest):
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_error_task_resize_prep(self):
-        self._test_delete_server_403_base('error', 'resize_prep')
+        self._test_delete_server_base('error', 'resize_prep')
 
     @attr(kind='medium')
     def test_delete_server_instance_vm_error_task_error(self):
@@ -554,26 +540,7 @@ class UpdateServerTest(FunctionalTest):
         test_update_server
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        resp, body = self.ss_client.get_server(server['id'])
-        self.assertEqual(name, body['name'])
+        server = self.get_instance()
 
         alt_name = self._testMethodName + '_rename'
 
@@ -592,24 +559,6 @@ class UpdateServerTest(FunctionalTest):
         test_update_server_not_exists_id
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
         alt_name = self._testMethodName + '_rename'
         resp, body = self.ss_client.update_server(sys.maxint, name=alt_name)
         print "resp=", resp
@@ -624,40 +573,8 @@ class UpdateServerTest(FunctionalTest):
         test_update_server_same_name
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name1 = self._testMethodName + '1'
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name1,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        name2 = self._testMethodName + '2'
-        resp, server = self.ss_client.create_server(name2,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        resp, body = self.ss_client.get_server(server['id'])
-        self.assertEqual(name2, body['name'])
-
-        alt_name = name1
+        server = self.get_instance()
+        alt_name = server['name']
         resp, body = self.ss_client.update_server(server['id'], name=alt_name)
         print "resp=", resp
         print "body=", body
@@ -673,27 +590,7 @@ class UpdateServerTest(FunctionalTest):
         test_update_server_empty_name
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        resp, body = self.ss_client.get_server(server['id'])
-        self.assertEqual(name, body['name'])
-
+        server = self.get_instance()
         alt_name = ''
         resp, body = self.ss_client.update_server(server['id'], name=alt_name)
         print "resp=", resp
@@ -709,26 +606,7 @@ class UpdateServerTest(FunctionalTest):
         test_update_server_specify_other_tenant_server
 
         """
-
-        # create server => tenant:admin
-        name = self._testMethodName
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
+        server = self.get_instance()
         # update server => tenant:demo
         alt_name = self._testMethodName + '_rename'
         self.assertNotEqual(name, alt_name)
@@ -745,26 +623,7 @@ class UpdateServerTest(FunctionalTest):
         test_update_server_specify_overlimits_to_name
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        resp, body = self.ss_client.get_server(server['id'])
-        self.assertEqual(name, body['name'])
+        server = self.get_instance()
 
         alt_name = 'a' * 256
         resp, body = self.ss_client.update_server(server['id'], name=alt_name)
@@ -781,24 +640,7 @@ class UpdateServerTest(FunctionalTest):
         test_update_server_when_create_image
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
+        server = self.get_instance()
         # snapshot.
         img_name = self._testMethodName + '_image'
         resp, _ = self.ss_client.create_image(server['id'], img_name)
@@ -824,26 +666,8 @@ class UpdateServerTest(FunctionalTest):
         test_update_server_specify_uuid
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        resp, body = self.ss_client.get_server(server['id'])
-        uuid = body['uuid']
+        server = self.get_instance()
+        uuid = server['uuid']
         alt_name = self._testMethodName + '_rename'
         resp, body = self.ss_client.update_server(uuid, name=alt_name)
         self.assertEqual('200', resp['status'])
@@ -889,27 +713,7 @@ class UpdateServerTest(FunctionalTest):
         test_update_server_specify_double_byte
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        resp, body = self.ss_client.get_server(server['id'])
-        self.assertEqual(name, body['name'])
-
+        server = self.get_instance()
         alt_name = '\xef\xbb\xbf'
 
         resp, body = self.ss_client.update_server(server['id'], name=alt_name)
@@ -924,27 +728,7 @@ class UpdateServerTest(FunctionalTest):
         test_update_server_specify_illegal_characters
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        resp, body = self.ss_client.get_server(server['id'])
-        self.assertEqual(name, body['name'])
-
+        server = self.get_instance()
         alt_name = 'name_/.\@_name'
 
         resp, body = self.ss_client.update_server(server['id'], name=alt_name)
@@ -959,27 +743,7 @@ class UpdateServerTest(FunctionalTest):
         test_update_server_specify_illegal_characters
 
         """
-        meta = {'hello': 'world'}
-        accessIPv4 = '1.1.1.1'
-        accessIPv6 = '::babe:220.12.22.2'
-        name = self._testMethodName
-        file_contents = 'This is a test file.'
-        personality = [{'path': '/etc/test.txt',
-                       'contents': base64.b64encode(file_contents)}]
-        resp, server = self.ss_client.create_server(name,
-                                                    self.image_ref,
-                                                    self.flavor_ref,
-                                                    meta=meta,
-                                                    accessIPv4=accessIPv4,
-                                                    accessIPv6=accessIPv6,
-                                                    personality=personality)
-
-        # Wait for the server to become active
-        self.ss_client.wait_for_server_status(server['id'], 'ACTIVE')
-
-        resp, body = self.ss_client.get_server(server['id'])
-        self.assertEqual(name, body['name'])
-
+        server = self.get_instance()
         alt_name = 999
 
         resp, body = self.ss_client.update_server(server['id'], name=alt_name)

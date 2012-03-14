@@ -15,6 +15,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 import base64
+import socket
 import subprocess
 import sys
 import time
@@ -115,6 +116,7 @@ class VirtualInterfacesTest(FunctionalTest):
         # create a network for test
         networks = []
         cidr = '10.0.10.0/24'
+        gw = '10.0.10.1'
         subprocess.check_call('bin/nova-manage '
                               '--flagfile=%s '
                               'network create '
@@ -124,7 +126,9 @@ class VirtualInterfacesTest(FunctionalTest):
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
                               '--network_size=32 '
-                              % (self.config.nova.config, cidr),
+                              '--gateway=%s '
+                              '--host=%s '
+                              % (self.config.nova.config, cidr, gw, socket.gethostname()),
                               cwd=self.config.nova.directory, shell=True)
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
@@ -167,6 +171,7 @@ class VirtualInterfacesTest(FunctionalTest):
         # create a network for test
         networks = []
         cidr = '10.0.4.0/24'
+        gw = '10.0.4.1'
         subprocess.check_call('bin/nova-manage '
                               '--flagfile=%s '
                               'network create '
@@ -176,7 +181,9 @@ class VirtualInterfacesTest(FunctionalTest):
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
                               '--network_size=32 '
-                              % (self.config.nova.config, cidr),
+                              '--gateway=%s '
+                              '--host=%s '
+                              % (self.config.nova.config, cidr, gw, socket.gethostname()),
                               cwd=self.config.nova.directory, shell=True)
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
@@ -323,6 +330,7 @@ class VirtualInterfacesTest(FunctionalTest):
         # create a network for test
         networks = []
         cidr = '10.0.5.0/24'
+        gw = '10.0.5.1'
         subprocess.check_call('bin/nova-manage '
                               '--flagfile=%s '
                               'network create '
@@ -332,7 +340,9 @@ class VirtualInterfacesTest(FunctionalTest):
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
                               '--network_size=32 '
-                              % (self.config.nova.config, cidr),
+                              '--gateway=%s '
+                              '--host=%s '
+                              % (self.config.nova.config, cidr, gw, socket.gethostname()),
                               cwd=self.config.nova.directory, shell=True)
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
@@ -375,7 +385,9 @@ class VirtualInterfacesTest(FunctionalTest):
         # create three networks for test
         cidrs = ['10.0.6.0/24', '10.0.7.0/24', '10.0.8.0/24']
         networks = []
-        for cidr in cidrs:
+        for i in [6, 7, 8]:
+            cidr = '10.0.%s.0/24' % i
+            gw = '10.0.%s.1' % i
             subprocess.check_call('bin/nova-manage '
                                   '--flagfile=%s '
                                   'network create '
@@ -385,10 +397,12 @@ class VirtualInterfacesTest(FunctionalTest):
                                   '--bridge_interface=br-int '
                                   '--num_networks=1 '
                                   '--network_size=32 '
-                                  % (self.config.nova.config, cidr),
+                                  '--gateway=%s '
+                                  '--host=%s '
+                                  % (self.config.nova.config, cidr, gw, socket.gethostname()),
                                   cwd=self.config.nova.directory, shell=True)
             sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
-                  'WHERE cidr = \'%s\';' % cidr
+                           'WHERE cidr = \'%s\';' % cidr
             network_fixed_ip, network_uuid, network_gw = self.exec_sql(sql)[0]
             network_fixed_ip = '.'.join(network_fixed_ip.split('.')[0:3])\
                                     + '.100'
