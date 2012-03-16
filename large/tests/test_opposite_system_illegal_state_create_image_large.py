@@ -368,7 +368,7 @@ class GlanceErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_401(self):
+    def test_image_service_create_with_no_connection_to_glance(self):
         """
         Cannot connect to Glance
 
@@ -381,7 +381,7 @@ class GlanceErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_402(self):
+    def test_image_service_create_with_no_response_from_glance(self):
         """
         No response from Glance
 
@@ -393,7 +393,7 @@ class GlanceErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_423(self):
+    def test_image_service_show_with_no_connection_to_glance(self):
         """
         Cannot connect to Glance
 
@@ -405,7 +405,7 @@ class GlanceErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_424(self):
+    def test_image_service_show_with_no_response_from_glance(self):
         """
         No response from Glance
 
@@ -417,7 +417,7 @@ class GlanceErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_425(self):
+    def test_image_service_show_with_image_not_found(self):
         """
         NotFoundError from Glance
 
@@ -429,7 +429,7 @@ class GlanceErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_433(self):
+    def test_image_service_update_with_no_connection_to_glance(self):
         """
         Cannot connect to Glance
 
@@ -441,7 +441,7 @@ class GlanceErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_434(self):
+    def test_image_service_update_with_no_response_from_glance(self):
         """
         No response from Glance
 
@@ -453,7 +453,7 @@ class GlanceErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_435(self):
+    def test_image_service_update_with_image_not_found(self):
         """
         NotFoundError from Glance
 
@@ -465,7 +465,7 @@ class GlanceErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_ci002(self):
+    def test_create_image_when_ref_image_is_deleted(self):
         """
         Create image when the image referred by server is deleted
         """
@@ -593,7 +593,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_405(self):
+    def test_conn_lookup_by_name_with_libvirt_error(self):
         """
         LibvirtError from Glance
 
@@ -611,7 +611,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_406(self):
+    def test_conn_lookup_by_name_with_vir_err_no_domain(self):
         """
         LibvirtError(VIR_ERR_NO_DOMAIN) from Glance
 
@@ -627,7 +627,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_407(self):
+    def test_conn_lookup_by_name_with_stopped_libvirt(self):
         """
         Libvirt stopped
 
@@ -644,7 +644,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_420(self):
+    def test_conn_lookup_by_name_2nd_with_libvirt_error(self):
         """
         LibvirtError from Glance
 
@@ -660,7 +660,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_421(self):
+    def test_conn_lookup_by_name_2nd_with_vir_err_no_domain(self):
         """
         LibvirtError(VIR_ERR_NO_DOMAIN) from Glance
 
@@ -676,7 +676,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_422(self):
+    def test_conn_lookup_by_name_2nd_with_stopped_libvirt(self):
         """
         Libvirt stopped
 
@@ -706,7 +706,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_426(self):
+    def test_virt_dom_snapshot_create_xml_with_libvirt_error(self):
         """
         LibvirtError from Glance
 
@@ -719,7 +719,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_427(self):
+    def test_virt_dom_snapshot_create_xml_with_stopped_libvirt(self):
         """
         Libvirt stopped
 
@@ -734,7 +734,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_428(self):
+    def test_virt_dom_xml_desc_with_libvirt_error(self):
         """
         LibvirtError from Glance
 
@@ -749,7 +749,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_429(self):
+    def test_virt_dom_xml_desc_with_stopped_libvirt(self):
         """
         Libvirt stopped
 
@@ -762,7 +762,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_430(self):
+    def test_tempfile_mkdtemp_with_io_error(self):
         """
         IOError
 
@@ -776,7 +776,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_431(self):
+    def test_utils_execute_qemu_img_cmd_with_no_response_from_command(self):
         """
         No response from command
 
@@ -788,7 +788,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_432(self):
+    def test_utils_execute_qemu_img_cmd_with_process_execution_error(self):
         """
         ProcessExecutionError from command
 
@@ -815,7 +815,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_436(self):
+    def test_shutil_rmtree_with_io_error(self):
         """
         NotFoundError from Glance
 
@@ -829,7 +829,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_437(self):
+    def test_snapshot_ptr_delete_with_libvirt_error(self):
         """
         IOError
 
@@ -843,7 +843,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_438(self):
+    def test_snapshot_ptr_delete_with_stopped_libvirt(self):
         """
         LibvirtError from Glance
 
@@ -858,7 +858,7 @@ class LibvirtErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_439(self):
+    def test_snapshot_ptr_delete_with_no_response_from_libvirt(self):
         """
         Libvirt stopped
 
@@ -934,7 +934,8 @@ class QuantumErrorTest(FunctionalTest):
                                          cwd=self.config.nova.directory,
                                          shell=True), retcode)
 
-    def _create_image_with_quantum(self, vm_state, task_state, image_status, **param):
+    def _create_image_with_quantum(self, vm_state, task_state, image_status,
+                                   **param):
         # quantum
         quantum = QuantumProcess(self.config.quantum.directory,
                         self.config.quantum.config)
@@ -1017,42 +1018,40 @@ class QuantumErrorTest(FunctionalTest):
                                              image_status,
                                              show_port_attachment=status_code)
 
-#    @test.skip_test('Not yet implemented')
-#    @attr(kind='large')
-#    def test_d02_412(self):
-#        self._create_image_with_quantum('active', 'killed', delete_vif_db=True)
-
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_413(self):
+    def test_get_port_with_forbidden(self):
         """
         Forbidden(403) in port attachment from Quantum
 
 
         at nova.xxxxx
-            GET /tenants/{tenant-id}/networks/{network-id}/ports/ {port-id}/attachment
+            GET /tenants/{tenant-id}/networks/{network-id}/ports/
+            {port-id}/attachment
         """
         self._test_show_port_attachment('active', 'NULL', 'killed', 403)
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_414(self):
+    def test_get_port_with_network_not_found(self):
         """
         NetworkNotFound(420) in port attachment from Quantum
 
         at nova.xxxxx
-            GET /tenants/{tenant-id}/networks/{network-id}/ports/ {port-id}/attachment
+            GET /tenants/{tenant-id}/networks/{network-id}/ports/
+            {port-id}/attachment
         """
         self._test_show_port_attachment('active', 'NULL', 'killed', 420)
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_415(self):
+    def test_get_port_with_port_not_found(self):
         """
         PortNotFound(430) in port attachment from Quantum
 
         at nova.xxxxx
-            GET /tenants/{tenant-id}/networks/{network-id}/ports/ {port-id}/attachment
+            GET /tenants/{tenant-id}/networks/{network-id}/ports/
+            {port-id}/attachment
         """
         self._test_show_port_attachment('active', 'NULL', 'killed', 430)
 
@@ -1202,7 +1201,7 @@ class DBErrorTest(FunctionalTest):
                               shell=True)
 
     @attr(kind='large')
-    def test_d02_403(self):
+    def test_db_instance_get_from_queue_with_stopped_db(self):
         """
         DB stopped
 
@@ -1219,7 +1218,7 @@ class DBErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_404(self):
+    def test_db_instance_get_from_queue_with_sql_error(self):
         """
         SQLError from DB
 
@@ -1234,7 +1233,7 @@ class DBErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_408(self):
+    def test_db_instance_update_to_image_snapshot_with_stopped_db(self):
         """
         DB stopped
 
@@ -1252,7 +1251,7 @@ class DBErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_409(self):
+    def test_db_instance_update_to_image_snapshot_with_sql_error(self):
         """
         SQLError from DB
 
@@ -1270,7 +1269,7 @@ class DBErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_410(self):
+    def test_db_virtual_interface_get_by_instance_with_stopped_db(self):
         """
         DB stopped
 
@@ -1286,7 +1285,7 @@ class DBErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_411(self):
+    def test_db_virtual_interface_get_by_instance_with_sql_error(self):
         """
         VIF not found
 
@@ -1302,7 +1301,7 @@ class DBErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_412(self):
+    def test_db_virtual_interface_get_by_instance_with_vif_not_found(self):
         """
         VIF not found
 
@@ -1314,7 +1313,7 @@ class DBErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_440(self):
+    def test_db_instance_update_to_none_with_stopped_db(self):
         """
         DB stopped
 
@@ -1331,7 +1330,7 @@ class DBErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_441(self):
+    def test_db_instance_update_to_none_with_sql_error(self):
         """
         SQLError from DB
 
@@ -1453,7 +1452,7 @@ class RabbitMQErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_1401(self):
+    def test_rpc_cast_with_stopped_rabbitmq(self):
         """
         RabbitMQ stopped
 
@@ -1564,48 +1563,12 @@ class MelangeErrorTest(FunctionalTest):
 
     @test.skip_test('Not yet implemented')
     @attr(kind='large')
-    def test_d02_416(self):
+    def test_get_port_detail_with_error_from_melange(self):
         """
         500 Response from Melange
 
         at nova.xxxxx
             GET ipam%(tenant_scope)s/ip_blocks % locals()
-        """
-        self._create_image_with_fake_melange('', '', '', [],
-                                             'active', 'NULL', 'killed')
-
-    @test.skip_test('Not yet implemented')
-    @attr(kind='large')
-    def test_d02_417(self):
-        """
-        No response from Melange
-
-        at nova.xxxxx
-            GET ipam%(tenant_scope)s/ip_blocks % locals()
-        """
-        self._create_image_with_fake_melange('', '', '', [],
-                                             'active', 'NULL', 'killed')
-
-    @test.skip_test('Not yet implemented')
-    @attr(kind='large')
-    def test_d02_418(self):
-        """
-        500 Response from Melange
-
-        at nova.xxxxx
-            GET ipam%(tenant_scope)s/networks/%(network_id)s/interfaces/%(vif_id)s/ip_allocations % locals()
-        """
-        self._create_image_with_fake_melange('', '', '', [],
-                                             'active', 'NULL', 'killed')
-
-    @test.skip_test('Not yet implemented')
-    @attr(kind='large')
-    def test_d02_419(self):
-        """
-        No response from Melange
-
-        at nova.xxxxx
-            GET ipam%(tenant_scope)s/networks/%(network_id)s/interfaces/%(vif_id)s/ip_allocations % locals()
         """
         self._create_image_with_fake_melange('', '', '', [],
                                              'active', 'NULL', 'killed')
