@@ -175,14 +175,14 @@ class LimitsTest(TestBase):
         time.sleep(10)
 
     @attr(kind='large')
-    def test_A00_04_absolute_limits(self):
+    def test_absolute_limits(self):
         resp, body = self.get_absolute_limits()
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['limits']['absolute']['maxTotalCores'],
                          self.cores)
 
     @attr(kind='large')
-    def test_A00_145_get_stored_limit(self):
+    def test_get_stored_limit(self):
         cores = 5
 
         # update
@@ -197,18 +197,18 @@ class LimitsTest(TestBase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_A00_146_get_limit_from_unknown_tenant(self):
+    def test_get_limit_from_unknown_tenant(self):
         resp, _body = self.get_limits(tenant_id='unknown')
         self.assertEqual(resp.status, 404)
 
     @attr(kind='large')
-    def test_A00_147_get_limit(self):
+    def test_get_limit(self):
         resp, body = self.get_limits()
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], self.cores)
 
     @attr(kind='large')
-    def test_A00_148_update_limits(self):
+    def test_update_limits(self):
         cores = 5
 
         # update
@@ -223,7 +223,7 @@ class LimitsTest(TestBase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_A00_149_update_limits_with_unknown_tenant(self):
+    def test_update_limits_with_unknown_tenant(self):
         cores = 5
 
         # update
@@ -231,7 +231,7 @@ class LimitsTest(TestBase):
         self.assertEqual(resp.status, 404)
 
     @attr(kind='large')
-    def test_A00_151_update_limits(self):
+    def test_update_limits(self):
         cores = 5
 
         # update
@@ -245,7 +245,7 @@ class LimitsTest(TestBase):
         self.assertEqual(body['quota_set']['cores'], cores)
 
     @attr(kind='large')
-    def test_A00_152_update_some_limits(self):
+    def test_update_some_limits(self):
         cores = 5
         volumes = 1
 
@@ -262,7 +262,7 @@ class LimitsTest(TestBase):
         self.assertEqual(body['quota_set']['volumes'], volumes)
 
     @attr(kind='large')
-    def test_A00_153_create_limits(self):
+    def test_create_limits(self):
         cores = 5
 
         # prepare
@@ -281,7 +281,7 @@ class LimitsTest(TestBase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_A00_154_update_unknown_limits(self):
+    def test_update_unknown_limits(self):
         # prepare
         s = self.get_quota_data_from_mysql()
         self.assertEqual(len(s.split()), 0, "Must be no quota")
@@ -295,14 +295,14 @@ class LimitsTest(TestBase):
         self.assertEqual(len(s.split()), 0, "Must be no quota")
 
     @attr(kind='large')
-    def test_A00_155_default_limits(self):
+    def test_default_limits(self):
         resp, body = self.get_limits(defaults=True)
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['quota_set']['cores'], self.cores)
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_A00_156_default_limits_from_unknown_tenant(self):
+    def test_default_limits_from_unknown_tenant(self):
         # update
         resp, body = self.get_limits(tenant_id='unknown', defaults=True)
         self.assertEqual(resp.status, 404)
@@ -329,14 +329,14 @@ class AppliedFlagValueTest(TestBase):
         time.sleep(10)
 
     @attr(kind='large')
-    def test_A00_02_absolute_limits(self):
+    def test_absolute_limits(self):
         resp, body = self.get_absolute_limits()
         self.assertEqual(resp.status, 200)
         self.assertEqual(body['limits']['absolute']['maxTotalCores'],
                          self.cores)
 
     @attr(kind='large')
-    def test_A00_03_use_stored_value_instead_of_flags(self):
+    def test_use_stored_value_instead_of_flags(self):
         cores = 5
 
         # update
