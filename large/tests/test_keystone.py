@@ -14,13 +14,8 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-import base64
-import re
 import subprocess
-import time
-import json
 import logging
-import inspect
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
@@ -29,7 +24,7 @@ import storm.config
 from kong import tests
 from storm import openstack
 from storm.common import rest_client
-from storm.common.rest_client import LoggingFeature
+from storm.common.rest_client import RestClientLogging
 from storm.services.keystone.json.keystone_client import TokenClient
 from nose.plugins import skip
 
@@ -37,14 +32,14 @@ LOG = logging.getLogger("large.tests.test_keystone")
 messages = []
 
 def setUpModule(module):
-    rest_client.logging = KeystoneLogging()
+    rest_client.rest_logging = KeystoneLogging()
 
 def tearDownModule(module):
     print "\nAll keystone tests done. Dump message infos."
     for m in messages:
         print "Test: %s\nMessages %s" % m
 
-class KeystoneLogging(LoggingFeature):
+class KeystoneLogging(RestClientLogging):
 
     def do_auth(self, creds):
         LOG.info("Authenticate %s" % creds)
@@ -794,7 +789,6 @@ class KeystoneTest(FunctionalTest):
     def test_create_user_roles_with_not_exist_user(self):
         self.data.setup_one_user()
         self.data.setup_role()
-        user = self.get_user_by_name('test_user1')
         tenant = self.get_tenant_by_name('test_tenant1')
         role = self.get_role_by_name(self.data.role_name)
         resp, body = self.client.create_role_ref('999999', role['id'], tenant['id'])

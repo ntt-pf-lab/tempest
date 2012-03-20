@@ -15,7 +15,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from tempest.common import rest_client
 import json
 from cloudfiles.fjson import json_loads
 from tempest.common.rest_client import RestClient
@@ -24,7 +23,7 @@ from tempest.common.rest_client import RestClient
 class QuantumClient(object):
 
     def __init__(self, username, password, url, tenant, config=None):
-        self.client = rest_client.RestClient(username, password, url,
+        self.client = QuantumRestClient(username, password, url,
                                              tenant_name=tenant,
                                              config=config,
                                              service="quantum")

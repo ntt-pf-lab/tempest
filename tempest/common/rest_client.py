@@ -71,6 +71,7 @@ class RestClient(object):
 
         headers = {'Content-Type': 'application/json'}
         body = json.dumps(creds)
+        rest_logging.do_auth(creds)
         resp, body = self.http_obj.request(auth_url, 'POST',
                                            headers=headers, body=body)
         return resp, body
@@ -119,8 +120,10 @@ class RestClient(object):
         headers['X-Auth-Token'] = self.token
 
         req_url = "%s/%s" % (self.base_url, url)
+        rest_logging.do_request(req_url, method, headers, body)
         resp, resp_body = self.http_obj.request(req_url, method,
                                            headers=headers, body=body)
+        rest_logging.do_response(resp, body)
 
         if resp.status == 404:
             self._log(req_url, body, resp, resp_body)
@@ -180,3 +183,17 @@ class RestAdminClient(RestClient):
         endpoints = catalog[0]['endpoints']
         mgmt_url = endpoints[0]['adminURL']
         return token, mgmt_url
+
+
+class RestClientLogging(object):
+
+    def do_auth(self, creds):
+        pass
+
+    def do_request(self, req_url, method, headers, body):
+        pass
+
+    def do_response(self, resp, body):
+        pass
+
+rest_logging = RestClientLogging()
