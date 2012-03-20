@@ -111,12 +111,14 @@ class FunctionalTest(unittest.TestCase):
 
     @attr(kind='large')
     def expire_token(self, user_id, tenant_id):
-        sql = "update token set expires = '2000-01-01' where user_id=%s and tenant_id=%s" % (user_id, tenant_id)
+        sql = "update token set expires = '2000-01-01' where user_id=%s and \
+                tenant_id=%s" % (user_id, tenant_id)
         self.db.exec_mysql(sql)
 
     @attr(kind='large')
     def remove_token(self, user_id, tenant_id):
-        sql = "delete from token where user_id=%s and tenant_id=%s" % (user_id, tenant_id)
+        sql = "delete from token where user_id=%s and tenant_id=%s" % \
+                (user_id, tenant_id)
         self.db.exec_mysql(sql)
 
 
@@ -143,8 +145,10 @@ class DataGenerator(object):
         self.role_name = None
 
     def setup_one_user(self):
-        _, tenant = self.client.create_tenant("test_tenant1", "tenant_for_test")
-        _, user = self.client.create_user("test_user1", "password", tenant['tenant']['id'], "user1@mail.com")
+        _, tenant = self.client.create_tenant("test_tenant1",
+                                            "tenant_for_test")
+        _, user = self.client.create_user("test_user1", "password",
+                                    tenant['tenant']['id'], "user1@mail.com")
         self.tenants.append(tenant['tenant'])
         self.users.append(user['user'])
 
@@ -153,7 +157,8 @@ class DataGenerator(object):
         services = services['OS-KSADM:services']
         service_name = services[0]['name']
         service_id = services[0]['id']
-        _, roles = self.client.create_role(service_name + ':test1' , 'Test role', service_id)
+        _, roles = self.client.create_role(service_name + ':test1' ,
+                                        'Test role', service_id)
         self.role_name = service_name + ':test1'
         self.roles.append(roles['role'])
 
@@ -172,7 +177,8 @@ class KeystoneTest(FunctionalTest):
         self.data.setup_one_user()
         _, body = self.client.get_tenants()
         tenants = body['tenants']['values']
-        self.assertIn('test_tenant1', [t['name'] for t in tenants], "test_tenant1 should be include.")
+        self.assertIn('test_tenant1', [t['name'] for t in tenants],
+                        "test_tenant1 should be include.")
 
     @attr(kind='large')
     def test_get_tenants_with_no_grant(self):
@@ -253,7 +259,8 @@ class KeystoneTest(FunctionalTest):
     @attr(kind='large')
     def test_create_tenants_conflict(self):
         self.data.setup_one_user()
-        resp, body = self.client.create_tenant("test_tenant1", "tenant_for_test")
+        resp, body = self.client.create_tenant("test_tenant1",
+                                            "tenant_for_test")
         self.assertEqual('409', resp['status'])
         messages.append(('test_create_tenants_conflict', body))
 
@@ -339,7 +346,8 @@ class KeystoneTest(FunctionalTest):
         # create token.
         self.token_client.auth('test_user1', 'password', 'test_tenant1')
         # reauth
-        resp, body = self.token_client.auth('test_user1', 'password', 'test_tenant1')
+        resp, body = self.token_client.auth('test_user1', 'password',
+                                            'test_tenant1')
         self.assertEqual('200', resp['status'])
         messages.append(('test_auth', body))
 
@@ -352,7 +360,8 @@ class KeystoneTest(FunctionalTest):
         tenant = self.get_tenant_by_name('test_tenant1')
         self.expire_token(user['id'], tenant['id'])
         # reauth
-        resp, body = self.token_client.auth('test_user1', 'password', 'test_tenant1')
+        resp, body = self.token_client.auth('test_user1', 'password',
+                                            'test_tenant1')
         self.assertEqual('200', resp['status'])
         messages.append(('test_auth_with_expire_token', body))
 
@@ -365,7 +374,8 @@ class KeystoneTest(FunctionalTest):
         tenant = self.get_tenant_by_name('test_tenant1')
         self.remove_token(user['id'], tenant['id'])
         # reauth
-        resp, body = self.token_client.auth('test_user1', 'password', 'test_tenant1')
+        resp, body = self.token_client.auth('test_user1', 'password',
+                                            'test_tenant1')
         self.assertEqual('200', resp['status'])
         messages.append(('test_auth_with_none_token', body))
 
@@ -373,7 +383,8 @@ class KeystoneTest(FunctionalTest):
     def test_auth_with_disable_user(self):
         self.data.setup_one_user()
         self.diable_user('test_user1')
-        resp, body = self.token_client.auth('test_user1', 'password', 'test_tenant1')
+        resp, body = self.token_client.auth('test_user1', 'password',
+                                            'test_tenant1')
         self.assertEqual('403', resp['status'])
         messages.append(('test_auth_with_diable_user', body))
 
@@ -381,28 +392,32 @@ class KeystoneTest(FunctionalTest):
     def test_auth_with_disable_tenant(self):
         self.data.setup_one_user()
         self.diable_tenant('test_tenant1')
-        resp, body = self.token_client.auth('test_user1', 'password', 'test_tenant1')
+        resp, body = self.token_client.auth('test_user1', 'password',
+                                            'test_tenant1')
         self.assertEqual('403', resp['status'])
         messages.append(('test_auth_with_disable_tenant', body))
 
     @attr(kind='large')
     def test_auth_with_illigal_password(self):
         self.data.setup_one_user()
-        resp, body = self.token_client.auth('test_user1', 'test', 'test_tenant1')
+        resp, body = self.token_client.auth('test_user1', 'test',
+                                            'test_tenant1')
         self.assertEqual('401', resp['status'])
         messages.append(('test_auth_with_illigal_password', body))
 
     @attr(kind='large')
     def test_auth_with_illigal_name(self):
         self.data.setup_one_user()
-        resp, body = self.token_client.auth('not_exist', 'password', 'test_tenant1')
+        resp, body = self.token_client.auth('not_exist', 'password',
+                                            'test_tenant1')
         self.assertEqual('401', resp['status'])
         messages.append(('test_auth_with_illigal_name', body))
 
     @attr(kind='large')
     def test_auth_with_illigal_tenant(self):
         self.data.setup_one_user()
-        resp, body = self.token_client.auth('test_user1', 'password', 'test_tenant99')
+        resp, body = self.token_client.auth('test_user1', 'password',
+                                            'test_tenant99')
         self.assertEqual('401', resp['status'])
         messages.append(('test_auth_with_illigal_tenant', body))
 
@@ -411,7 +426,8 @@ class KeystoneTest(FunctionalTest):
         self.data.setup_one_user()
         _, body = self.client.get_users()
         users = body['users']['values']
-        self.assertIn('test_user1', [u['name'] for u in users], "test_user1 should be include.")
+        self.assertIn('test_user1', [u['name'] for u in users],
+                        "test_user1 should be include.")
 
     @attr(kind='large')
     def test_get_users_with_no_grant(self):
@@ -451,7 +467,8 @@ class KeystoneTest(FunctionalTest):
     def test_create_user(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
-        resp, body = self.client.create_user('test_user2', 'password', tenant['id'], 'user2@test.com')
+        resp, body = self.client.create_user('test_user2', 'password',
+                                            tenant['id'], 'user2@test.com')
         self.data.users.append(body['user'])
         self.assertEqual('201', resp['status'])
         self.assertEqual('test_user2', body['user']['name'])
@@ -462,7 +479,8 @@ class KeystoneTest(FunctionalTest):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        resp, body = self.client.create_user('test_user2', 'password', tenant['id'], 'user2@test.com')
+        resp, body = self.client.create_user('test_user2', 'password',
+                                            tenant['id'], 'user2@test.com')
         self.assertEqual('401', resp['status'])
         messages.append(('test_create_users_with_no_grant',body))
 
@@ -476,7 +494,8 @@ class KeystoneTest(FunctionalTest):
         # maybe gone well.
         self.client.get_users()
         self.expire_token(user['id'], user['tenantId'])
-        resp, body = self.client.create_user('test_user2', 'password', tenant['id'], 'user2@test.com')
+        resp, body = self.client.create_user('test_user2', 'password',
+                                            tenant['id'], 'user2@test.com')
         self.assertEqual('403', resp['status'])
         messages.append(('test_get_users_with_expired_user', body))
 
@@ -490,7 +509,8 @@ class KeystoneTest(FunctionalTest):
         # maybe gone well.
         self.client.get_users()
         self.remove_token(user['id'], user['tenantId'])
-        resp, body = self.client.create_user('test_user2', 'password', tenant['id'], 'user2@test.com')
+        resp, body = self.client.create_user('test_user2', 'password',
+                                            tenant['id'], 'user2@test.com')
         self.assertEqual('404', resp['status'])
         messages.append(('test_create_users_with_no_token', body))
 
@@ -498,7 +518,8 @@ class KeystoneTest(FunctionalTest):
     def test_create_users_with_conflict_name(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
-        resp, body = self.client.create_user('test_user1', 'password', tenant['id'], 'user2@test.com')
+        resp, body = self.client.create_user('test_user1', 'password',
+                                            tenant['id'], 'user2@test.com')
         self.assertEqual('409', resp['status'])
         messages.append(('test_create_users_with_conflict_name',body))
 
@@ -506,7 +527,8 @@ class KeystoneTest(FunctionalTest):
     def test_create_users_with_conflict_email(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
-        resp, body = self.client.create_user('test_user2', 'password', tenant['id'], 'user1@mail.com')
+        resp, body = self.client.create_user('test_user2', 'password',
+                                            tenant['id'], 'user1@mail.com')
         self.assertEqual('409', resp['status'])
         messages.append(('test_create_users_with_conflict_email',body))
 
@@ -515,7 +537,8 @@ class KeystoneTest(FunctionalTest):
     def test_create_users_with_over_256_name(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
-        resp, body = self.client.create_user('a' * 256, 'password', tenant['id'], 'user2@test.com')
+        resp, body = self.client.create_user('a' * 256, 'password',
+                                            tenant['id'], 'user2@test.com')
         self.assertEqual('400', resp['status'])
         messages.append(('test_create_users_with_over_256_name',body))
 
@@ -523,7 +546,8 @@ class KeystoneTest(FunctionalTest):
     def test_create_users_with_empty_name(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
-        resp, body = self.client.create_user('', 'password', tenant['id'], 'user2@test.com')
+        resp, body = self.client.create_user('', 'password',
+                                            tenant['id'], 'user2@test.com')
         self.assertEqual('400', resp['status'])
         messages.append(('test_create_users_with_empty_name',body))
 

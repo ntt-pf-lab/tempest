@@ -1,5 +1,4 @@
 import os
-import re
 import subprocess
 import time
 
@@ -74,7 +73,7 @@ class LibvirtFunctionalTest(unittest.TestCase):
             username='openstack', password='openstack',
             api_config_file=os.path.join(self.config.glance.directory, self.config.glance.api_config),
             registry_config_file=os.path.join(self.config.glance.directory, self.config.glance.registry_config))
-            
+
         self.glance_ssh_con = self.glance_havoc.connect('127.0.0.1', 'openstack',
                             'openstack', self.glance_havoc.config.nodes.ssh_timeout)
 

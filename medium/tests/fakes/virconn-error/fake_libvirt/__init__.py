@@ -1,4 +1,3 @@
-import os
 import libvirt
 from glance.common import exception as glance_exception
 

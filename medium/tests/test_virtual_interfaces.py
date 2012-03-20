@@ -18,7 +18,6 @@ import base64
 import socket
 import subprocess
 import sys
-import time
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
@@ -28,12 +27,6 @@ from tempest import openstack
 import tempest.config
 from nova import test
 
-from medium.tests.processes import (
-        GlanceRegistryProcess, GlanceApiProcess,
-        KeystoneProcess,
-        QuantumProcess, QuantumPluginOvsAgentProcess,
-        NovaApiProcess, NovaComputeProcess,
-        NovaNetworkProcess, NovaSchedulerProcess)
 
 """
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
@@ -383,7 +376,6 @@ class VirtualInterfacesTest(FunctionalTest):
         """Returns 200 response with a list of virtual interfaces"""
 
         # create three networks for test
-        cidrs = ['10.0.6.0/24', '10.0.7.0/24', '10.0.8.0/24']
         networks = []
         for i in [6, 7, 8]:
             cidr = '10.0.%s.0/24' % i

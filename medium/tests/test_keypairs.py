@@ -26,12 +26,6 @@ from tempest import openstack
 import tempest.config
 from tempest.services.nova.json.keypairs_client import KeypairsClient
 
-from medium.tests.processes import (
-        GlanceRegistryProcess, GlanceApiProcess,
-        KeystoneProcess,
-        QuantumProcess, QuantumPluginOvsAgentProcess,
-        NovaApiProcess, NovaComputeProcess,
-        NovaNetworkProcess, NovaSchedulerProcess)
 
 """
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
@@ -435,7 +429,6 @@ class KeypairsTest(FunctionalTest):
     def test_delete_keypair_when_keypair_does_not_exist(self):
         """Returns 404 response"""
         # execute and assert
-        keyname = 'key_' + self._testMethodName
         resp, body = self.kp_client.delete_keypair('')
         self.assertEqual('404', resp['status'])
 

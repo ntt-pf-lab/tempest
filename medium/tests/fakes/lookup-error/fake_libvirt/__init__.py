@@ -69,7 +69,7 @@ class fake_vir_error(fake):
         flag_in_target = False
         try:
             raise Exception
-        except Exception, e:
+        except Exception:
             lst = traceback.extract_stack()
             for mi in lst:
                 if mi[2] in ('destroy', 'reboot', 'snapshot',
@@ -110,7 +110,7 @@ class fake_vir_error_rd(fake):
         flag_in_target = False
         try:
             raise Exception
-        except Exception, e:
+        except Exception:
             lst = traceback.extract_stack()
             for mi in lst:
                 if mi[2] in ('destroy'):
@@ -155,7 +155,7 @@ class fake_vir_error_rd_conf(fake):
         flag_in_target = False
         try:
             raise Exception
-        except Exception, e:
+        except Exception:
             lst = traceback.extract_stack()
             for mi in lst:
                 if mi[2] in ('_wait_for_reboot'):
@@ -200,7 +200,7 @@ class fake_no_domain(fake):
         flag_in_target = False
         try:
             raise Exception
-        except Exception, e:
+        except Exception:
             lst = traceback.extract_stack()
             for mi in lst:
                 if mi[2] in ('destroy', 'reboot', 'snapshot',
@@ -241,7 +241,7 @@ class fake_no_domain_rd(fake):
         flag_in_target = False
         try:
             raise Exception
-        except Exception, e:
+        except Exception:
             lst = traceback.extract_stack()
             for mi in lst:
                 if mi[2] in ('destroy'):
@@ -286,7 +286,7 @@ class fake_no_domain_rd_conf(fake):
         flag_in_target = False
         try:
             raise Exception
-        except Exception, e:
+        except Exception:
             lst = traceback.extract_stack()
             for mi in lst:
                 if mi[2] in ('_wait_for_reboot'):

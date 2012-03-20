@@ -9,16 +9,7 @@ from nose.plugins.attrib import attr
 from tempest import openstack
 import tempest.config
 from tempest.common.utils.data_utils import rand_name
-
-from medium.tests.processes import (
-        GlanceRegistryProcess, GlanceApiProcess,
-        KeystoneProcess,
-        QuantumProcess, QuantumPluginOvsAgentProcess,
-        NovaApiProcess, NovaComputeProcess,
-        NovaNetworkProcess, NovaSchedulerProcess)
-from medium.tests.utils import (
-        emphasised_print, silent_check_call,
-        cleanup_virtual_instances, cleanup_processes)
+from medium.tests.utils import emphasised_print
 
 """
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
@@ -26,11 +17,9 @@ To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 
 default_config = tempest.config.TempestConfig('etc/medium.conf')
 config = default_config
-environ_processes = []
 
 
 def setUpModule(module):
-    environ_processes = module.environ_processes
     config = module.config
 
     try:

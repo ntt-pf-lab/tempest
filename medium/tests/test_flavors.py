@@ -154,7 +154,6 @@ class FlavorsTest(FunctionalTest):
 
         # get list_flavors from db after added new data.
         resp, body = self.client.list_flavors()
-        flavors = body['flavors']
         self.flg = False
         for i in range(0, 5):
             if 'm1.opst' in body['flavors'][i]['name']:
@@ -278,7 +277,6 @@ class FlavorsTest(FunctionalTest):
 
         # get list_detail from db after added new data.
         _, body = self.client.list_flavors_with_detail()
-        flavors = body['flavors']
         self.flag = False
         for i in range(0, 5):
             if 'm1.opst' in body['flavors'][i]['name']:

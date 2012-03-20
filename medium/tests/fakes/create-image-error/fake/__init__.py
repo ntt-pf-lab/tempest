@@ -1,9 +1,6 @@
-import os
 import time
-import subprocess
 
 from nova.db import api
-from nova.db.sqlalchemy import api as sql_api
 from nova.compute import task_states
 
 import manager as ssh_manager
@@ -26,7 +23,6 @@ def stopDBService():
 
 
 def stopLibvirtService():
-    havoc = ssh_manager.HavocManager()
     compute_havoc = ssh_manager.ComputeHavoc()
     compute_havoc.stop_libvirt()
     time.sleep(10)

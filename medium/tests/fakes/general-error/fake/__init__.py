@@ -1,10 +1,11 @@
-from nova import exception
-import tempfile
+import types
+import shlex
+import random
 
+from nova import exception
 from eventlet import greenthread
 from eventlet.green import subprocess
 from nova import log as logging
-import shlex
 from nova import flags
 
 LOG = logging.getLogger("nova.utils")

@@ -1,15 +1,10 @@
-import os
 import time
 
 from nova.db import api
-from nova.db.sqlalchemy import api as sql_api
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova.virt import disk
 from nova.virt import images
-import gflags
-import string
-from nova import flags
 import libvirt
 from nova import exception
 from nova import image
@@ -27,31 +22,15 @@ LOG = logging.getLogger('log-for-fake-db')
 
 def stopGlanceService():
     glance_havoc = ssh_manager.GlanceHavoc()
-    ssh_con = glance_havoc.connect(
-                        glance_havoc.config.nodes.glance.ip,
-                        glance_havoc.config.nodes.glance.user,
-                        glance_havoc.config.nodes.glance.password,
-                        glance_havoc.config.nodes.ssh_timeout)
-
     glance_havoc.stop_glance_api()
 
 
 def startLibvirtService():
     compute_havoc = ssh_manager.ComputeHavoc()
-    compute_ssh_con = compute_havoc.connect(
-                            compute_havoc.config.nodes.compute.ip,
-                            compute_havoc.config.nodes.compute.user,
-                            compute_havoc.config.nodes.compute.password,
-                            self.compute_havoc.config.nodes.ssh_timeout)
     compute_havoc._run_cmd("sudo service libvirt-bin start")
 
 def stopLibvirtService():
     compute_havoc = ssh_manager.ComputeHavoc()
-    compute_ssh_con = compute_havoc.connect(
-                            compute_havoc.config.nodes.compute.ip,
-                            compute_havoc.config.nodes.compute.user,
-                            compute_havoc.config.nodes.compute.password,
-                            self.compute_havoc.config.nodes.ssh_timeout)
     compute_havoc._run_cmd("sudo service libvirt-bin stop")
 
 def startDBService():

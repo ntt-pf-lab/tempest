@@ -18,11 +18,9 @@ import re
 import subprocess
 import time
 
-import sys
 import unittest2 as unittest
 from nose.plugins.attrib import attr
-from nova import test
-from tempest import openstack, exceptions
+from tempest import openstack
 import tempest.config
 from tempest.common.utils.data_utils import rand_name
 

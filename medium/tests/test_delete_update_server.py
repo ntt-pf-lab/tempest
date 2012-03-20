@@ -17,7 +17,6 @@
 import base64
 import re
 import subprocess
-import time
 import sys
 
 import unittest2 as unittest
@@ -26,7 +25,6 @@ from nova import test
 
 from tempest import openstack
 import tempest.config
-from tempest.common.utils.data_utils import rand_name
 
 """
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
@@ -39,7 +37,6 @@ environ_processes = []
 
 
 def setUpModule(module):
-#    environ_processes = module.environ_processes
     config = module.config
 
 def tearDownModule(module):
@@ -609,7 +606,6 @@ class UpdateServerTest(FunctionalTest):
         server = self.get_instance()
         # update server => tenant:demo
         alt_name = self._testMethodName + '_rename'
-        self.assertNotEqual(name, alt_name)
         resp, body = self.s2_client.update_server(server['id'], name=alt_name)
         print "resp=", resp
         print "body=", body
@@ -684,9 +680,9 @@ class UpdateServerTest(FunctionalTest):
         test_update_server_specify_uuid_more_than_37_char
 
         """
-        uuid = 'a' * 37
+        #uuid = 'a' * 37
         alt_name = self._testMethodName + '_rename'
-#        resp, body = self.ss_client.update_server(uuid, name=alt_name)
+        #resp, body = self.ss_client.update_server(uuid, name=alt_name)
         resp, body = self.ss_client.update_server(100, name=alt_name)
         print "resp=", resp
         print "body=", body

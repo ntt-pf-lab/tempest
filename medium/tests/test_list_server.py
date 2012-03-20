@@ -17,7 +17,6 @@
 import base64
 import re
 import subprocess
-import time
 import sys
 
 import unittest2 as unittest
@@ -26,7 +25,7 @@ from nova import test
 
 from tempest import openstack
 import tempest.config
-from tempest.common.utils.data_utils import rand_name
+
 
 """
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
@@ -35,11 +34,9 @@ To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 default_config = tempest.config.TempestConfig('etc/medium.conf')
 test_config = tempest.config.TempestConfig('etc/medium_test.conf')
 config = default_config
-environ_processes = []
 
 
 def setUpModule(module):
-#    environ_processes = module.environ_processes
     config = module.config
 
 def tearDownModule(module):

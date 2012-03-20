@@ -3,7 +3,6 @@ from tempest import openstack
 import unittest2 as unittest
 from tempest import exceptions
 from tempest.common.utils.data_utils import rand_name
-import time
 
 
 class SecurityGroupsTest(unittest.TestCase):

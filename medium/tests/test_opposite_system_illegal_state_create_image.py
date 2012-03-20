@@ -1,5 +1,4 @@
 import os
-import re
 import subprocess
 import time
 
@@ -12,7 +11,6 @@ import tempest.config
 from tempest import exceptions
 from tempest.common.utils.data_utils import rand_name
 import stackmonkey.manager as ssh_manager
-from nova import test
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,

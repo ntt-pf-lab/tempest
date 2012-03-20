@@ -25,7 +25,6 @@ from nose.plugins.skip import SkipTest
 
 GLANCE_INSTALLED = False
 try:
-    from glance import client
     from glance.common import exception
     GLANCE_INSTALLED = True
 except ImportError:

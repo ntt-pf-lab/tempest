@@ -175,8 +175,6 @@ class ServerMetadataTest(unittest.TestCase):
         Negative test: Should not be able to delete metadata item from a
         nonexistant server
         """
-        meta = {'d': 'delvalue'}
-
         #Delete the metadata item
         try:
             resp, metadata = self.client.delete_server_metadata_item(999, 'd')

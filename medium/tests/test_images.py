@@ -32,12 +32,6 @@ from tempest.services.nova.json.images_client import ImagesClient
 from tempest.services.nova.json.servers_client import ServersClient
 from tempest.services.keystone.json.keystone_client import TokenClient
 
-from medium.tests.processes import (
-        GlanceRegistryProcess, GlanceApiProcess,
-        KeystoneProcess,
-        QuantumProcess, QuantumPluginOvsAgentProcess,
-        NovaApiProcess, NovaComputeProcess,
-        NovaNetworkProcess, NovaSchedulerProcess)
 
 """
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
@@ -272,7 +266,7 @@ class ImagesTest(FunctionalTest):
         self.ss_client_for_user3 = ServersClient(**user3)
         self.img_client_for_user3 = ImagesClient(**user3)
 	retry = 0
-        while True: 
+        while True:
             try:
 		self._create_server()
 	    except Exception as e:

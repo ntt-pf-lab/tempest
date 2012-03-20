@@ -1,5 +1,4 @@
 import os
-import re
 import subprocess
 import time
 
@@ -10,8 +9,6 @@ from tempest import openstack
 import tempest.config
 from tempest import exceptions
 from tempest.common.utils.data_utils import rand_name
-from nova import utils
-from nova import flags
 from nova import test
 
 from medium.tests.processes import (
@@ -19,7 +16,6 @@ from medium.tests.processes import (
         KeystoneProcess,
         NovaApiProcess, NovaComputeProcess,
         NovaNetworkProcess, NovaSchedulerProcess,
-        QuantumProcess, QuantumPluginOvsAgentProcess,
         FakeQuantumProcess)
 from medium.tests.utils import (
         emphasised_print, silent_check_call,

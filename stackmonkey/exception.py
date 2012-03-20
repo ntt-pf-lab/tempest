@@ -9,7 +9,7 @@ class HavocException(Exception):
             try:
                 message = self.message % kwargs
 
-            except Exception as e:
+            except Exception:
                 message = self.message
 
         super(HavocException, self).__init__(message)

@@ -1,5 +1,4 @@
 import os
-import re
 import subprocess
 import time
 
@@ -8,10 +7,7 @@ from nose.plugins.attrib import attr
 
 from tempest import openstack
 import tempest.config
-from tempest import exceptions
 from tempest.common.utils.data_utils import rand_name
-from nova import utils
-from nova import flags
 from nova import test
 
 from medium.tests.processes import (
