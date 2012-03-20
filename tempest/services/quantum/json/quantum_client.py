@@ -15,19 +15,16 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from storm.common import rest_client
-from storm import exceptions
+from tempest.common import rest_client
 import json
-import time
-import httplib2
 from cloudfiles.fjson import json_loads
-from storm.common.rest_client import RestClient
+from tempest.common.rest_client import RestClient
 
 
 class QuantumClient(object):
 
-    def __init__(self, username, key, url, tenant, config=None):
-        self.client = QuantumRestClient(username, key, url,
+    def __init__(self, username, password, url, tenant, config=None):
+        self.client = rest_client.RestClient(username, password, url,
                                              tenant_name=tenant,
                                              config=config,
                                              service="quantum")
@@ -40,7 +37,7 @@ class QuantumClient(object):
         return resp, body
 
     def create_network(self, name, nova_id):
-        post = { 
+        post = {
             'network': {
               'name': name,
               'nova_id': nova_id
@@ -96,7 +93,7 @@ class QuantumClient(object):
         }
         headers = {'Content-Type': 'application/json'}
         body = json.dumps(post)
-        resp, body = self.client.put('networks/%s/ports/%s/attachment.json' 
+        resp, body = self.client.put('networks/%s/ports/%s/attachment.json'
                 % (network_id, port_id), headers=headers, body=body)
         return resp, body
 
@@ -111,7 +108,7 @@ class QuantumClient(object):
 
 
 class QuantumRestClient(RestClient):
-    
+
     def _extract_auth_response(self, body, service):
         auth_data = json.loads(body)['access']
         token = auth_data['token']['id']

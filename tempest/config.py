@@ -27,7 +27,7 @@ class IdentityConfig(object):
     @property
     def port(self):
         """Port for the Identity service."""
-        return self.get("port", "8773")
+        return self.get("port", "5000")
 
     @property
     def api_version(self):
@@ -73,6 +73,16 @@ class IdentityConfig(object):
     def strategy(self):
         """Which auth method does the environment use? (basic|keystone)"""
         return self.get("strategy", 'keystone')
+
+    @property
+    def directory(self):
+        """Directory of keystone home. Defaults to /opt/stack/keystone"""
+        return self.get("directory", "/opt/stack/keystone")
+
+    @property
+    def config(self):
+        """Path to keystone registry config. Defaults to etc/keystone.conf"""
+        return self.get("config", "etc/keystone.conf")
 
 
 class ComputeConfig(object):
@@ -141,6 +151,16 @@ class ComputeConfig(object):
         """Catalog type of the Compute service."""
         return self.get("catalog_type", 'compute')
 
+    @property
+    def directory(self):
+        """Directory of nova home. Defaults to /opt/stack/nova"""
+        return self.get("directory", "/opt/stack/nova")
+
+    @property
+    def config(self):
+        """path of nova.conf. Defaults to /opt/openstack/nova/etc/nova.conf"""
+        return self.get("config", "/opt/openstack/nova/etc/nova.conf")
+
 
 class ImagesConfig(object):
     """
@@ -197,6 +217,78 @@ class ImagesConfig(object):
         """Optional URL to auth service. Will be discovered if None"""
         return self.get("auth_url")
 
+    @property
+    def directory(self):
+        """Directory of Images service home. Defaults to /opt/stack/glance"""
+        return self.get("directory", "/opt/stack/glance")
+
+    @property
+    def registry_config(self):
+        """Path to Images registry config. Defaults to etc/glance-registry.conf"""
+        return self.get("registry_config", "etc/glance-registry.conf")
+
+    @property
+    def api_config(self):
+        """Path to Images api config. Defaults to etc/glance-api.conf"""
+        return self.get("api_config", "etc/glance-api.conf")
+
+
+class NetworkConfig(object):
+    """Provides configuration information for connecting to an
+	OpenStack Network Service.
+	"""
+
+    def __init__(self, conf):
+        """Initialize a quantum-specific configuration object."""
+        self.conf = conf
+
+    def get(self, item_name, default_value):
+        try:
+            return self.conf.get("quantum", item_name)
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+            return default_value
+
+    @property
+    def directory(self):
+        """Directory of quantum home. Defaults to /opt/stack/quantum"""
+        return self.get("directory", "/opt/stack/quantum")
+
+    @property
+    def config(self):
+        """Path to quantum manager config. Defaults to etc/quantum.conf"""
+        return self.get("config", "etc/quantum.conf")
+
+    @property
+    def agent_config(self):
+        """Path to quantum agent plugin config. Defaults to quantum/plugins/openvswitch/ovs_quantum_plugin.ini"""
+        return self.get("agent_config", "quantum/plugins/openvswitch/ovs_quantum_plugin.ini")
+
+
+class MySQLConfig(object):
+    """Provides configuration information for connecting to MySQL."""
+
+    def __init__(self, conf):
+        """Initialize a mysql-specific configuration object."""
+        self.conf = conf
+
+    def get(self, item_name, default_value):
+        try:
+            return self.conf.get("mysql", item_name)
+        except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
+            return default_value
+
+    @property
+    def user(self):
+        return self.get('user', 'root')
+
+    @property
+    def password(self):
+        return self.get('password', 'password')
+
+    @property
+    def host(self):
+        return self.get('host', 'localhost')
+
 
 class TempestConfig(object):
     """Provides OpenStack configuration information."""
@@ -225,9 +317,11 @@ class TempestConfig(object):
             raise RuntimeError(msg)
 
         self._conf = self.load_config(path)
-        self.compute = ComputeConfig(self._conf)
         self.identity = IdentityConfig(self._conf)
+	self.compute = ComputeConfig(self._conf)
         self.images = ImagesConfig(self._conf)
+	self.network = NetworkConfig(self._conf)
+        self.mysql = MySQLConfig(self._conf)
 
     def load_config(self, path):
         """Read configuration from given path and return a config object."""

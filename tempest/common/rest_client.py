@@ -1,7 +1,6 @@
 import json
 import httplib2
 import logging
-import sys
 import time
 from tempest import exceptions
 
@@ -11,7 +10,6 @@ MAX_RECURSION_DEPTH = 2
 
 
 class RestClient(object):
-
     def __init__(self, config, user, password, auth_url, service,
                  tenant_name=None):
         self.log = logging.getLogger(__name__)
@@ -48,52 +46,51 @@ class RestClient(object):
         """
         Provides authentication via Keystone
         """
+        self.http_obj = httplib2.Http()
+        resp, body = self._auth_token(user, password, auth_url, tenant_name)
 
+        if resp.status == 200:
+            try:
+                return self._extract_auth_response(body, service)
+            except KeyError:
+                print "Failed to authenticate user"
+                raise
+        elif resp.status == 401:
+            raise exceptions.AuthenticationFailure(user=user,
+                                                password=password)
+
+    def _auth_token(self, user, api_key, auth_url, tenant_name):
         creds = {'auth': {
                 'passwordCredentials': {
                     'username': user,
-                    'password': password,
+                    'password': api_key,
                 },
                 'tenantName': tenant_name
             }
         }
 
-        self.http_obj = httplib2.Http()
         headers = {'Content-Type': 'application/json'}
         body = json.dumps(creds)
         resp, body = self.http_obj.request(auth_url, 'POST',
                                            headers=headers, body=body)
+        return resp, body
 
-        if resp.status == 200:
-            try:
-                auth_data = json.loads(body)['access']
-                token = auth_data['token']['id']
-            except Exception, e:
-                print "Failed to obtain token for user: %s" % e
-                raise
+    def _extract_auth_response(self, body, service):
+        auth_data = json.loads(body)['access']
+        token = auth_data['token']['id']
+        tenant_id = auth_data['token']['tenant']['id']
+        catalog = [s for s in auth_data['serviceCatalog']
+                     if s['name'] == service]
+        endpoints = catalog[0]['endpoints']
+        mgmt_url = endpoints[0]['publicURL']
 
-            mgmt_url = None
-            for ep in auth_data['serviceCatalog']:
-                if ep["type"] == service:
-                    mgmt_url = ep['endpoints'][0]['publicURL']
-                    # See LP#920817. The tenantId is *supposed*
-                    # to be returned for each endpoint accorsing to the
-                    # Keystone spec. But... it isn't, so we have to parse
-                    # the tenant ID out of hte public URL :(
-                    tenant_id = mgmt_url.split('/')[-1]
-                    break
-
-            if mgmt_url == None:
-                raise exceptions.EndpointNotFound(service)
-
-            #TODO (dwalleck): This is a horrible stopgap.
-            #Need to join strings more cleanly
-            temp = mgmt_url.rsplit('/')
-            service_url = temp[0] + '//' + temp[2] + '/' + temp[3] + '/'
-            management_url = service_url + tenant_id
-            return token, management_url
-        elif resp.status == 401:
-            raise exceptions.AuthenticationFailure(user=user, password=api_key)
+        #TODO (dwalleck): This is a horrible stopgap.
+        #Need to join strings more cleanly
+        temp = mgmt_url.rsplit('/')
+        service_url = temp[0] + '//' + temp[2] + '/' + temp[3] + '/'
+        #management_url = service_url + tenant_name
+        management_url = service_url + tenant_id
+        return token, management_url
 
     def post(self, url, body, headers):
         return self.request('POST', url, headers, body)
@@ -171,3 +168,15 @@ class RestClient(object):
             raise exceptions.TempestException(str(resp.status))
 
         return resp, resp_body
+
+
+class RestAdminClient(RestClient):
+
+    def _extract_auth_response(self, body, service):
+        auth_data = json.loads(body)['access']
+        token = auth_data['token']['id']
+        catalog = [s for s in auth_data['serviceCatalog']
+                     if s['name'] == service]
+        endpoints = catalog[0]['endpoints']
+        mgmt_url = endpoints[0]['adminURL']
+        return token, mgmt_url

@@ -16,21 +16,19 @@
 # under the License.
 
 
-from storm.common import rest_client
-from storm import exceptions
+from tempest.common import rest_client
 import json
-import time
 import httplib2
 from cloudfiles.fjson import json_loads
 
 class KeystoneClient(object):
 
-    def __init__(self, username, key, url, tenant, config=None):
-        self.client = rest_client.RestClient(username, key, url,
+    def __init__(self, username, password, url, tenant, config=None):
+        self.client = rest_client.RestClient(username, password, url,
                                              tenant_name=tenant,
                                              config=config,
                                              service="keystone")
-        self.admin_client = rest_client.RestAdminClient(username, key, url,
+        self.admin_client = rest_client.RestAdminClient(username, password, url,
                                                         tenant_name=tenant,
                                                         config=config,
                                                         service="keystone")
@@ -108,7 +106,7 @@ class KeystoneClient(object):
         post_body = {
             'name': name,
             'description': description,
-            'serviceId': service_id 
+            'serviceId': service_id
         }
         post_body = json.dumps({'role': post_body})
         resp, body = self.admin_client.post('OS-KSADM/roles', post_body, self.headers)
