@@ -15,20 +15,16 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 import base64
-import re
 import subprocess
 import time
-import json
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 
-import storm.config
-from storm import openstack
-from storm.common.utils.data_utils import rand_name
-from storm import exceptions
-from nova import utils
-from nova import test
+import tempest.config
+from tempest import openstack
+from tempest.common.utils.data_utils import rand_name
+from tempest import exceptions
 import stackmonkey.manager as ssh_manager
 
 from medium.tests.processes import (
@@ -42,7 +38,7 @@ from medium.tests.processes import (
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
 
-default_config = storm.config.StormConfig('etc/large-less-build_timeout.conf')
+default_config = tempest.config.TempestConfig('etc/large-less-build_timeout.conf')
 config = default_config
 environ_processes = []
 

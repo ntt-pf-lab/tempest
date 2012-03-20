@@ -24,16 +24,16 @@ import unittest2 as unittest
 from nose.plugins.attrib import attr
 from nova import test
 
-from storm import openstack
-import storm.config
-from storm.common.utils.data_utils import rand_name
+from tempest import openstack
+import tempest.config
+from tempest.common.utils.data_utils import rand_name
 
 """
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
 
-default_config = storm.config.StormConfig('etc/medium.conf')
-test_config = storm.config.StormConfig('etc/medium_test.conf')
+default_config = tempest.config.TempestConfig('etc/medium.conf')
+test_config = tempest.config.TempestConfig('etc/medium_test.conf')
 config = default_config
 environ_processes = []
 

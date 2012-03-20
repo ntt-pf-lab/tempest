@@ -16,23 +16,17 @@
 # under the License.
 import json
 import subprocess
-import time
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 
-from storm import openstack
-from medium.tests.processes import (
-        KeystoneProcess,
-        NovaApiProcess)
+from tempest import openstack
 from medium.tests.test_through import config, tearDownModule
 
 config = config
-environ_processes = []
 
 
 def setUpModule(module):
-    environ_processes = module.environ_processes
     config = module.config
 
     try:
@@ -60,7 +54,7 @@ class TenantTest(unittest.TestCase):
 
     def setUp(self):
         self.os = openstack.Manager(config=self.config)
-        # take a rest client from storm internal.
+        # take a rest client from tempest internal.
         self.rest_client = self.os.servers_client.client
 
         self.testing_processes = []

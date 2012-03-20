@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-from tempest.common import rest_client
-=======
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright 2011 NTT
@@ -18,28 +15,18 @@ from tempest.common import rest_client
 # License for the specific language governing permissions and limitations
 # under the License.
 
-
-from storm.common import rest_client
-from storm import exceptions
->>>>>>> hpB
+from tempest.common import rest_client
 import json
 
 
 class FlavorsClient(object):
 
-<<<<<<< HEAD
     def __init__(self, config, username, password, auth_url, tenant_name=None):
         self.config = config
         catalog_type = self.config.compute.catalog_type
         self.client = rest_client.RestClient(config, username, password,
                                              auth_url, catalog_type,
                                              tenant_name)
-=======
-    def __init__(self, username, key, auth_url, tenant_name=None, config=None):
-        self.client = rest_client.RestClient(username, key,
-                                             auth_url, tenant_name,
-                                             config=config)
->>>>>>> hpB
 
     def list_flavors(self, params=None):
         url = 'flavors'

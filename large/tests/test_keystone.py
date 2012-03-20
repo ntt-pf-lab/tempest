@@ -20,12 +20,12 @@ import logging
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 
-import storm.config
+import tempest.config
 from kong import tests
-from storm import openstack
-from storm.common import rest_client
-from storm.common.rest_client import RestClientLogging
-from storm.services.keystone.json.keystone_client import TokenClient
+from tempest import openstack
+from tempest.common import rest_client
+from tempest.common.rest_client import RestClientLogging
+from tempest.services.keystone.json.keystone_client import TokenClient
 from nose.plugins import skip
 
 LOG = logging.getLogger("large.tests.test_keystone")
@@ -56,7 +56,7 @@ class KeystoneLogging(RestClientLogging):
 class FunctionalTest(unittest.TestCase):
 
     def setUp(self):
-        default_config = storm.config.StormConfig('etc/large.conf')
+        default_config = tempest.config.TempestConfig('etc/large.conf')
         self.os = openstack.Manager(default_config)
         self.client = self.os.keystone_client
         self.token_client = TokenClient(default_config)
@@ -68,7 +68,7 @@ class FunctionalTest(unittest.TestCase):
 
     @attr(kind='large')
     def swap_user(self, user, password, tenant_name):
-        config = storm.config.StormConfig('etc/large.conf')
+        config = tempest.config.TempestConfig('etc/large.conf')
         config.keystone.conf.set('keystone', 'user', user)
         config.keystone.conf.set('keystone', 'password', password)
         config.keystone.conf.set('keystone', 'tenant_name', tenant_name)

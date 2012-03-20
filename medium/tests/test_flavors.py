@@ -19,8 +19,8 @@ import time
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 from nova import test
-from storm import openstack
-import storm.config
+from tempest import openstack
+import tempest.config
 
 
 """
@@ -28,9 +28,9 @@ To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
 
 # for admin tenant
-default_config = storm.config.StormConfig('etc/medium.conf')
+default_config = tempest.config.TempestConfig('etc/medium.conf')
 # for demo tenant
-test_config = storm.config.StormConfig('etc/medium_test.conf')
+test_config = tempest.config.TempestConfig('etc/medium_test.conf')
 config = default_config
 environ_processes = []
 
@@ -97,7 +97,7 @@ class FunctionalTest(unittest.TestCase):
 
 
 class FlavorsTest(FunctionalTest):
-    # Almost same as storm.tests.test_flavors,
+    # Almost same as tempest.tests.test_flavors,
     # extends MT environment behavior.
 
     def setUp(self):

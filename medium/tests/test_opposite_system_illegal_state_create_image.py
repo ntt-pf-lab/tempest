@@ -7,10 +7,10 @@ import unittest2 as unittest
 from nose.plugins.attrib import attr
 
 from kong import tests
-from storm import openstack
-import storm.config
-from storm import exceptions
-from storm.common.utils.data_utils import rand_name
+from tempest import openstack
+import tempest.config
+from tempest import exceptions
+from tempest.common.utils.data_utils import rand_name
 import stackmonkey.manager as ssh_manager
 from nova import test
 
@@ -26,7 +26,7 @@ from medium.tests.utils import (
         cleanup_virtual_instances, cleanup_processes)
 
 
-config = storm.config.StormConfig('etc/medium-less-build_timeout.conf')
+config = tempest.config.TempestConfig('etc/medium-less-build_timeout.conf')
 environ_processes = []
 
 

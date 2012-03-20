@@ -6,9 +6,9 @@ import subprocess
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 
-from storm import openstack
-import storm.config
-from storm.common.utils.data_utils import rand_name
+from tempest import openstack
+import tempest.config
+from tempest.common.utils.data_utils import rand_name
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -24,7 +24,7 @@ from medium.tests.utils import (
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
 
-default_config = storm.config.StormConfig('etc/medium.conf')
+default_config = tempest.config.TempestConfig('etc/medium.conf')
 config = default_config
 environ_processes = []
 
@@ -137,7 +137,7 @@ class ServersTest(FunctionalTest):
 
 
 class FlavorsTest(FunctionalTest):
-    # Almost same as storm.tests.test_flavors,
+    # Almost same as tempest.tests.test_flavors,
     # but extends MT environment behavior.
 
     def setUp(self):

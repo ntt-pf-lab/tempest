@@ -24,8 +24,8 @@ import unittest2 as unittest
 from nose.plugins.attrib import attr
 
 from kong import tests
-from storm import openstack
-import storm.config
+from tempest import openstack
+import tempest.config
 from nova import test
 
 from medium.tests.processes import (
@@ -39,7 +39,7 @@ from medium.tests.processes import (
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
 
-default_config = storm.config.StormConfig('etc/medium.conf')
+default_config = tempest.config.TempestConfig('etc/medium.conf')
 config = default_config
 environ_processes = []
 

@@ -18,26 +18,25 @@ import base64
 import re
 import socket
 import subprocess
-import time
 import sys
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 from nova import test
 
-from storm import openstack
-import storm.config
-from storm.common.utils.data_utils import rand_name
-from storm import exceptions
+from tempest import openstack
+import tempest.config
+from tempest.common.utils.data_utils import rand_name
+from tempest import exceptions
 
 """
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
 # Inner L2 network, bridge, gateway, dhcp
-NW1= ('10.0.0.0/24', 'br_int', '10.0.0.1', '10.0.0.2') 
-NW2 = ('10.0.1.0/24', 'br_int', '10.0.1.1', '10.0.1.2') 
-default_config = storm.config.StormConfig('etc/medium.conf')
-test_config = storm.config.StormConfig('etc/medium_test.conf')
+NW1= ('10.0.0.0/24', 'br_int', '10.0.0.1', '10.0.0.2')
+NW2 = ('10.0.1.0/24', 'br_int', '10.0.1.1', '10.0.1.2')
+default_config = tempest.config.TempestConfig('etc/medium.conf')
+test_config = tempest.config.TempestConfig('etc/medium_test.conf')
 config = default_config
 environ_processes = []
 quantum_client = None
@@ -54,7 +53,6 @@ def setUpModule(module):
     Create networks.
 
     """
-    config = module.config
     os = openstack.Manager(config=default_config)
     quantum_client = os.quantum_client
     nw_wrapper = NetworkWrapper(default_config)
@@ -799,7 +797,7 @@ class CreateServerTest(FunctionalTest):
 
         # create server => tenant:demo
         demo_name = self._testMethodName + '_demo'
-        resp, server = self.s2_client.create_server(name,
+        resp, server = self.s2_client.create_server(demo_name,
                                                     alt_img_id,
                                                     self.flavor_ref,
                                                     meta=meta,
@@ -1140,7 +1138,7 @@ class CreateServerTest(FunctionalTest):
                                                     accessIPv6=accessIPv6,
                                                     personality=personality)
 
- 
+
         sql = "delete from quotas;"
         self.exec_sql(sql)
 

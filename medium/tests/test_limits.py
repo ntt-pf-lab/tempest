@@ -22,7 +22,7 @@ from nova import test
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 
-from storm import openstack
+from tempest import openstack
 from medium.tests.processes import (
         KeystoneProcess,
         NovaApiProcess)
@@ -57,7 +57,7 @@ class TestBase(unittest.TestCase):
     def setUp(self):
         self.testing_processes = []
         self.os = openstack.Manager(config=self.config)
-        # take a rest client from storm internal.
+        # take a rest client from tempest internal.
         self.rest_client = self.os.servers_client.client
 
         # reset db.

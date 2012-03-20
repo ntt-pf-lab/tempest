@@ -1,8 +1,6 @@
-from storm import exceptions
-from storm.common import rest_client
+from tempest.common import rest_client
 import httplib2
 import json
-import storm.config
 
 
 class RestClientUnauth(rest_client.RestClient):

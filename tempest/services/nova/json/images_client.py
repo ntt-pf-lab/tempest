@@ -1,17 +1,11 @@
-<<<<<<< HEAD
 from tempest.common import rest_client
 from tempest import exceptions
-=======
-from storm import exceptions
-from storm.common import rest_client
->>>>>>> hpB
 import json
 import time
 
 
 class ImagesClient(object):
 
-<<<<<<< HEAD
     def __init__(self, config, username, password, auth_url, tenant_name=None):
         self.config = config
         catalog_type = self.config.compute.catalog_type
@@ -21,18 +15,6 @@ class ImagesClient(object):
 
         self.build_interval = self.config.compute.build_interval
         self.build_timeout = self.config.compute.build_timeout
-=======
-    def __init__(self, username, key, auth_url, tenant_name, config=None):
-        if config is None:
-            config = storm.config.StormConfig()
-        self.config = config
-
-        self.client = rest_client.RestClient(username, key,
-                                             auth_url, tenant_name,
-                                             config=config)
-        self.build_interval = self.config.nova.build_interval
-        self.build_timeout = self.config.nova.build_timeout
->>>>>>> hpB
         self.headers = {'Content-Type': 'application/json',
                         'Accept': 'application/json'}
 

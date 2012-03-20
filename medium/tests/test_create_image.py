@@ -22,9 +22,9 @@ import sys
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 from nova import test
-from storm import openstack, exceptions
-import storm.config
-from storm.common.utils.data_utils import rand_name
+from tempest import openstack, exceptions
+import tempest.config
+from tempest.common.utils.data_utils import rand_name
 
 
 """
@@ -32,9 +32,9 @@ To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
 
 # for admin tenant
-default_config = storm.config.StormConfig('etc/medium.conf')
+default_config = tempest.config.TempestConfig('etc/medium.conf')
 # for demo tenant
-test_config = storm.config.StormConfig('etc/medium_test.conf')
+test_config = tempest.config.TempestConfig('etc/medium_test.conf')
 config = default_config
 environ_processes = []
 

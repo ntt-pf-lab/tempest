@@ -22,9 +22,9 @@ import unittest2 as unittest
 from nose.plugins.attrib import attr
 from nova import test
 
-from storm import openstack
-import storm.config
-from storm.services.nova.json.keypairs_client import KeypairsClient
+from tempest import openstack
+import tempest.config
+from tempest.services.nova.json.keypairs_client import KeypairsClient
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -37,7 +37,7 @@ from medium.tests.processes import (
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
 
-default_config = storm.config.StormConfig('etc/medium.conf')
+default_config = tempest.config.TempestConfig('etc/medium.conf')
 config = default_config
 environ_processes = []
 

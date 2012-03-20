@@ -15,9 +15,9 @@ from nova import exception
 from nova import image
 from nova import log as logging
 
-#from storm import openstack
-#import storm.config
-#from storm import exceptions
+#from tempest import openstack
+#import tempest.config
+#from tempest import exceptions
 import manager as ssh_manager
 #import stackmonkey.manager as ssh_manager
 

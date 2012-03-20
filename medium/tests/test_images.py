@@ -26,11 +26,11 @@ import unittest2 as unittest
 from nose.plugins.attrib import attr
 
 from kong import tests
-from storm import openstack
-import storm.config
-from storm.services.nova.json.images_client import ImagesClient
-from storm.services.nova.json.servers_client import ServersClient
-from storm.services.keystone.json.keystone_client import TokenClient
+from tempest import openstack
+import tempest.config
+from tempest.services.nova.json.images_client import ImagesClient
+from tempest.services.nova.json.servers_client import ServersClient
+from tempest.services.keystone.json.keystone_client import TokenClient
 
 from medium.tests.processes import (
         GlanceRegistryProcess, GlanceApiProcess,
@@ -43,7 +43,7 @@ from medium.tests.processes import (
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
 
-default_config = storm.config.StormConfig('etc/medium.conf')
+default_config = tempest.config.TempestConfig('etc/medium.conf')
 config = default_config
 environ_processes = []
 MAX_RETRY=10
