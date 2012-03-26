@@ -11,20 +11,25 @@ import SecurityGroupsClient
 from tempest.services.nova.json.floating_ips_client import FloatingIPsClient
 from tempest.services.nova.json.keypairs_client import KeyPairsClient
 from tempest.services.networks.json.networks_client import NetworksClient
+from tempest.services.nova.json.volumes_client import VolumesClient
 
 
 class Manager(object):
 
-    def __init__(self):
+    def __init__(self, username=None, password=None, tenant_name=None):
         """
         Top level manager for all Openstack APIs
         """
         self.config = tempest.config.TempestConfig()
-        username = self.config.identity.username
-        password = self.config.identity.password
-        tenant_name = self.config.identity.tenant_name
 
         if None in [username, password, tenant_name]:
+            # Pull from the default, the first non-admin user
+            username = self.config.identity.nonadmin_user1
+            password = self.config.identity.nonadmin_user1_password
+            tenant_name = self.config.identity.nonadmin_user1_tenant_name
+
+        if None in [username, password, tenant_name]:
+            # We can't find any usable credentials, fail early
             raise exceptions.InvalidConfiguration(message="Missing complete \
                                                   user credentials.")
         auth_url = self.config.identity.auth_url
@@ -44,6 +49,7 @@ class Manager(object):
         self.security_groups_client = SecurityGroupsClient(*client_args)
         self.floating_ips_client = FloatingIPsClient(*client_args)
         self.networks_client = NetworksClient(*client_args)
+        self.volumes_client = VolumesClient(*client_args)
 
 
 class ServiceManager(object):

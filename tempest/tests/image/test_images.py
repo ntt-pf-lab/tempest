@@ -33,7 +33,6 @@ except ImportError:
 from tempest import openstack
 
 
-@unittest.skipUnless(GLANCE_INSTALLED, 'Glance not installed')
 class CreateRegisterImagesTest(unittest.TestCase):
 
     """
@@ -42,6 +41,8 @@ class CreateRegisterImagesTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        if not GLANCE_INSTALLED:
+            raise SkipTest('Glance not installed')
         cls.os = openstack.ServiceManager()
         cls.client = cls.os.images.get_client()
         cls.created_images = []
@@ -137,6 +138,8 @@ class ListImagesTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        if not GLANCE_INSTALLED:
+            raise SkipTest('Glance not installed')
         raise SkipTest('Skipping until Glance Bug 912897 is fixed')
         cls.os = openstack.ServiceManager()
         cls.client = cls.os.images.get_client()
@@ -198,4 +201,4 @@ class ListImagesTest(unittest.TestCase):
         Simple test to see all fixture images returned
         """
         images = self.client.get_images()
-        self.assertEqual(10, len(images) - len(cls.original_images))
+        self.assertEqual(10, len(images) - len(self.original_images))
