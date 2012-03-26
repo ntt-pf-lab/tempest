@@ -257,7 +257,7 @@ class NetworkWrapper(object):
 
     def create_network(self, label, ip_range, size, bridge, tenant, uuid, gw, dhcp):
         params = "--label=%s --fixed_range_v4=%s --num_networks=1 --network_size=%s\
- --bridge_interface=%s --project_id=%s --uuid=%s --gateway=%s --dhcp_server=%s" %\
+ --bridge_interface=%s --project_id=%s --uuid=%s --gateway=%s --dhcp_server=%s --host=xosb1" %\
          (label, ip_range, size, bridge, tenant, uuid, gw, dhcp)
         LOG.info(params)
         return self._nova_manage_network('create', params)
