@@ -202,21 +202,21 @@ class QuantumManagerRestServiceTest(QuantumManagerFunctionalTest):
     def _test_show_port_attachment(self, status_code):
         self._execute_fake_and_wait_for_error(show_port_attachment=status_code)
 
-    @test.skip_test('not merge into kirin master brach')
+    @test.skip_test('not merge into kirin master branch')
     @attr(kind='medium')
-    def test_d02_311(self):
+    def test_show_port_attachment_forbidden(self):
         """show_port_attachment_forbidden"""
         self._test_show_port_attachment(403)
 
-    @test.skip_test('not merge into kirin master brach')
+    @test.skip_test('not merge into kirin master branch')
     @attr(kind='medium')
-    def test_d02_312(self):
+    def test_show_port_attachment_network_not_found(self):
         """show_port_attachment_network_not_found"""
         self._test_show_port_attachment(420)
 
-    @test.skip_test('not merge into kirin master brach')
+    @test.skip_test('not merge into kirin master branch')
     @attr(kind='medium')
-    def test_d02_313(self):
+    def test_show_port_attachment_port_not_found(self):
         """show_port_attachment_port_not_found"""
         self._test_show_port_attachment(430)
 
@@ -358,101 +358,81 @@ class LibvirtRebootErrorTest(LibvirtFunctionalTest):
                           server['id'], 'ERROR')
 
     @attr(kind='medium')
-    def test_d02_303(self):
+    def test_reboot_libvirt_vir_error(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
                            'fake_libvirt.libvirt_patch_vir_error', 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_304(self):
+    def test_reboot_libvirt_no_domain(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
                             'fake_libvirt.libvirt_patch_no_domain', 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_318(self):
+    def test_reboot_libvirt_vir_error_rd(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
                     'fake_libvirt.libvirt_patch_vir_error_rd', 'ERROR', True)
 
     @attr(kind='medium')
-    def test_d02_319(self):
+    def test_reboot_libvirt_no_domain_rd(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
                     'fake_libvirt.libvirt_patch_no_domain_rd', 'ERROR', True)
 
     @attr(kind='medium')
-    def test_d02_321(self):
+    def test_reboot_virdomain_error(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'virdomain-error',
                                 'fake_libvirt.libvirt_patch')
 
     @attr(kind='medium')
-    def test_d02_322(self):
+    def test_reboot_virdomain_error_invalid_op(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'virdomain-error',
                                 'fake_libvirt.libvirt_patch_invalid_operation')
 
     @attr(kind='medium')
-    def test_d02_324(self):
+    def test_reboot_undefine_error(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'virdomain-error',
                             'fake_libvirt.libvirt_patch_undefine', 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_325(self):
+    def test_reboot_undefine_error_invalid_op(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'virdomain-error',
             'fake_libvirt.libvirt_undefine_patch_invalid_operation', 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_327(self):
+    def test_reboot_vif_unplug_error(self):
         self._reboot_server_with_fake_libvirt('nova.virt.libvirt.vif',
                         'vif-unplug-error', 'fake_libvirt_vif.vif_patch')
 
     @attr(kind='medium')
-    def test_d02_329(self):
-        self._reboot_server_with_fake_libvirt('nova.virt.libvirt.vif',
-                        'vif-unplug-error', 'fake_libvirt_vif.vif_patch')
-
-    @attr(kind='medium')
-    def test_d02_331(self):
+    def test_reboot_firewall_error_unfilter(self):
         self._reboot_server_with_fake_libvirt('nova.virt.libvirt.firewall',
                         'firewall-error', 'fake_iptables.unfilter_patch')
 
     @attr(kind='medium')
-    def test_d02_332(self):
+    def test_reboot_vif_plug_error(self):
         self._reboot_server_with_fake_libvirt('nova.virt.libvirt.vif',
                         'vif-plug-error', 'fake_libvirt_vif.vif_patch')
 
     @attr(kind='medium')
-    def test_d02_333(self):
-        self._reboot_server_with_fake_libvirt('nova.virt.libvirt.vif',
-                        'vif-plug-error', 'fake_libvirt_vif.vif_patch')
-
-    @attr(kind='medium')
-    def test_d02_334(self):
-        self._reboot_server_with_fake_libvirt('nova.virt.libvirt.vif',
-                        'vif-plug-error', 'fake_libvirt_vif.vif_patch')
-
-    @attr(kind='medium')
-    def test_d02_335(self):
-        self._reboot_server_with_fake_libvirt('nova.virt.libvirt.vif',
-                        'vif-plug-error', 'fake_libvirt_vif.vif_patch')
-
-    @attr(kind='medium')
-    def test_d02_337(self):
+    def test_reboot_virconn_error(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'virconn-error',
                                 'fake_libvirt.libvirt_definexml_patch')
 
     @attr(kind='medium')
-    def test_d02_340(self):
+    def test_reboot_virdomain_error_create(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'virdomain-error',
                                 'fake_libvirt.libvirt_create_patch')
 
     @attr(kind='medium')
-    def test_d02_343(self):
+    def test_reboot_firewall_error_filter(self):
         self._reboot_server_with_fake_libvirt('nova.virt.libvirt.firewall',
                         'firewall-error', 'fake_iptables.filter_patch')
 
     @attr(kind='medium')
-    def test_d02_344(self):
+    def test_reboot_lookup_error(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
                      'fake_libvirt.libvirt_patch_vir_error_rd_conf')
 
     @attr(kind='medium')
-    def test_d02_345(self):
+    def test_lookup_error_no_domain(self):
         self._reboot_server_with_fake_libvirt('libvirt', 'lookup-error',
                     'fake_libvirt.libvirt_patch_no_domain_rd_conf')

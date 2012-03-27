@@ -367,56 +367,50 @@ class LibvirtErrorTest(LibvirtFunctionalTest):
         self.ss_client.wait_for_server_not_exists(server['id'])
 
     @attr(kind='medium')
-    def test_d02_223(self):
+    def test_delete_server_lookup_error(self):
         self._delete_server_with_fake_libvirt('lookup-error', [
             ('libvirt', 'fake_libvirt.libvirt_patch_vir_error')])
 
     @attr(kind='medium')
-    def test_d02_224(self):
+    def test_delete_server_lookup_error_no_domain(self):
         self._delete_server_with_fake_libvirt('lookup-error', [
             ('libvirt', 'fake_libvirt.libvirt_patch_no_domain')])
 
     @attr(kind='medium')
-    def test_d02_226(self):
+    def test_delete_server_virdomain_error_connection_patch(self):
         self._delete_server_with_fake_libvirt('virdomain-error', [
             ('libvirt', 'fake_libvirt.libvirt_patch'),
             ('nova.virt.libvirt.connection', 'fake_libvirt_connection.patch')])
 
     @attr(kind='medium')
-    def test_d02_227(self):
+    def test_delete_server_virdomain_error_invalid_op(self):
         self._delete_server_with_fake_libvirt('virdomain-error', [
             ('libvirt', 'fake_libvirt.libvirt_patch_invalid_operation')])
 
     @attr(kind='medium')
-    def test_d02_229(self):
+    def test_delete_server_virdomain_error_undefine(self):
         self._delete_server_with_fake_libvirt('virdomain-error', [
             ('libvirt', 'fake_libvirt.libvirt_patch_undefine')])
 
     @attr(kind='medium')
-    def test_d02_230(self):
+    def test_delete_server_virdomain_error_undefine_invalid_op(self):
         self._delete_server_with_fake_libvirt('virdomain-error', [
             ('libvirt', 'fake_libvirt.libvirt_undefine_patch_invalid_operation')])
 
-    @test.skip_test('skip temply')
+    @test.skip_test('skip temporarily')
     @attr(kind='medium')
-    def test_d02_232(self):
+    def test_delete_server_vif_unplug_error(self):
         self._delete_server_with_fake_libvirt('vif-unplug-error', [
             ('nova.virt.libvirt.vif', 'fake_libvirt_vif.vif_patch')])
 
-    @test.skip_test('skip temply')
+    @test.skip_test('skip temporarily')
     @attr(kind='medium')
-    def test_d02_234(self):
-        self._delete_server_with_fake_libvirt('vif-unplug-error', [
-            ('nova.virt.libvirt.vif', 'fake_libvirt_vif.vif_patch')])
-
-    @test.skip_test('skip temply')
-    @attr(kind='medium')
-    def test_d02_236(self):
+    def test_delete_server_firewall_error(self):
         self._delete_server_with_fake_libvirt('firewall-error', [
             ('nova.virt.libvirt.firewall', 'fake_iptables.unfilter_patch')])
 
-    @test.skip_test('skip temply')
+    @test.skip_test('skip temporarily')
     @attr(kind='medium')
-    def test_d02_237(self):
+    def test_delete_server_general_error(self):
         self._delete_server_with_fake_libvirt('general-error', [
             ('shutil', 'fake.rmtree_patch')])
