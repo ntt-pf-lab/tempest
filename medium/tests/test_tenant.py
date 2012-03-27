@@ -33,14 +33,14 @@ def setUpModule(module):
         # create users.
         subprocess.check_call('/opt/openstack/nova/bin/nova-manage user create '
                               '--name=%s --access=secrete --secret=secrete'\
-                                      % config.nova.username,
-                              cwd=config.nova.directory, shell=True)
+                                      % config.compute.username,
+                              cwd=config.compute.source_dir, shell=True)
 
         # create projects.
         subprocess.check_call('/opt/openstack/nova/bin/nova-manage project create '
                               '--project=1 --user=%s'\
-                                      % config.nova.username,
-                              cwd=config.nova.directory, shell=True)
+                                      % config.compute.username,
+                              cwd=config.compute.source_dir, shell=True)
 
     except Exception:
         pass

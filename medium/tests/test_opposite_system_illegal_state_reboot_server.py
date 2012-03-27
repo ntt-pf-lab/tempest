@@ -32,20 +32,20 @@ def setUpModule(module):
 
     # glance.
     environ_processes.append(GlanceRegistryProcess(
-            config.glance.directory,
-            config.glance.registry_config))
+            config.images.source_dir,
+            config.images.registry_config))
     environ_processes.append(GlanceApiProcess(
-            config.glance.directory,
-            config.glance.api_config,
-            config.glance.host,
-            config.glance.port))
+            config.images.source_dir,
+            config.images.api_config,
+            config.images.host,
+            config.images.port))
 
     # keystone.
     environ_processes.append(KeystoneProcess(
-            config.keystone.directory,
-            config.keystone.config,
-            config.keystone.host,
-            config.keystone.port))
+            config.identity.source_dir,
+            config.identity.config,
+            config.identity.host,
+            config.identity.port))
 
     for process in environ_processes:
         process.start()
@@ -84,15 +84,15 @@ class QuantumManagerFunctionalTest(unittest.TestCase):
 
         # nova.
         self.testing_processes.append(NovaApiProcess(
-                self.config.nova.directory,
-                self.config.nova.host,
-                self.config.nova.port))
+                self.config.compute.source_dir,
+                self.config.compute.host,
+                self.config.compute.port))
         self.testing_processes.append(NovaNetworkProcess(
-                self.config.nova.directory))
+                self.config.compute.source_dir))
         self.testing_processes.append(NovaSchedulerProcess(
-                self.config.nova.directory))
+                self.config.compute.source_dir))
         self.testing_processes.append(NovaComputeProcess(
-                self.config.nova.directory))
+                self.config.compute.source_dir))
 
         # reset db.
         silent_check_call('mysql -u%s -p%s -e "'
@@ -103,7 +103,7 @@ class QuantumManagerFunctionalTest(unittest.TestCase):
                               self.config.mysql.password),
                           shell=True)
         silent_check_call('/opt/openstack/nova/bin/nova-manage db sync',
-                          cwd=self.config.nova.directory, shell=True)
+                          cwd=self.config.compute.source_dir, shell=True)
 
         for process in self.testing_processes:
             process.start()
@@ -118,11 +118,11 @@ class QuantumManagerFunctionalTest(unittest.TestCase):
         # create users.
         silent_check_call('/opt/openstack/nova/bin/nova-manage user create '
                           '--name=admin --access=secrete --secret=secrete',
-                          cwd=self.config.nova.directory, shell=True)
+                          cwd=self.config.compute.source_dir, shell=True)
         # create projects.
         silent_check_call('/opt/openstack/nova/bin/nova-manage project create '
                           '--project=1 --user=admin',
-                          cwd=self.config.nova.directory, shell=True)
+                          cwd=self.config.compute.source_dir, shell=True)
 
         self.addCleanup(cleanup_virtual_instances)
         self.addCleanup(cleanup_processes, self.testing_processes)
@@ -135,7 +135,7 @@ class QuantumManagerFunctionalTest(unittest.TestCase):
                                              '--bridge_interface=br-int '
                                              '--num_networks=1 '
                                              '--network_size=32 ',
-                                         cwd=self.config.nova.directory,
+                                         cwd=self.config.compute.source_dir,
                                          shell=True), retcode)
 
 
@@ -250,13 +250,13 @@ class LibvirtFunctionalTest(unittest.TestCase):
 
         # nova.
         self.testing_processes.append(NovaApiProcess(
-                self.config.nova.directory,
-                self.config.nova.host,
-                self.config.nova.port))
+                self.config.compute.source_dir,
+                self.config.compute.host,
+                self.config.compute.port))
         self.testing_processes.append(NovaNetworkProcess(
-                self.config.nova.directory))
+                self.config.compute.source_dir))
         self.testing_processes.append(NovaSchedulerProcess(
-                self.config.nova.directory))
+                self.config.compute.source_dir))
 
         # quantum.
         self.testing_processes.append(
@@ -271,7 +271,7 @@ class LibvirtFunctionalTest(unittest.TestCase):
                               self.config.mysql.password),
                           shell=True)
         silent_check_call('/opt/openstack/nova/bin/nova-manage db sync',
-                          cwd=self.config.nova.directory, shell=True)
+                          cwd=self.config.compute.source_dir, shell=True)
 
         for process in self.testing_processes:
             process.start()
@@ -280,11 +280,11 @@ class LibvirtFunctionalTest(unittest.TestCase):
         # create users.
         silent_check_call('/opt/openstack/nova/bin/nova-manage user create '
                           '--name=admin --access=secrete --secret=secrete',
-                          cwd=self.config.nova.directory, shell=True)
+                          cwd=self.config.compute.source_dir, shell=True)
         # create projects.
         silent_check_call('/opt/openstack/nova/bin/nova-manage project create '
                           '--project=1 --user=admin',
-                          cwd=self.config.nova.directory, shell=True)
+                          cwd=self.config.compute.source_dir, shell=True)
 
         # allocate networks.
         silent_check_call('/opt/openstack/nova/bin/nova-manage network create '
@@ -294,7 +294,7 @@ class LibvirtFunctionalTest(unittest.TestCase):
                           '--bridge_interface=br-int '
                           '--num_networks=1 '
                           '--network_size=32 ',
-                          cwd=self.config.nova.directory, shell=True)
+                          cwd=self.config.compute.source_dir, shell=True)
 
         self.addCleanup(cleanup_virtual_instances)
         self.addCleanup(cleanup_processes, self.testing_processes)
@@ -312,7 +312,7 @@ class LibvirtRebootErrorTest(LibvirtFunctionalTest):
             fakepath, fake_patch_name, status='ERROR', pass_get_info=False):
 
         compute = NovaComputeProcess(
-                self.config.nova.directory)
+                self.config.compute.source_dir)
         compute.start()
         self.testing_processes.append(compute)
         time.sleep(10)
@@ -339,7 +339,7 @@ class LibvirtRebootErrorTest(LibvirtFunctionalTest):
                         'fake_libvirt.libvirt_con_get_info_patch'))
         env = os.environ.copy()
         env['PYTHONPATH'] = self.get_fake_path(fakepath)
-        compute = NovaComputeProcess(self.config.nova.directory,
+        compute = NovaComputeProcess(self.config.compute.source_dir,
                                      patches=patches,
                                      env=env)
         compute.start()

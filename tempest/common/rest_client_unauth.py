@@ -5,7 +5,7 @@ import json
 
 class RestClientUnauth(rest_client.RestClient):
 
-    def keystone_v2_auth(self, user, api_key, auth_url, tenant_name):
+    def keystone_v2_auth(self, user, password, auth_url, tenant_name):
         """
         Provides authentication via Keystone 2.0
         """
@@ -13,7 +13,7 @@ class RestClientUnauth(rest_client.RestClient):
         creds = {'auth': {
                 'passwordCredentials': {
                     'username': user,
-                    'password': api_key,
+                    'password': password,
                 }
             }
         }

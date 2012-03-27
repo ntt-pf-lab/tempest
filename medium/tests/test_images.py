@@ -64,31 +64,31 @@ def setUpModule(module):
 
         # create tenants.
         subprocess.check_call('bin/keystone-manage tenant add tenant1',
-                              cwd=config.keystone.directory, shell=True)
+                              cwd=config.identity.source_dir, shell=True)
         subprocess.check_call('bin/keystone-manage tenant add tenant2',
-                              cwd=config.keystone.directory, shell=True)
+                              cwd=config.identity.source_dir, shell=True)
 
         # create users.
         subprocess.check_call('bin/keystone-manage user add '
                               'user1 user1 tenant1',
-                              cwd=config.keystone.directory, shell=True)
+                              cwd=config.identity.source_dir, shell=True)
         subprocess.check_call('bin/keystone-manage user add '
                               'user2 user2 tenant1',
-                              cwd=config.keystone.directory, shell=True)
+                              cwd=config.identity.source_dir, shell=True)
         subprocess.check_call('bin/keystone-manage user add '
                               'user3 user3 tenant2',
-                              cwd=config.keystone.directory, shell=True)
+                              cwd=config.identity.source_dir, shell=True)
 
         # grant role
         subprocess.check_call('bin/keystone-manage role grant '
                               'Member user1 tenant1',
-                              cwd=config.keystone.directory, shell=True)
+                              cwd=config.identity.source_dir, shell=True)
         subprocess.check_call('bin/keystone-manage role grant '
                               'Member user2 tenant1',
-                              cwd=config.keystone.directory, shell=True)
+                              cwd=config.identity.source_dir, shell=True)
         subprocess.check_call('bin/keystone-manage role grant '
                               'Member user3 tenant2',
-                              cwd=config.keystone.directory, shell=True)
+                              cwd=config.identity.source_dir, shell=True)
 
     except Exception:
         pass
@@ -126,10 +126,10 @@ def tearDownModule(module):
 
 class GlanceWrapper(object):
     def __init__(self, token, config):
-        self.path = config.glance.directory
-        self.conf = config.glance.api_config
-        self.host = config.glance.host
-        self.port = config.glance.port
+        self.path = config.images.source_dir
+        self.conf = config.images.api_config
+        self.host = config.images.host
+        self.port = config.images.port
         self.token = token
 
     def _glance(self, action, params, yes=None):
@@ -238,31 +238,31 @@ class ImagesTest(FunctionalTest):
         self.ss_client = self.os.servers_client
         self.img_client = self.os.images_client
         self.token_client = TokenClient(self.config)
-        token = self.token_client.get_token(self.config.keystone.user,
-                                            self.config.keystone.password,
-                                            self.config.keystone.tenant_name)
+        token = self.token_client.get_token(self.config.identity.username,
+                                            self.config.identity.password,
+                                            self.config.identity.tenant_name)
         self.glance = GlanceWrapper(token, self.config)
         class config(object):
             class env(object):
                 authentication = "keystone_v2"
 
             class nova(object):
-                build_interval = self.config.nova.build_interval
-                build_timeout = self.config.nova.build_timeout
+                build_interval = self.config.compute.build_interval
+                build_timeout = self.config.compute.build_timeout
 
         # user1
         user1 = {'username': 'user1', 'key': 'user1', 'tenant_name': 'tenant1',
-                 'auth_url': self.config.nova.auth_url, 'config': config}
+                 'auth_url': self.config.compute.auth_url, 'config': config}
         self.ss_client_for_user1 = ServersClient(**user1)
         self.img_client_for_user1 = ImagesClient(**user1)
         # user2
         user2 = {'username': 'user2', 'key': 'user2', 'tenant_name': 'tenant1',
-                 'auth_url': self.config.nova.auth_url, 'config': config}
+                 'auth_url': self.config.compute.auth_url, 'config': config}
         self.ss_client_for_user2 = ServersClient(**user2)
         self.img_client_for_user2 = ImagesClient(**user2)
         # user3
         user3 = {'username': 'user3', 'key': 'user3', 'tenant_name': 'tenant2',
-                 'auth_url': self.config.nova.auth_url, 'config': config}
+                 'auth_url': self.config.compute.auth_url, 'config': config}
         self.ss_client_for_user3 = ServersClient(**user3)
         self.img_client_for_user3 = ImagesClient(**user3)
 	retry = 0

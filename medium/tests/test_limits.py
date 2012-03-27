@@ -38,10 +38,10 @@ def setUpModule(module):
 
     # keystone.
     environ_processes.append(KeystoneProcess(
-            config.keystone.directory,
-            config.keystone.config,
-            config.keystone.host,
-            config.keystone.port))
+            config.identity.source_dir,
+            config.identity.config,
+            config.identity.host,
+            config.identity.port))
 
     for process in environ_processes:
         process.start()
@@ -70,19 +70,19 @@ class TestBase(unittest.TestCase):
                                   self.config.mysql.host),
                               shell=True)
         subprocess.call('/opt/openstack/nova/bin/nova-manage db sync',
-                        cwd=self.config.nova.directory, shell=True)
+                        cwd=self.config.compute.source_dir, shell=True)
 
         # create users.
         subprocess.check_call('/opt/openstack/nova/bin/nova-manage user create '
                               '--name=%s --access=secrete --secret=secrete'\
-                                      % self.config.nova.username,
-                              cwd=self.config.nova.directory, shell=True)
+                                      % self.config.compute.username,
+                              cwd=self.config.compute.source_dir, shell=True)
 
         # create projects.
         subprocess.check_call('/opt/openstack/nova/bin/nova-manage project create '
                               '--project=1 --user=%s'\
-                                      % self.config.nova.username,
-                              cwd=self.config.nova.directory, shell=True)
+                                      % self.config.compute.username,
+                              cwd=self.config.compute.source_dir, shell=True)
 
     def tearDown(self):
         for process in self.testing_processes:
@@ -104,7 +104,7 @@ class TestBase(unittest.TestCase):
                                          % (self.config.mysql.user,
                                             self.config.mysql.password,
                                             self.config.mysql.host,
-                                            self.config.nova.username,
+                                            self.config.compute.username,
                                             resource_sql),
                                          shell=True)
         return s
@@ -165,9 +165,9 @@ class LimitsTest(TestBase):
 
         # nova.
         nova_api = NovaApiProcess(
-                self.config.nova.directory,
-                self.config.nova.host,
-                self.config.nova.port)
+                self.config.compute.source_dir,
+                self.config.compute.host,
+                self.config.compute.port)
         self.testing_processes.append(nova_api)
 
         for process in self.testing_processes:
@@ -318,9 +318,9 @@ class AppliedFlagValueTest(TestBase):
 
         # nova.
         nova_api = NovaApiProcess(
-                self.config.nova.directory,
-                self.config.nova.host,
-                self.config.nova.port)
+                self.config.compute.source_dir,
+                self.config.compute.host,
+                self.config.compute.port)
         nova_api.command += ' --quota_cores=%d' % self.cores
         self.testing_processes.append(nova_api)
 

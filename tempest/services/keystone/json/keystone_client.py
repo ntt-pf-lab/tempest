@@ -146,7 +146,7 @@ class KeystoneClient(object):
 class TokenClient(object):
 
     def __init__(self, config):
-        self.auth_url = config.keystone.auth_url
+        self.auth_url = config.identity.auth_url
 
     def auth(self, user, password, tenant):
         creds = {'auth': {

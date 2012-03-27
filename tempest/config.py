@@ -55,6 +55,21 @@ class IdentityConfig(object):
         return self.get("use_ssl", 'false').lower() != 'false'
 
     @property
+    def username(self):
+        """Admin username to use for Nova API requests"""
+        return self.get("username")
+
+    @property
+    def password(self):
+        """Admin user API key to use when authenticating"""
+        return self.get("password")
+
+    @property
+    def tenant_name(self):
+        """Admin Tenant name to use for Nova API requests"""
+        return self.get("tenant_name")
+
+    @property
     def nonadmin_user1(self):
         """Username to use for Nova API requests."""
         return self.get("nonadmin_user1")
@@ -90,9 +105,9 @@ class IdentityConfig(object):
         return self.get("strategy", 'keystone')
 
     @property
-    def directory(self):
+    def source_dir(self):
         """Directory of keystone home. Defaults to /opt/stack/keystone"""
-        return self.get("directory", "/opt/stack/keystone")
+        return self.get("source_dir", "/opt/stack/keystone")
 
     @property
     def config(self):
@@ -110,6 +125,21 @@ class ComputeConfig(object):
             return self.conf.get("compute", item_name)
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
             return default_value
+
+    @property
+    def username(self):
+        """Username to use for Nova API requests. Defaults to 'admin'."""
+        return self.get("username", "admin")
+
+    @property
+    def api_key(self):
+        """API key to use when authenticating. Defaults to 'admin_key'."""
+        return self.get("api_key", "admin_key")
+
+    @property
+    def tenant_id(self):
+        """Tenant id to use for Nova API requests. Defaults to 'admin'."""
+        return self.get("tenant_id", "admin")
 
     @property
     def image_ref(self):
@@ -167,14 +197,14 @@ class ComputeConfig(object):
         return self.get("catalog_type", 'compute')
 
     @property
-    def directory(self):
+    def source_dir(self):
         """Directory of nova home. Defaults to /opt/stack/nova"""
-        return self.get("directory", "/opt/stack/nova")
+        return self.get("source_dir", "/opt/stack/nova")
 
     @property
     def config(self):
-        """path of nova.conf. Defaults to /opt/openstack/nova/etc/nova.conf"""
-        return self.get("config", "/opt/openstack/nova/etc/nova.conf")
+        """path of nova.conf. Defaults to /opt/stack/nova/etc/nova.conf"""
+        return self.get("config", "/opt/stack/nova/etc/nova.conf")
 
 
 class ImagesConfig(object):
@@ -233,9 +263,9 @@ class ImagesConfig(object):
         return self.get("auth_url")
 
     @property
-    def directory(self):
+    def source_dir(self):
         """Directory of Images service home. Defaults to /opt/stack/glance"""
-        return self.get("directory", "/opt/stack/glance")
+        return self.get("source_dir", "/opt/stack/glance")
 
     @property
     def registry_config(self):
@@ -259,14 +289,14 @@ class NetworkConfig(object):
 
     def get(self, item_name, default_value):
         try:
-            return self.conf.get("quantum", item_name)
+            return self.conf.get("network", item_name)
         except (ConfigParser.NoSectionError, ConfigParser.NoOptionError):
             return default_value
 
     @property
-    def directory(self):
+    def source_dir(self):
         """Directory of quantum home. Defaults to /opt/stack/quantum"""
-        return self.get("directory", "/opt/stack/quantum")
+        return self.get("source_dir", "/opt/stack/quantum")
 
     @property
     def config(self):
@@ -294,14 +324,17 @@ class MySQLConfig(object):
 
     @property
     def user(self):
+        """Username of MySQL service"""
         return self.get('user', 'root')
 
     @property
     def password(self):
+        """Password for MySQL user"""
         return self.get('password', 'password')
 
     @property
     def host(self):
+        """MySQL service host"""
         return self.get('host', 'localhost')
 
 

@@ -907,24 +907,24 @@ class ServersActionTest(FunctionalTest):
 #            '--flagfile=/opt/openstack/nova/etc/nova.conf flavor create '
 #            '--name=small --memory=1024 --cpu=1 --local_gb=1 '
 #            '--flavor=%d --swap=0' % self.small_flavor_ref,
-#            cwd=config.nova.directory, shell=True)
+#            cwd=config.compute.source_dir, shell=True)
 #
 #        self.fat_flavor_ref = 999
 #        subprocess.check_call('/opt/openstack/nova/bin/nova-manage '
 #            '--flagfile=/opt/openstack/nova/etc/nova.conf flavor create '
 #            '--name=fat --memory=1024 --cpu=1 --local_gb=2 '
 #            '--flavor=%d --swap=0' % self.fat_flavor_ref,
-#            cwd=config.nova.directory, shell=True)
+#            cwd=config.compute.source_dir, shell=True)
 #
 #        def flush_flavors():
 #            subprocess.call('/opt/openstack/nova/bin/nova-manage '\
 #                            '--flagfile=/opt/openstack/nova/etc/nova.conf'\
 #                            ' flavor delete small --purge',
-#                            cwd=config.nova.directory, shell=True)
+#                            cwd=config.compute.source_dir, shell=True)
 #            subprocess.call('/opt/openstack/nova/bin/nova-manage '\
 #                            '--flagfile=/opt/openstack/nova/etc/nova.conf '\
 #                            'flavor delete fat --purge',
-#                            cwd=config.nova.directory, shell=True)
+#                            cwd=config.compute.source_dir, shell=True)
 #
 #        self.addCleanup(flush_flavors)
 #

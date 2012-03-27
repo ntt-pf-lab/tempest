@@ -59,11 +59,11 @@ class RestClient(object):
             raise exceptions.AuthenticationFailure(user=user,
                                                 password=password)
 
-    def _auth_token(self, user, api_key, auth_url, tenant_name):
+    def _auth_token(self, user, password, auth_url, tenant_name):
         creds = {'auth': {
                 'passwordCredentials': {
                     'username': user,
-                    'password': api_key,
+                    'password': password,
                 },
                 'tenantName': tenant_name
             }

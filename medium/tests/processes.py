@@ -53,7 +53,7 @@ class Process(object):
 
 
 class GlanceRegistryProcess(Process):
-    def __init__(self, directory, config, **kwargs):
+    def __init__(self, source_dir, config, **kwargs):
         self.registry_havoc = manager.GlanceHavoc(registry_config_file=config,
                 **kwargs)
 
@@ -65,7 +65,7 @@ class GlanceRegistryProcess(Process):
 
 
 class GlanceApiProcess(Process):
-    def __init__(self, directory, config, host, port, **kwargs):
+    def __init__(self, source_dir, config, host, port, **kwargs):
         self.glance_api_havoc = manager.GlanceHavoc(host, api_config_file=config,
                 **kwargs)
 
@@ -77,7 +77,7 @@ class GlanceApiProcess(Process):
 
 
 class KeystoneProcess(Process):
-    def __init__(self, directory, config, host, port, **kwargs):
+    def __init__(self, source_dir, config, host, port, **kwargs):
         self.keystone_havoc = manager.KeystoneHavoc(host, config_file=config,
                 **kwargs)
 
@@ -114,7 +114,7 @@ class NovaProcess(Process):
 
 
 class NovaApiProcess(NovaProcess):
-    def __init__(self, directory, host, port, **kwargs):
+    def __init__(self, source_dir, host, port, **kwargs):
         self.api_havoc = manager.ControllerHavoc(host, **kwargs)
 
     def start(self):
@@ -125,7 +125,7 @@ class NovaApiProcess(NovaProcess):
 
 
 class NovaComputeProcess(NovaProcess):
-    def __init__(self, directory, **kwargs):
+    def __init__(self, source_dir, **kwargs):
         self.compute_havoc = manager.ComputeHavoc(**kwargs)
 
     def start(self):
@@ -136,7 +136,7 @@ class NovaComputeProcess(NovaProcess):
 
 
 class NovaNetworkProcess(NovaProcess):
-    def __init__(self, directory, **kwargs):
+    def __init__(self, source_dir, **kwargs):
         self.network_havoc = manager.NetworkHavoc(**kwargs)
 
     def start(self):
@@ -147,7 +147,7 @@ class NovaNetworkProcess(NovaProcess):
 
 
 class NovaSchedulerProcess(NovaProcess):
-    def __init__(self, directory, **kwargs):
+    def __init__(self, source_dir, **kwargs):
         self.scheduler_havoc = manager.ControllerHavoc(**kwargs)
 
     def start(self):
@@ -158,7 +158,7 @@ class NovaSchedulerProcess(NovaProcess):
 
 
 class QuantumProcess(Process):
-    def __init__(self, directory, config, **kwargs):
+    def __init__(self, source_dir, config, **kwargs):
         self.quantum_havoc = manager.QuantumHavoc(config_file=config, **kwargs)
 
     def start(self):
@@ -169,7 +169,7 @@ class QuantumProcess(Process):
 
 
 class QuantumPluginOvsAgentProcess(Process):
-    def __init__(self, directory, config, **kwargs):
+    def __init__(self, source_dir, config, **kwargs):
         self.havoc = manager.QuantumHavoc(agent_config_file=config, **kwargs)
 
     def start(self):

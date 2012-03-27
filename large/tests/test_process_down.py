@@ -49,28 +49,28 @@ def setUpModule(module):
 
     # glance.
     environ_processes.append(GlanceRegistryProcess(
-            config.glance.directory,
-            config.glance.registry_config))
+            config.images.source_dir,
+            config.images.registry_config))
     environ_processes.append(GlanceApiProcess(
-            config.glance.directory,
-            config.glance.api_config,
-            config.glance.host,
-            config.glance.port))
+            config.images.source_dir,
+            config.images.api_config,
+            config.images.host,
+            config.images.port))
 
     # keystone.
     environ_processes.append(KeystoneProcess(
-            config.keystone.directory,
-            config.keystone.config,
-            config.keystone.host,
-            config.keystone.port))
+            config.identity.source_dir,
+            config.identity.config,
+            config.identity.host,
+            config.identity.port))
 
     # quantum.
     environ_processes.append(QuantumProcess(
-        config.quantum.directory,
-        config.quantum.config))
+        config.network.source_dir,
+        config.network.config))
     environ_processes.append(QuantumPluginOvsAgentProcess(
-        config.quantum.directory,
-        config.quantum.agent_config))
+        config.network.source_dir,
+        config.network.agent_config))
 
     for process in environ_processes:
         process.start()
@@ -98,16 +98,16 @@ class FunctionalTest(unittest.TestCase):
 
         # nova.
         self.testing_processes.append(NovaApiProcess(
-                self.config.nova.directory,
-                self.config.nova.host,
-                self.config.nova.port))
+                self.config.compute.source_dir,
+                self.config.compute.host,
+                self.config.compute.port))
         self.testing_processes.append(NovaComputeProcess(
-                self.config.nova.directory,
-                    config_file=self.config.nova.directory + '/bin/nova.conf'))
+                self.config.compute.source_dir,
+                    config_file=self.config.compute.source_dir + '/bin/nova.conf'))
         self.testing_processes.append(NovaNetworkProcess(
-                self.config.nova.directory))
+                self.config.compute.source_dir))
         self.testing_processes.append(NovaSchedulerProcess(
-                self.config.nova.directory))
+                self.config.compute.source_dir))
 
         # reset db.
         subprocess.check_call('mysql -u%s -p%s -h%s -e "'
@@ -119,7 +119,7 @@ class FunctionalTest(unittest.TestCase):
                                   self.config.mysql.host),
                               shell=True)
         subprocess.call('/opt/openstack/nova/bin/nova-manage db sync',
-                        cwd=self.config.nova.directory, shell=True)
+                        cwd=self.config.compute.source_dir, shell=True)
         try:
             subprocess.check_call('mysql -u%s -p%s -h%s -e "'
                               'connect ovs_quantum;'
@@ -140,18 +140,18 @@ class FunctionalTest(unittest.TestCase):
         # create users.
         subprocess.check_call('/opt/openstack/nova/bin/nova-manage user create '
                               '--name=admin --access=secrete --secret=secrete',
-                              cwd=self.config.nova.directory, shell=True)
+                              cwd=self.config.compute.source_dir, shell=True)
         subprocess.check_call('/opt/openstack/nova/bin/nova-manage user create '
                               '--name=demo --access=secrete --secret=secrete',
-                              cwd=self.config.nova.directory, shell=True)
+                              cwd=self.config.compute.source_dir, shell=True)
 
         # create projects.
         subprocess.check_call('/opt/openstack/nova/bin/nova-manage project create '
                               '--project=1 --user=admin',
-                              cwd=self.config.nova.directory, shell=True)
+                              cwd=self.config.compute.source_dir, shell=True)
         subprocess.check_call('/opt/openstack/nova/bin/nova-manage project create '
                               '--project=2 --user=demo',
-                              cwd=self.config.nova.directory, shell=True)
+                              cwd=self.config.compute.source_dir, shell=True)
 
         # allocate networks.
         subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
@@ -161,7 +161,7 @@ class FunctionalTest(unittest.TestCase):
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
                               '--network_size=32 ',
-                              cwd=self.config.nova.directory, shell=True)
+                              cwd=self.config.compute.source_dir, shell=True)
         subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                               '--label=private_1-2 '
                               '--project_id=1 '
@@ -169,7 +169,7 @@ class FunctionalTest(unittest.TestCase):
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
                               '--network_size=32 ',
-                              cwd=self.config.nova.directory, shell=True)
+                              cwd=self.config.compute.source_dir, shell=True)
         subprocess.check_call('/opt/openstack/nova/bin/nova-manage network create '
                               '--label=private_2-1 '
                               '--project_id=2 '
@@ -177,7 +177,7 @@ class FunctionalTest(unittest.TestCase):
                               '--bridge_interface=br-int '
                               '--num_networks=1 '
                               '--network_size=32 ',
-                              cwd=self.config.nova.directory, shell=True)
+                              cwd=self.config.compute.source_dir, shell=True)
 
     def tearDown(self):
         # kill still existing virtual instances.
@@ -764,7 +764,7 @@ class ProcessDownTest(FunctionalTest):
         """
         self.havoc._run_cmd("sudo service rabbitmq-server stop")
 #        subprocess.call('sudo service rabbitmq-server stop',
-#                        cwd=self.config.nova.directory, shell=True)
+#                        cwd=self.config.compute.source_dir, shell=True)
         time.sleep(10)
         meta = {'hello': 'world'}
         accessIPv4 = '1.1.1.1'

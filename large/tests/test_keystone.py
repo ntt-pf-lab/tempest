@@ -69,9 +69,9 @@ class FunctionalTest(unittest.TestCase):
     @attr(kind='large')
     def swap_user(self, user, password, tenant_name):
         config = tempest.config.TempestConfig('etc/large.conf')
-        config.keystone.conf.set('keystone', 'user', user)
-        config.keystone.conf.set('keystone', 'password', password)
-        config.keystone.conf.set('keystone', 'tenant_name', tenant_name)
+        config.identity.conf.set('identity', 'username', user)
+        config.identity.conf.set('identity', 'password', password)
+        config.identity.conf.set('identity', 'tenant_name', tenant_name)
         self.os = openstack.Manager(config)
         self.client = self.os.keystone_client
 

@@ -55,17 +55,17 @@ def setUpModule(module):
 
         # create tenants.
         subprocess.check_call('bin/keystone-manage tenant add tenant1',
-                              cwd=config.keystone.directory, shell=True)
+                              cwd=config.identity.source_dir, shell=True)
 
         # create users.
         subprocess.check_call('bin/keystone-manage user add '
                               'user1 user1 tenant1',
-                              cwd=config.keystone.directory, shell=True)
+                              cwd=config.identity.source_dir, shell=True)
 
         # grant role
         subprocess.check_call('bin/keystone-manage role grant '
                               'Member user1 tenant1',
-                              cwd=config.keystone.directory, shell=True)
+                              cwd=config.identity.source_dir, shell=True)
 
     except Exception:
         pass
@@ -139,12 +139,12 @@ class KeypairsTest(FunctionalTest):
                 authentication = "keystone_v2"
 
             class nova(object):
-                build_interval = self.config.nova.build_interval
-                build_timeout = self.config.nova.build_timeout
+                build_interval = self.config.compute.build_interval
+                build_timeout = self.config.compute.build_timeout
 
         # user1
         user1 = {'username': 'user1', 'key': 'user1', 'tenant_name': 'tenant1',
-                 'auth_url': self.config.nova.auth_url, 'config': config}
+                 'auth_url': self.config.compute.auth_url, 'config': config}
         self.kp_client_for_user1 = KeypairsClient(**user1)
 
         # Please wait, it will fail otherwise.

@@ -82,7 +82,7 @@ def tearDownModule(module):
 
 class NetworkWrapper(object):
     def __init__(self, config):
-        self.path = config.nova.directory
+        self.path = config.compute.source_dir
 
     def _nova_manage_network(self, action, params):
         flags = "--flagfile=etc/nova.conf"
