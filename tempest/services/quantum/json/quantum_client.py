@@ -22,11 +22,9 @@ from tempest.common.rest_client import RestClient
 
 class QuantumClient(object):
 
-    def __init__(self, username, password, url, tenant, config=None):
-        self.client = QuantumRestClient(username, password, url,
-                                             tenant_name=tenant,
-                                             config=config,
-                                             service="quantum")
+    def __init__(self, config, username, password, url, tenant):
+        self.client = QuantumRestClient(config, username, password, url,
+                                        'network', tenant_name=tenant)
         self.headers = {'Content-Type': 'application/json',
                         'Accept': 'application/json'}
 
@@ -112,7 +110,7 @@ class QuantumRestClient(RestClient):
         auth_data = json.loads(body)['access']
         token = auth_data['token']['id']
         catalog = [s for s in auth_data['serviceCatalog']
-                     if s['name'] == service]
+                     if s['type'] == service]
         endpoints = catalog[0]['endpoints']
         mgmt_url = endpoints[0]['publicURL']
         return token, mgmt_url

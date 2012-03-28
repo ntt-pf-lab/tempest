@@ -27,10 +27,7 @@ import tempest.config
 To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 """
 
-# for admin tenant
-default_config = tempest.config.TempestConfig('etc/medium.conf')
-# for demo tenant
-test_config = tempest.config.TempestConfig('etc/medium_test.conf')
+default_config = tempest.config.TempestConfig()
 config = default_config
 environ_processes = []
 
@@ -42,13 +39,16 @@ def setUpModule(module):
 class FunctionalTest(unittest.TestCase):
 
     config = default_config
-    config2 = test_config
+#   config2 = test_config
 
     def setUp(self):
         # for admin tenant
-        self.os = openstack.Manager(config=self.config)
+        username = config.identity.username
+        password = config.identity.password
+        tenant_name = config.identity.tenant_name
+        self.os = openstack.Manager(username, password, tenant_name)
         # for demo tenant
-        self.os2 = openstack.Manager(config=self.config2)
+        self.os2 = openstack.Manager()
         self.testing_processes = []
 
     def tearDown(self):
@@ -102,14 +102,13 @@ class FlavorsTest(FunctionalTest):
 
     def setUp(self):
         super(FlavorsTest, self).setUp()
-        self.flavor_ref = self.config.env.flavor_ref
+        self.flavor_ref = self.config.compute.flavor_ref
         self.client = self.os.flavors_client
 
     @attr(kind='medium')
     def test_list_flavors_show_all_default_flavors(self):
         """ List of all flavors should contain the expected flavor """
-        _, body = self.client.list_flavors()
-        flavors = body['flavors']
+        _, flavors = self.client.list_flavors()
         _, flavor = self.client.get_flavor_details(self.flavor_ref)
         flavor_min_detail = {'id': flavor['id'], 'links': flavor['links'],
                              'name': flavor['name']}
@@ -126,8 +125,7 @@ class FlavorsTest(FunctionalTest):
         self.exec_sql(sql)
 
         # get list_flavors from blank db.
-        resp, body = self.client.list_flavors()
-        flavors = body['flavors']
+        resp, flavors = self.client.list_flavors()
         self.assertEquals([], flavors)
         self.assertEquals('200', resp['status'])
 
@@ -153,10 +151,10 @@ class FlavorsTest(FunctionalTest):
         self.exec_sql(sql)
 
         # get list_flavors from db after added new data.
-        resp, body = self.client.list_flavors()
+        resp, flavors = self.client.list_flavors()
         self.flg = False
         for i in range(0, 5):
-            if 'm1.opst' in body['flavors'][i]['name']:
+            if 'm1.opst' in flavors[i]['name']:
                 self.flg = True
         self.assertEquals('200', resp['status'])
         self.assertTrue(self.flg)
@@ -178,8 +176,7 @@ class FlavorsTest(FunctionalTest):
         self.exec_sql(sql)
 
         # get list_flavors from db after removing all data.
-        resp, body = self.client.list_flavors()
-        flavors = body['flavors']
+        resp, flavors = self.client.list_flavors()
         self.assertEquals([], flavors)
         self.assertEquals('200', resp['status'])
 
@@ -200,8 +197,7 @@ class FlavorsTest(FunctionalTest):
         self.exec_sql(sql)
 
         # get list_flavors from db after mark all data as deleted.
-        resp, body = self.client.list_flavors()
-        flavors = body['flavors']
+        resp, flavors = self.client.list_flavors()
         self.assertEquals([], flavors)
         self.assertEquals('200', resp['status'])
 
@@ -232,8 +228,7 @@ class FlavorsTest(FunctionalTest):
     def test_list_detail_flavors_show_all_default_flavors(self):
         """ Detailed list of all flavors should contain the expected flavor """
 
-        _, body = self.client.list_flavors_with_detail()
-        flavors = body['flavors']
+        _, flavors = self.client.list_flavors_with_detail()
         _, flavor = self.client.get_flavor_details(self.flavor_ref)
         self.assertTrue(flavor in flavors)
 
@@ -248,8 +243,7 @@ class FlavorsTest(FunctionalTest):
         self.exec_sql(sql)
 
         # get list_detail from blank db.
-        resp, body = self.client.list_flavors_with_detail()
-        flavors = body['flavors']
+        resp, flavors = self.client.list_flavors_with_detail()
         self.assertEquals([], flavors)
         self.assertEquals('200', resp['status'])
 
@@ -300,8 +294,7 @@ class FlavorsTest(FunctionalTest):
         self.exec_sql(sql)
 
         # get list_detail from db after removing all data.
-        resp, body = self.client.list_flavors_with_detail()
-        flavors = body['flavors']
+        resp, flavors = self.client.list_flavors_with_detail()
         self.assertEquals([], flavors)
         self.assertEquals('200', resp['status'])
 
@@ -322,8 +315,7 @@ class FlavorsTest(FunctionalTest):
         self.exec_sql(sql)
 
         # get list_detail from db after mark all data as deleted.
-        resp, body = self.client.list_flavors_with_detail()
-        flavors = body['flavors']
+        resp, flavors = self.client.list_flavors_with_detail()
         self.assertEquals([], flavors)
         self.assertEquals('200', resp['status'])
 

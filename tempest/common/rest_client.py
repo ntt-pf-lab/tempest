@@ -81,7 +81,7 @@ class RestClient(object):
         token = auth_data['token']['id']
         tenant_id = auth_data['token']['tenant']['id']
         catalog = [s for s in auth_data['serviceCatalog']
-                     if s['name'] == service]
+                     if s['type'] == service]
         endpoints = catalog[0]['endpoints']
         mgmt_url = endpoints[0]['publicURL']
 
