@@ -115,28 +115,6 @@ class FlavorsTest(FunctionalTest):
         self.assertTrue(flavor_min_detail in flavors)
 
     @attr(kind='medium')
-    def test_list_flavors_when_list_is_blank(self):
-        """ List of all flavors should be blank"""
-
-        # preparing sql to blank db.
-        sql = ("CREATE TABLE instance_types_bk LIKE instance_types;"
-               "INSERT INTO instance_types_bk SELECT * FROM instance_types;"
-               "DELETE FROM instance_types;")
-        self.exec_sql(sql)
-
-        # get list_flavors from blank db.
-        resp, flavors = self.client.list_flavors()
-        self.assertEquals([], flavors)
-        self.assertEquals('200', resp['status'])
-
-        # initialize db correctly.
-        sql = ("TRUNCATE table instance_types;"
-               "INSERT INTO instance_types SELECT * FROM instance_types_bk;")
-        self.exec_sql(sql)
-        sql = ("DROP TABLE IF EXISTS instance_types_bk;")
-        self.exec_sql(sql)
-
-    @attr(kind='medium')
     def test_list_flavors_when_add_new_flavor(self):
         """ List of all flavors should contain the expected new flavor """
 
