@@ -27,6 +27,8 @@ class FlavorsClient(object):
         self.client = rest_client.RestClient(config, username, password,
                                              auth_url, catalog_type,
                                              tenant_name)
+        self.headers = {'Content-Type': 'application/json',
+                       'Accept': 'application/json'}
 
     def list_flavors(self, params=None):
         url = 'flavors'
@@ -60,3 +62,27 @@ class FlavorsClient(object):
             return resp, body
         body = json.loads(body)
         return resp, body['flavor']
+
+    def create_flavor(self, name, ram, vcpus, disk, ephemeral, flavor_id,
+                    swap, rxtx):
+        """Creates a new flavor or instance type"""
+        post_body = {
+                'name': name,
+                'ram': ram,
+                'vcpus': vcpus,
+                'disk': disk,
+                'OS-FLV-EXT-DATA:ephemeral': ephemeral,
+                'id': flavor_id,
+                'swap': swap,
+                'rxtx_factor': rxtx
+            }
+
+        post_body = json.dumps({'flavor': post_body})
+        resp, body = self.client.post('flavors', post_body, self.headers)
+
+        body = json.loads(body)
+        return resp, body['flavor']
+
+    def delete_flavor(self, flavor_id):
+        """Deletes the given flavor"""
+        return self.client.delete("flavors/%s" % str(flavor_id))

@@ -14,12 +14,12 @@
 # under the License.
 
 import subprocess
-import time
 
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 from nova import test
 from tempest import openstack
+from tempest import exceptions
 import tempest.config
 
 
@@ -104,10 +104,18 @@ class FlavorsTest(FunctionalTest):
         super(FlavorsTest, self).setUp()
         self.flavor_ref = self.config.compute.flavor_ref
         self.client = self.os.flavors_client
+        self.name = 'test_flavor'
+        self.ram = 512
+        self.vcpus = 1
+        self.disk = 10
+        self.ephemeral = 10
+        self.flavor_id = 1234
+        self.swap = 1024
+        self.rxtx = 1
 
     @attr(kind='medium')
     def test_list_flavors_show_all_default_flavors(self):
-        """ List of all flavors should contain the expected flavor """
+        """List of all flavors should contain the expected flavor"""
         _, flavors = self.client.list_flavors()
         _, flavor = self.client.get_flavor_details(self.flavor_ref)
         flavor_min_detail = {'id': flavor['id'], 'links': flavor['links'],
@@ -115,34 +123,132 @@ class FlavorsTest(FunctionalTest):
         self.assertTrue(flavor_min_detail in flavors)
 
     @attr(kind='medium')
-    def test_list_flavors_when_add_new_flavor(self):
-        """ List of all flavors should contain the expected new flavor """
+    def test_list_detail_flavors_show_all_default_flavors(self):
+        """Detailed list of all flavors should contain the expected flavor"""
 
-        # preparing sql to add new data to db.
-        sql = ("CREATE TABLE instance_types_bk LIKE instance_types;"
-               "INSERT INTO instance_types_bk SELECT * FROM instance_types;")
-        self.exec_sql(sql)
-        time.sleep(5)
-        sql = ("INSERT INTO instance_types "
-                "(deleted, name, memory_mb, vcpus, local_gb, flavorid) "
-                "VALUES (0, 'm1.opst', 512, 2, 20, 6);")
-        self.exec_sql(sql)
+        _, flavors = self.client.list_flavors_with_detail()
+        _, flavor = self.client.get_flavor_details(self.flavor_ref)
+        self.assertTrue(flavor in flavors)
 
-        # get list_flavors from db after added new data.
+    @attr(kind='medium')
+    def test_create_flavor(self):
+        """Test create flavor and newly created flavor is listed.
+        This operation requires the user to have 'admin' role"""
+
+        #Create the flavor
+        resp, flavor = self.client.create_flavor(self.name, self.ram,
+                                                self.vcpus, self.disk,
+                                                self.ephemeral, self.flavor_id,
+                                                self.swap, self.rxtx)
+        self.assertEqual(200, resp.status)
+        self.assertEqual(flavor['name'], self.name)
+        self.assertEqual(flavor['vcpus'], self.vcpus)
+        self.assertEqual(flavor['disk'], self.disk)
+        self.assertEqual(flavor['ram'], self.ram)
+        self.assertEqual(flavor['id'], self.flavor_id)
+        self.assertEqual(flavor['swap'], self.swap)
+        self.assertEqual(flavor['rxtx_factor'], self.rxtx)
+        self.assertEqual(flavor['OS-FLV-EXT-DATA:ephemeral'], self.ephemeral)
+
+        #Verify flavor is retrieved
+        resp, flavor = self.client.get_flavor_details(self.flavor_id)
+        self.assertEqual(resp.status, 200)
+        self.assertEqual(flavor['name'], self.name)
+
+        #Delete the flavor
+        resp, body = self.client.delete_flavor(flavor['id'])
+        self.assertEqual(resp.status, 202)
+
+    @attr(kind='medium')
+    def test_create_flavor_verify_entry_in_list_details(self):
+        """Test create flavor and newly created flavor is listed.
+        This operation requires the user to have 'admin' role"""
+
+        #Create the flavor
+        resp, flavor = self.client.create_flavor(self.name, self.ram,
+                                                self.vcpus, self.disk,
+                                                self.ephemeral, self.flavor_id,
+                                                self.swap, self.rxtx)
+        self.assertEqual(200, resp.status)
+        self.assertEqual(flavor['name'], self.name)
+        self.assertEqual(flavor['vcpus'], self.vcpus)
+        self.assertEqual(flavor['disk'], self.disk)
+        self.assertEqual(flavor['ram'], self.ram)
+        self.assertEqual(flavor['id'], self.flavor_id)
+        self.assertEqual(flavor['swap'], self.swap)
+        self.assertEqual(flavor['rxtx_factor'], self.rxtx)
+        self.assertEqual(flavor['OS-FLV-EXT-DATA:ephemeral'], self.ephemeral)
+
+        flag = False
+        #Verify flavor is retrieved
+        resp, flavors = self.client.list_flavors_with_detail()
+        self.assertEqual(resp.status, 200)
+        for flavor in flavors:
+            if flavor['name'] == self.name:
+                flag = True
+        self.assertTrue(flag)
+
+        #Delete the flavor
+        resp, body = self.client.delete_flavor(self.flavor_id)
+        self.assertEqual(resp.status, 202)
+
+    @attr(kind='medium')
+    def test_list_flavors_when_all_flavors_deleted(self):
+        """ List of all flavors should be blank"""
+
+        # Backup list of flavors
+        resp, flavors = self.client.list_flavors_with_detail()
+        orig_flavors = flavors
+
+        # Delete all flavors
+        for flavor in flavors:
+            self.client.delete_flavor(flavor['id'])
+
         resp, flavors = self.client.list_flavors()
-        self.flg = False
-        for i in range(0, 5):
-            if 'm1.opst' in flavors[i]['name']:
-                self.flg = True
-        self.assertEquals('200', resp['status'])
-        self.assertTrue(self.flg)
+        self.assertEqual([], flavors)
 
-        # initialize db correctly.
-        sql = ("TRUNCATE table instance_types;"
-               "INSERT INTO instance_types SELECT * FROM instance_types_bk;"
-               "DROP TABLE IF EXISTS instance_types_bk;")
-        self.exec_sql(sql)
+        # Re create original flavors
+        for flavor in orig_flavors:
+            if not flavor['swap']:
+                swap = 0
+            else:
+                swap = flavor['swap']
+            resp, _ = self.client.create_flavor(flavor['name'], flavor['ram'],
+                                     flavor['vcpus'], flavor['disk'],
+                                     flavor['OS-FLV-EXT-DATA:ephemeral'],
+                                     flavor['id'], swap,
+                                     int(flavor['rxtx_factor']))
+            self.assertEqual(200, resp.status)
 
+    @attr(kind='medium')
+    def test_list_flavor_details_when_all_flavors_deleted(self):
+        """Detailed List of all flavors should be blank"""
+
+        # Backup list of flavors
+        resp, flavors = self.client.list_flavors_with_detail()
+        orig_flavors = flavors
+
+        # Delete all flavors
+        for flavor in flavors:
+            self.client.delete_flavor(flavor['id'])
+
+        resp, flavors = self.client.list_flavors_with_detail()
+        self.assertEqual([], flavors)
+
+        # Re create original flavors
+        for flavor in orig_flavors:
+            if not flavor['swap']:
+                swap = 0
+            else:
+                swap = flavor['swap']
+            resp, _ = self.client.create_flavor(flavor['name'], flavor['ram'],
+                                     flavor['vcpus'], flavor['disk'],
+                                     flavor['OS-FLV-EXT-DATA:ephemeral'],
+                                     flavor['id'], swap,
+                                     int(flavor['rxtx_factor']))
+            self.assertEqual(200, resp.status)
+
+    @test.skip_test('Skipped due to database access dependency')
     @attr(kind='medium')
     def test_list_flavors_when_delete_all_flavors_by_purge(self):
         """ List of all flavors should be blank by purge"""
@@ -164,103 +270,7 @@ class FlavorsTest(FunctionalTest):
                "DROP TABLE IF EXISTS instance_types_bk;")
         self.exec_sql(sql)
 
-    @attr(kind='medium')
-    def test_list_flavors_when_delete_all_flavors_by_destroy(self):
-        """ List of all flavors should be blank by destroy"""
-
-        # preparing sql to marks all data as deleted.
-        sql = ("CREATE TABLE instance_types_bk LIKE instance_types;"
-               "INSERT INTO instance_types_bk SELECT * FROM instance_types;"
-               "UPDATE instance_types SET deleted=1;")
-        self.exec_sql(sql)
-
-        # get list_flavors from db after mark all data as deleted.
-        resp, flavors = self.client.list_flavors()
-        self.assertEquals([], flavors)
-        self.assertEquals('200', resp['status'])
-
-        # initialize db correctly.
-        sql = ("TRUNCATE table instance_types;"
-               "INSERT INTO instance_types SELECT * FROM instance_types_bk;"
-               "DROP TABLE IF EXISTS instance_types_bk;")
-        self.exec_sql(sql)
-
-    @attr(kind='medium')
-    def test_list_flavors_when_specify_get_parameter(self):
-        """ List of all flavors match with specified GET parameter"""
-
-        resp, body = self.client.list_flavors(
-                                        {'minDisk': 'aaa', 'minRam': 'bbb'})
-        print "resp=", resp
-        print "body=", body
-
-    @attr(kind='medium')
-    def test_list_flavors_when_specify_invalid_get_parameter(self):
-        """ List of all flavors match with specified GET parameter"""
-
-        resp, body = self.client.list_flavors({'aaa': 80, 'bbb': 8192})
-        print "resp=", resp
-        print "body=", body
-
-    @attr(kind='medium')
-    def test_list_detail_flavors_show_all_default_flavors(self):
-        """ Detailed list of all flavors should contain the expected flavor """
-
-        _, flavors = self.client.list_flavors_with_detail()
-        _, flavor = self.client.get_flavor_details(self.flavor_ref)
-        self.assertTrue(flavor in flavors)
-
-    @attr(kind='medium')
-    def test_list_detail_flavors_when_list_is_blank(self):
-        """ Detailed list of all flavors should be blank """
-
-        # preparing sql to blank db.
-        sql = ("CREATE TABLE instance_types_bk LIKE instance_types;"
-               "INSERT INTO instance_types_bk SELECT * FROM instance_types;"
-               "DELETE FROM instance_types;")
-        self.exec_sql(sql)
-
-        # get list_detail from blank db.
-        resp, flavors = self.client.list_flavors_with_detail()
-        self.assertEquals([], flavors)
-        self.assertEquals('200', resp['status'])
-
-        # initialize db correctly.
-        sql = ("TRUNCATE table instance_types;"
-               "INSERT INTO instance_types SELECT * FROM instance_types_bk;")
-        self.exec_sql(sql)
-        sql = ("DROP TABLE IF EXISTS instance_types_bk;")
-        self.exec_sql(sql)
-
-    @attr(kind='medium')
-    def test_list_detail_flavors_when_add_new_flavor(self):
-        """ Detailed list of all flavors
-                                     should contain the expected new flavor """
-
-        # preparing sql to add new data to db.
-        sql = ("CREATE TABLE instance_types_bk LIKE instance_types;"
-               "INSERT INTO instance_types_bk SELECT * FROM instance_types;")
-        self.exec_sql(sql)
-        time.sleep(5)
-        sql = ("INSERT INTO instance_types "
-                "(deleted, name, memory_mb, vcpus, local_gb, flavorid) "
-                "VALUES (0, 'm1.opst', 512, 2, 20, 6);")
-        self.exec_sql(sql)
-
-        # get list_detail from db after added new data.
-        _, body = self.client.list_flavors_with_detail()
-        self.flag = False
-        for i in range(0, 5):
-            if 'm1.opst' in body['flavors'][i]['name']:
-                self.flag = True
-        self.assertTrue(self.flag)
-
-        # initialize db correctly.
-        sql = ("TRUNCATE table instance_types;"
-               "INSERT INTO instance_types SELECT * FROM instance_types_bk;"
-               "DROP TABLE IF EXISTS instance_types_bk;")
-        self.exec_sql(sql)
-
+    @test.skip_test('Skipped due to database access dependency')
     @attr(kind='medium')
     def test_list_detail_flavors_when_delete_all_flavors_by_purge(self):
         """ Detailed list of all flavors should be blank by purge """
@@ -282,6 +292,7 @@ class FlavorsTest(FunctionalTest):
                "DROP TABLE IF EXISTS instance_types_bk;")
         self.exec_sql(sql)
 
+    @test.skip_test('Skipped due to database access dependency')
     @attr(kind='medium')
     def test_list_detail_flavors_when_delete_all_flavors_by_destroy(self):
         """ Detailed list of all flavors should be blank by destroy """
@@ -303,18 +314,7 @@ class FlavorsTest(FunctionalTest):
                "DROP TABLE IF EXISTS instance_types_bk;")
         self.exec_sql(sql)
 
-    @attr(type='smoke')
-    def test_get_flavor_details_when_flavor_exists(self):
-        """ The expected flavor details should be returned """
-        _, flavor = self.client.get_flavor_details(1)
-        self.assertEqual(self.flavor_ref, flavor['id'])
-
-    @attr(kind='medium')
-    def test_get_flavor_details_when_flavor_not_exist(self):
-        """ Return error because specified flavor does not exist """
-        resp, _ = self.client.get_flavor_details(10)
-        self.assertEquals('404', resp['status'])
-
+    @test.skip_test('Skipped due to database access dependency')
     @attr(kind='medium')
     def test_get_flavor_details_when_specify_purged_flavor(self):
         """ Return error because specified flavor is purged """
@@ -335,31 +335,29 @@ class FlavorsTest(FunctionalTest):
                "DROP TABLE IF EXISTS instance_types_bk;")
         self.exec_sql(sql)
 
-    @test.skip_test('Skip this case for bug #422')
     @attr(kind='medium')
-    def test_get_flavor_details_when_specify_destroyed_flavor(self):
-        """ Return error because specified flavor is destroyed """
+    def test_get_flavor_details_raises_NotFound_for_deleted_flavor(self):
+        """Return error because specified flavor is deleted"""
 
-        # preparing sql to marks specific data as deleted.
-        sql = ("CREATE TABLE instance_types_bk LIKE instance_types;"
-               "INSERT INTO instance_types_bk SELECT * FROM instance_types;"
-               "UPDATE instance_types SET deleted=1 WHERE flavorid=3;")
-        self.exec_sql(sql)
+        # Create a test flavor
+        resp, flavor = self.client.create_flavor(self.name, self.ram,
+                                                self.vcpus, self.disk,
+                                                self.ephemeral, 2000,
+                                                self.swap, self.rxtx)
 
-        # get flavor_detail from db after mark specific data as deleted.
-        resp, _ = self.client.get_flavor_details(3)
-        self.assertEquals('404', resp['status'])
+        self.assertEquals(200, resp.status)
 
-        # initialize db correctly.
-        sql = ("TRUNCATE table instance_types;"
-               "INSERT INTO instance_types SELECT * FROM instance_types_bk;"
-               "DROP TABLE IF EXISTS instance_types_bk;")
-        self.exec_sql(sql)
+        # Delete the flavor
+        resp, _ = self.client.delete_flavor(2000)
+        self.assertEqual(resp.status, 202)
+
+        # Get deleted flavor details
+        self.assertRaises(exceptions.NotFound, self.client.get_flavor_details,
+                            2000)
 
     @attr(kind='medium')
-    def test_get_flavor_details_when_specify_invalid_id(self):
+    def test_get_flavor_details_for_invalid_flavor_id(self):
         """ Return error because way to specify is inappropriate """
 
-        # get flavor_detail from db after mark specific data as deleted.
-        resp, _ = self.client.get_flavor_details('test_opst')
-        self.assertEquals('400', resp['status'])
+        self.assertRaises(exceptions.NotFound, self.client.get_flavor_details,
+                            9999)
