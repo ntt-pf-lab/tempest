@@ -16,7 +16,7 @@ class FlavorsTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        # Setup Client object with for user with admin role
+        # Setup Client object for user with admin role
         cls.admin_os = openstack.Manager(username, password, tenant_name)
         cls.admin_client = cls.admin_os.flavors_client
 
@@ -180,6 +180,7 @@ class FlavorsTest(unittest.TestCase):
         resp, body = self.admin_client.delete_flavor(flavor['id'])
         self.assertEqual(resp.status, 202)
 
+    @attr(type='positive')
     def test_create_flavor_verify_entry_in_list_details(self):
         """Test create flavor and newly created flavor is listed in details
         This operation requires the user to have 'admin' role"""
@@ -204,6 +205,7 @@ class FlavorsTest(unittest.TestCase):
         resp, body = self.admin_client.delete_flavor(self.new_flavor_id)
         self.assertEqual(resp.status, 202)
 
+    @attr(type='positive')
     def test_list_deleted_flavors(self):
         """List of all flavors should be blank"""
 
@@ -232,6 +234,7 @@ class FlavorsTest(unittest.TestCase):
                                         int(flavor['rxtx_factor']))
             self.assertEqual(200, resp.status)
 
+    @attr(type='positive')
     def test_list_flavor_details_when_all_flavors_deleted(self):
         """Detailed List of all flavors should be blank"""
 
@@ -259,6 +262,7 @@ class FlavorsTest(unittest.TestCase):
                                            int(flavor['rxtx_factor']))
             self.assertEqual(200, resp.status)
 
+    @attr(type='negative')
     def test_get_flavor_details_raises_NotFound_for_deleted_flavor(self):
         """Return error because specified flavor is deleted"""
 
