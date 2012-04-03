@@ -53,6 +53,7 @@ class ServersClient(object):
             'accessIPv6': kwargs.get('accessIPv6'),
             'min_count': kwargs.get('min_count'),
             'max_count': kwargs.get('max_count'),
+            'key_name': kwargs.get('key_name')
         }
 
         post_body = json.dumps({'server': post_body})
@@ -159,7 +160,7 @@ class ServersClient(object):
             server_status = body['status']
 
             if server_status == 'ERROR':
-                raise exceptions.BuildErrorException
+                raise exceptions.BuildErrorException(server_id=server_id)
 
             if int(time.time()) - start >= self.build_timeout:
                 raise exceptions.TimeoutException

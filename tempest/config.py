@@ -70,6 +70,11 @@ class IdentityConfig(object):
         return self.get("tenant_name")
 
     @property
+    def tenant_id(self):
+        """Admin Tenant id to use for Nova API requests"""
+        return self.get("tenant_id")
+
+    @property
     def nonadmin_user1(self):
         """Username to use for Nova API requests."""
         return self.get("nonadmin_user1")
@@ -308,6 +313,10 @@ class NetworkConfig(object):
         """Path to quantum agent plugin config. Defaults to quantum/plugins/openvswitch/ovs_quantum_plugin.ini"""
         return self.get("agent_config", "quantum/plugins/openvswitch/ovs_quantum_plugin.ini")
 
+    @property
+    def api_version(self):
+        """Version of Quantum API"""
+        return self.get("api_version", "v1.0")
 
 class MySQLConfig(object):
     """Provides configuration information for connecting to MySQL."""
