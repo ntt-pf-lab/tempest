@@ -66,7 +66,7 @@ class TenantTest(unittest.TestCase):
         self.testing_processes = []
 
     @attr(kind='medium')
-    def test_A00_01_version(self):
+    def test_version(self):
         http_obj = self.rest_client.http_obj
         version_top_url = self.rest_client.base_url.rsplit('/', 1)[0] + '/'
         token = self.rest_client.token
@@ -79,7 +79,7 @@ class TenantTest(unittest.TestCase):
         self.assertEqual(body['version']['id'], 'v1.1')
 
     @attr(kind='medium')
-    def test_A00_01_tenant_not_existing(self):
+    def test_tenant_not_existing(self):
         http_obj = self.rest_client.http_obj
         version_top_url, tenant_name = self.rest_client.base_url.rsplit('/', 1)
         tenant_not_existing_url = version_top_url + '/' + tenant_name + '1'

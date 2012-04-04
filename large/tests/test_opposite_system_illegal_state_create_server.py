@@ -29,7 +29,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_101(self):
+    def test_db_stopped_when_instance_get(self):
 
         """
         Stop DB before _get_instance()
@@ -55,7 +55,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_102(self):
+    def test_db_except_when_instance_get(self):
 
         """
         Raise Exception in DB before _get_instance()
@@ -86,7 +86,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_103(self):
+    def test_can_not_connect_to_glance_when_image_show(self):
 
         """
         Stop glance before image_service.show()
@@ -118,7 +118,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_104(self):
+    def test_glance_no_response_when_image_show(self):
 
         """
         glance is no response:image_service.show()
@@ -150,7 +150,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_106(self):
+    def test_db_stopped_when_instance_type_get(self):
 
         """
         Stop DB before db.instance_type_get()
@@ -176,7 +176,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_107(self):
+    def test_db_except_when_instance_type_get(self):
 
         """
         Raise Exception in DB before db.instance_type_get()
@@ -209,7 +209,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_108(self):
+    def test_db_stopped_when_instance_update_networking(self):
 
         """
         Stop DB before db.instance_update(SCHEDULING -> NETWORKING)
@@ -235,7 +235,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_109(self):
+    def test_db_except_when_instance_update_networking(self):
 
         """
         Raise Exception in DB before db.instance_update(SCHEDULING -> NETWORKING)
@@ -268,7 +268,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_110(self):
+    def test_quantum_return_400_ports(self):
 
         """
         Quantum return BadRequest(400)
@@ -300,7 +300,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_111(self):
+    def test_quantum_return_403_ports(self):
 
         """
         Quantum return Forbidden(403)
@@ -332,7 +332,7 @@ class CreateServerTest(unittest.TestCase):
     
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_112(self):
+    def test_quantum_return_420_ports(self):
 
         """
         Quantum return NetworkNotFound(420)
@@ -364,7 +364,7 @@ class CreateServerTest(unittest.TestCase):
     
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_113(self):
+    def test_quantum_return_431_ports(self):
 
         """
         Quantum return RequestedStateInvalid(431)
@@ -396,7 +396,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_114(self):
+    def test_quantum_return_440_ports(self):
 
         """
         Quantum return AlreadyAttached(440)
@@ -428,7 +428,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_115(self):
+    def test_quantum_no_response_ports(self):
 
         """
         Quantum is no response
@@ -460,7 +460,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_116(self):
+    def test_quantum_return_403_attachment(self):
 
         """
         Quantum return Forbidden(403)
@@ -492,7 +492,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_117(self):
+    def test_quantum_return_420_attachment(self):
 
         """
         Quantum return NetworkNotFound(420)
@@ -524,7 +524,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_118(self):
+    def test_quantum_return_430_attachment(self):
 
         """
         Quantum return PortNotFound(430)
@@ -556,7 +556,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_119(self):
+    def test_quantum_return_432_attachment(self):
 
         """
         Quantum return PortInUse(432)
@@ -588,7 +588,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_120(self):
+    def test_quantum_return_440_attachment(self):
 
         """
         Quantum return AlreadyAttached(440)
@@ -620,7 +620,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_121(self):
+    def test_quantum_no_response_attachment(self):
 
         """
         Quantum is no response
@@ -652,7 +652,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_126(self):
+    def test_merange_return_500_ip_allocations(self):
 
         """
         Melange return Error response(500)
@@ -684,7 +684,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_127(self):
+    def test_merange_no_response_ip_allocations(self):
 
         """
         Melange is no response
@@ -716,7 +716,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_128(self):
+    def test_db_stopped_when_instance_update_bdm(self):
 
         """
         Stop DB before db.instance_update(NETWORKING -> BLOCK_DEVICE_MAPPING)
@@ -742,7 +742,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_129(self):
+    def test_db_except_when_instance_update_bdm(self):
 
         """
         Raise Exception in db.instance_update(NETWORKING -> BLOCK_DEVICE_MAPPING)
@@ -774,7 +774,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_130(self):
+    def test_db_stopped_when_instance_update_spawing(self):
 
         """
         Stop DB before db.instance_update(BLOCK_DEVICE_MAPPING -> SPAWING)
@@ -800,7 +800,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_131(self):
+    def test_db_except_when_instance_update_spawing(self):
 
         """
         Raise Exception in db.instance_update(BLOCK_DEVICE_MAPPING -> SPAWING)
@@ -832,7 +832,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_132(self):
+    def test_ip_link_show_raise_execution_error(self):
 
         """
         Command raise ProcessExecutionError
@@ -864,7 +864,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_133(self):
+    def test_ip_tuntap_add_raise_execution_error(self):
 
         """
         Command raise ProcessExecutionError
@@ -896,7 +896,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_134(self):
+    def test_ip_link_set_raise_execution_error(self):
 
         """
         Command raise ProcessExecutionError
@@ -928,7 +928,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_135(self):
+    def test_ovs_vsctl_add_port_raise_execution_error(self):
 
         """
         Command raise ProcessExecutionError
@@ -960,7 +960,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_136(self):
+    def test_ovs_vsctl_add_port_no_response(self):
 
         """
         Command is not response
@@ -992,7 +992,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_137(self):
+    def test_mkdir_basepath_raise_execution_error(self):
 
         """
         Command raise ProcessExecutionError
@@ -1024,7 +1024,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_138(self):
+    def test_open_libvirt_xml_raise_io_error(self):
 
         """
         Command raise OSError
@@ -1056,7 +1056,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_139(self):
+    def test_open_console_log_raise_io_error(self):
 
         """
         Command raise OSError
@@ -1088,7 +1088,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_140(self):
+    def test_can_not_connect_to_glance_when_image_get_kernel(self):
 
         """
         Stop glance before image_service.get()
@@ -1120,7 +1120,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_141(self):
+    def test_glance_no_response_when_image_get_kernel(self):
 
         """
         Glance is no responce:image_service.get()
@@ -1152,7 +1152,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_142(self):
+    def test_image_not_exist_when_image_get_kernel(self):
 
         """
         kernel is not exists on Glance:image_service.get()
@@ -1183,7 +1183,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_143(self):
+    def est_can_not_connect_to_glance_when_image_get_ram(self):
 
         """
         Stop glance before image_service.get()
@@ -1215,7 +1215,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_144(self):
+    def test_glance_no_response_when_image_get_ram(self):
 
         """
         Glance is no responce:image_service.get()
@@ -1247,7 +1247,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_145(self):
+    def test_image_not_exist_when_image_get_ram(self):
 
         """
         ramdisk is not exists on Glance:image_service.get()
@@ -1278,7 +1278,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_146(self):
+    def test_can_not_connect_to_glance_when_image_get_root(self):
 
         """
         Stop glance before image_service.get()
@@ -1310,7 +1310,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_147(self):
+    def test_glance_no_response_when_image_get_root(self):
 
         """
         Glance is no responce:image_service.get()
@@ -1342,17 +1342,18 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_148(self):
+    def test_image_not_exist_when_image_get_root(self):
 
         """
-        root disk is not exists on Glance:image_service.get()
+        image_service.get(context, image_id, image_file)
+        => not image
         """
 
         # create server
         resp, server_id = self._create_server(self._testMethodName,'ERROR')
 
         """ assert
-            response:204
+            response:202
             status::error-null
             virsh:-
             instance dir:exist
@@ -1373,7 +1374,83 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_151(self):
+    def test_qemu_img_convert_raise_execution_error(self):
+
+        """
+        utils.execute('qemu-img', 'convert', '-O', 'raw',path_tmp, staged)
+        => ProcessExecutionError
+        """
+
+        # create server
+        resp, server_id = self._create_server(self._testMethodName,'ERROR')
+
+        """ assert
+            response:202
+            status::error-null
+            virsh:-
+            instance dir:exist
+            Error:nova-compute.log
+        """
+
+        # response
+        self.assertEquals('202', resp)
+        # db
+        self.assertTrue(utils.exist_instance_in_db(self.config, server_id))
+        self.assertEqual('error', utils.get_instance_vm_state_in_db(
+                                                    self.config, server_id))
+        self.assertEqual('NULL', utils.get_instance_task_state_in_db(
+                                                    self.config, server_id))
+        # virsh
+        self.assertFalse(utils.exist_vm_in_virsh(server_id))
+        self.assertTrue(utils.exist_instance_path(self.config,server_id))
+
+    @test.skip_test('ignore this case')
+    @attr(kind='large')
+    def test_qemu_img_convert_no_response(self):
+
+        """
+        utils.execute('qemu-img', 'convert', '-O', 'raw',path_tmp, staged)
+        => ProcessExecutionError
+        """
+
+        # create server
+        resp, server_id = self._create_server(self._testMethodName,'ERROR')
+
+        """ assert
+            response:202
+            status::error-null
+            virsh:-
+            instance dir:exist
+            Error:nova-compute.log
+        """
+
+        # response
+        self.assertEquals('202', resp)
+        # db
+        self.assertTrue(utils.exist_instance_in_db(self.config, server_id))
+        self.assertEqual('error', utils.get_instance_vm_state_in_db(
+                                                    self.config, server_id))
+        self.assertEqual('NULL', utils.get_instance_task_state_in_db(
+                                                    self.config, server_id))
+        # virsh
+        self.assertFalse(utils.exist_vm_in_virsh(server_id))
+        self.assertTrue(utils.exist_instance_path(self.config,server_id))
+
+
+
+
+
+
+
+
+
+
+
+
+
+    @test.skip_test('ignore this case')
+    @attr(kind='large')
+    def test_truncate_target_ephemeral_raise_execution_error(self):
 
         """
         Command raise ProcessExecutionError
@@ -1405,7 +1482,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_152(self):
+    def test_mkfs_f_ephemeral_raise_execution_error(self):
 
         """
         Command raise ProcessExecutionError
@@ -1437,7 +1514,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_153(self):
+    def test_functools_partial_ephemeral_raise_error(self):
 
         """
         Command raise Error
@@ -1469,7 +1546,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_154(self):
+    def test_truncate_target_swap_raise_execution_error(self):
 
         """
         Command raise ProcessExecutionError
@@ -1501,7 +1578,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_155(self):
+    def test_mkswap_raise_execution_error(self):
 
         """
         Command raise ProcessExecutionError
@@ -1533,7 +1610,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_156(self):
+    def test_open_injected_nw_raise_io_error(self):
 
         """
         Command raise IOError
@@ -1565,7 +1642,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_157(self):
+    def test_tune2fs_raise_execution_error(self):
 
         """
         Command raise ProcessExecutionError
@@ -1597,7 +1674,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_158(self):
+    def test_mount_mapped_device_raise_execution_error(self):
 
         """
         Command raise ProcessExecutionError
@@ -1629,7 +1706,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_159(self):
+    def test_tee_a_keyfile_raise_execution_error(self):
 
         """
         Command raise ProcessExecutionError
@@ -1665,7 +1742,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_160(self):
+    def test_tee_a_netfile_raise_execution_error(self):
 
         """
         Command raise ProcessExecutionError
@@ -1701,7 +1778,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_161(self):
+    def test_define_xml_raise_libvirt_error(self):
 
         """
         Raise LibvirtError on _conn.defineXML(xml)
@@ -1732,7 +1809,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_162(self):
+    def test_libvirt_stopped_when_define_xml(self):
 
         """
         Stop libvirtd _conn.defineXML(xml)
@@ -1763,7 +1840,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_163(self):
+    def test_libvirt_no_response_when_define_xml(self):
 
         """
         libvirtd is no response on _conn.defineXML(xml)
@@ -1794,7 +1871,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_164(self):
+    def test_create_with_flags_raise_libvirt_error(self):
 
         """
         Raise LibvirtError on domain.createWithFlags(launch_flags)
@@ -1825,7 +1902,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_165(self):
+    def test_libvirt_stopped_when_create_with_flags(self):
 
         """
         Stop libvirtd domain.createWithFlags(launch_flags)
@@ -1856,7 +1933,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_166(self):
+    def test_libvirt_no_response_when_create_with_flags(self):
 
         """
         libvirtd is no response on domain.createWithFlags(launch_flags)
@@ -1887,7 +1964,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_167(self):
+    def test_cmd_save_raise_execution_error(self):
 
         """
         Command raise ProcessExecutionError
@@ -1919,7 +1996,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_168(self):
+    def test_look_by_name_raise_libvirt_error(self):
 
         """
         Raise LibvirtError on _conn.lookupByName(instance_name)
@@ -1951,7 +2028,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_169(self):
+    def test_look_by_name_raise_vir_err_no_domain(self):
 
         """
         Raise VIR_ERR_NO_DOMAIN on _conn.lookupByName(instance_name)
@@ -1984,7 +2061,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_170(self):
+    def test_libvirt_stopped_when_look_by_name(self):
 
         """
         Stop libvirtd on _conn.lookupByName(instance_name)
@@ -2016,7 +2093,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_171(self):
+    def test_libvirt_no_response_when_look_by_name(self):
 
         """
         libvirtd is no response on _conn.defineXML(xml)
@@ -2047,7 +2124,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_172(self):
+    def test_db_stopped_when_instance_update_none(self):
 
         """
         Stop DB before db.instance_update(SPAWNING -> NONE)
@@ -2074,7 +2151,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_173(self):
+    def test_db_except_when_instance_update_none(self):
 
         """
         Raise Exception in db.instance_update(SPAWNING -> NONE)
@@ -2107,7 +2184,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_CS001(self):
+    def test_glance_is_stopped(self):
 
         """
         Stop Glance 
@@ -2126,7 +2203,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_CS002(self):
+    def test_immediately_after_stop_nova_cpu(self):
 
         """
         as soon as stop nova-compute,create server
@@ -2157,7 +2234,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_CS003(self):
+    def test_1_minute_after_stop_nova_cpu(self):
 
         """
         stop nova-compute,create server after while
@@ -2188,7 +2265,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_CS004(self):
+    def test_rabbitmq_is_stopped(self):
 
         """
         stop RabbitMQ when scheduler select nova-compute
@@ -2219,7 +2296,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_CS005(self):
+    def test_id_has_been_granted(self):
 
         """
         Instance ID is used by the VM had been already
@@ -2250,7 +2327,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_CS006(self):
+    def test_network_is_disconnected_when_download_image(self):
 
         """
         while downloading the image, network with Glance is disconnected
@@ -2281,7 +2358,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_CS007(self):
+    def test_quantum_is_stopped(self):
 
         """
         creating a server, Quantum has been stopped
@@ -2312,7 +2389,38 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_CS009(self):
+    def test_quantum_no_response(self):
+
+        """
+        creating a server, Quantum no response
+        """
+
+        # create server
+        resp, server_id = self._create_server(self._testMethodName)
+
+        """ assert
+            response:202
+            status:error-null
+            virsh:-
+            instance dir:not exist
+            Error:nova-compute.log
+        """
+
+        # response
+        self.assertEquals('202', resp)
+        # db
+        self.assertTrue(utils.exist_instance_in_db(self.config, server_id))
+        self.assertEqual('error', utils.get_instance_vm_state_in_db(
+                                                    self.config, server_id))
+        self.assertEqual('Null', utils.get_instance_task_state_in_db(
+                                                    self.config, server_id))
+        # virsh
+        self.assertFalse(utils.exist_vm_in_virsh(server_id))
+        self.assertFalse(utils.exist_instance_path(self.config,server_id))
+
+    @test.skip_test('ignore this case')
+    @attr(kind='large')
+    def test_nvp_is_stopped(self):
 
         """
         creating a server, NVP has been stopped
@@ -2343,7 +2451,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_CS010(self):
+    def test_db_is_stopped(self):
 
         """
         creating a server, DB has been stopped
@@ -2365,7 +2473,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_CS011(self):
+    def test_bdm_fail_when_nova_cpu_is_stopped(self):
 
         """
         creating a server, nova-compute has been stopped
@@ -2397,7 +2505,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_CS012(self):
+    def test_networking_fail_when_nova_cpu_is_stopped(self):
 
         """
         creating a server, nova-compute has been stopped
@@ -2429,7 +2537,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_CS013(self):
+    def test_rabbitmq_is_stopped_when_ip(self):
 
         """
         creating a server, RabbitMQ has been stopped
@@ -2461,7 +2569,7 @@ class CreateServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_CS014(self):
+    def test_nova_cpu_is_stopped_when_update_instance(self):
 
         """
         creating a server, nova-compute has been stopped

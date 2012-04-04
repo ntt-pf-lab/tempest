@@ -228,21 +228,21 @@ class QuantumFunctionalTest(unittest.TestCase):
 
     @tests.skip_test("Skip this testcase. This will be tested in large test")
     @attr(kind='medium')
-    def test_d02_412(self):
+    def test_db_virtual_interface_get_by_instance_with_vif_not_found(self):
         self._execute_and_wait_for_error(delete_vif_db=True)
 
     @attr(kind='medium')
-    def test_d02_413(self):
+    def test_get_port_with_forbidden(self):
         """show_port_attachment_forbidden"""
         self._test_show_port_attachment(403)
 
     @attr(kind='medium')
-    def test_d02_414(self):
+    def test_get_port_with_network_not_found(self):
         """show_port_attachment_network_not_found"""
         self._test_show_port_attachment(420)
 
     @attr(kind='medium')
-    def test_d02_415(self):
+    def test_get_port_with_port_not_found(self):
         """show_port_attachment_port_not_found"""
         self._test_show_port_attachment(430)
 
@@ -410,94 +410,94 @@ class LibvirtSnapshotErrorTest(LibvirtFunctionalTest):
                           server['id'], 'ERROR')
 
     @attr(kind='medium')
-    def test_d02_405(self):
+    def test_conn_lookup_by_name_with_libvirt_error(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'lookup-error',
                                     'fake_libvirt.libvirt_patch', 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_406(self):
+    def test_conn_lookup_by_name_with_vir_err_no_domain(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'lookup-error',
                             'fake_libvirt.libvirt_patch_no_domain', 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_407(self):
+    def test_conn_lookup_by_name_with_stopped_libvirt(self):
         self._snapshot_image_with_fake_libvirt('nova.db.api',
                             'create-image-error',
                             'fake.instance_get_libvirt_stop_patch', 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_420(self):
+    def test_conn_lookup_by_name_2nd_with_libvirt_error(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'lookup-error',
                                 'fake_libvirt.libvirt_patch', 'ACTIVE', True)
 
     @attr(kind='medium')
-    def test_d02_421(self):
+    def test_conn_lookup_by_name_2nd_with_vir_err_no_domain(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'lookup-error',
                     'fake_libvirt.libvirt_patch_no_domain', 'ACTIVE', True)
 
     @attr(kind='medium')
-    def test_d02_422(self):
+    def test_conn_lookup_by_name_2nd_with_stopped_libvirt(self):
         self._snapshot_image_with_fake_libvirt('nova.db.api',
                 'create-image-error',
                 'fake.virtual_interface_get_by_instance_libvirt_stop_patch',
                 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_423(self):
+    def test_image_service_show_with_no_connection_to_glance(self):
         self._snapshot_image_with_fake_libvirt('nova.image.glance',
                 'virconn-error', 'fake_libvirt.libvirt_glance_show_patch',
                 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_425(self):
+    def test_image_service_show_with_image_not_found(self):
         self._snapshot_image_with_fake_libvirt('nova.image.glance',
                 'virconn-error', 'fake_libvirt.libvirt_image_not_found_patch',
                  'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_426(self):
+    def test_virt_dom_snapshot_create_xml_with_libvirt_error(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'virdomain-error',
                         'fake_libvirt.libvirt_snap_createxml_patch', 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_428(self):
+    def test_virt_dom_xml_desc_with_libvirt_error(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'virdomain-error',
                          'fake_libvirt.libvirt_snap_xmldesc_patch', 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_430(self):
+    def test_tempfile_mkdtemp_with_io_error(self):
         self._snapshot_image_with_fake_libvirt('tempfile',
                         'general-error', 'fake.mkdtemp_patch', 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_432(self):
+    def test_utils_execute_qemu_img_cmd_with_process_execution_error(self):
         self._snapshot_image_with_fake_libvirt('nova.utils',
                         'general-error', 'fake.execute_patch', 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_433(self):
+    def test_image_service_update_with_no_connection_to_glance(self):
         self._snapshot_image_with_fake_libvirt('nova.image.glance',
                 'virconn-error', 'fake_libvirt.libvirt_glance_update_patch',
                 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_435(self):
+    def test_image_service_update_with_image_not_found(self):
         self._snapshot_image_with_fake_libvirt('nova.image.glance',
                 'virconn-error', 'fake_libvirt.libvirt_update_not_found_patch',
                 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_436(self):
+    def test_shutil_rmtree_with_io_error(self):
         self._snapshot_image_with_fake_libvirt('shutil', 'general-error',
                                                'fake.rmtree_patch', 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_437(self):
+    def test_snapshot_ptr_delete_with_libvirt_error(self):
         self._snapshot_image_with_fake_libvirt('libvirt', 'virdomain-error',
                     'fake_libvirt.libvirt_snap_delete_patch', 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_438(self):
+    def test_snapshot_ptr_delete_with_stopped_libvirt(self):
         self._snapshot_image_with_fake_libvirt('shutil', 'general-error',
                                        'fake.shutil_rmtree_libvirt_stop_patch',
                                        'ACTIVE')
@@ -635,7 +635,7 @@ class GlanceErrorTest(unittest.TestCase):
                           server['id'], 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_401(self):
+    def test_image_service_create_with_no_connection_to_glance(self):
         self._snapshot_with_glance_error('', '', '')
 
 
@@ -851,54 +851,54 @@ class DBErrorTest(unittest.TestCase):
                               shell=True)
 
     @attr(kind='medium')
-    def test_d02_403(self):
+    def test_db_instance_get_from_queue_with_stopped_db(self):
         self._create_image_with_fake_db('nova.db.api',
                             'create-image-error', 'fake.db_stop_patch',
                             [], 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_404(self):
+    def test_db_instance_get_from_queue_with_sql_error(self):
         self._create_image_with_fake_db('nova.db.api',
                             'create-image-error', 'fake.db_exception_patch',
                             [], 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_408(self):
+    def test_db_instance_update_to_image_snapshot_with_stopped_db(self):
         self._create_image_with_fake_db('nova.compute.manager',
                     'create-image-error',
                     'fake.instance_update_stop_patch_at_first_update',
                     [], 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_409(self):
+    def test_db_instance_update_to_image_snapshot_with_sql_error(self):
         self._create_image_with_fake_db('nova.compute.manager',
                 'create-image-error',
                 'fake.instance_update_except_patch_at_first_update',
                 [], 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_410(self):
+    def test_db_virtual_interface_get_by_instance_with_stopped_db(self):
         self._create_image_with_fake_db('nova.db.api',
                 'create-image-error',
                 'fake.virtual_interface_get_by_instance_stop_patch',
                 [], 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_411(self):
+    def test_db_virtual_interface_get_by_instance_with_sql_error(self):
         self._create_image_with_fake_db('nova.db.api',
                 'create-image-error',
                 'fake.virtual_interface_get_by_instance_except_patch',
                 [], 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_440(self):
+    def test_db_instance_update_to_none_with_stopped_db(self):
         self._create_image_with_fake_db('nova.compute.manager',
                     'create-image-error',
                     'fake.instance_update_stop_patch_at_last_update',
                     [], 'ACTIVE')
 
     @attr(kind='medium')
-    def test_d02_441(self):
+    def test_db_instance_update_to_none_with_sql_error(self):
         self._create_image_with_fake_db('nova.compute.manager',
                 'create-image-error',
                 'fake.instance_update_except_patch_at_last_update',

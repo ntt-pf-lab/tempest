@@ -28,7 +28,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_201(self):
+    def test_db_stopped_when_instance_get(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -56,7 +56,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_202(self):
+    def test_db_except_when_instance_get(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -98,7 +98,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_203(self):
+    def test_db_stopped_when_virtual_interface_get_by_instance(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -127,7 +127,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_204(self):
+    def test_db_except_when_virtual_interface_get_by_instance(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -169,7 +169,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_205(self):
+    def test_vif_not_found_when_virtual_interface_get_by_instance(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -210,7 +210,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_206(self):
+    def test_quantum_return_403_when_get_attachment(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -253,7 +253,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_207(self):
+    def test_quantum_return_420_when_get_attachment(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -296,7 +296,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_208(self):
+    def test_quantum_return_430_when_get_attachment(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -339,7 +339,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_209(self):
+    def test_melange_return_500_when_get_attachment(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -381,7 +381,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_210(self):
+    def test_melange_no_response_when_get_attachment(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -423,7 +423,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_211(self):
+    def test_melange_return_500_when_get_ip_allocations(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -466,7 +466,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_212(self):
+    def test_melange_no_response_when_get_ip_allocations(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -506,7 +506,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_213(self):
+    def test_quantum_return_403_when_delete_attachment(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -547,7 +547,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_214(self):
+    def test_quantum_return_420_when_delete_attachment(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -588,7 +588,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_215(self):
+    def test_quantum_return_430_when_delete_attachment(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -629,7 +629,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_216(self):
+    def test_quantum_return_400_when_delete_port(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -669,7 +669,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_217(self):
+    def test_quantum_return_403_when_delete_port(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -710,7 +710,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_218(self):
+    def test_quantum_return_420_when_delete_port(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -751,7 +751,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_219(self):
+    def test_quantum_return_430_when_delete_port(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -792,7 +792,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_220(self):
+    def test_quantum_return_432_when_delete_port(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -833,7 +833,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_221(self):
+    def test_melange_return_500_when_delete_ip_allocations(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -876,7 +876,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_222(self):
+    def test_melange_no_response_when_delete_ip_allocations(self):
         # create server
         server_id = self._create_server(self._testMethodName)
 
@@ -917,7 +917,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_223(self):
+    def test_look_by_name_raise_libvirt_error(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -961,7 +961,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_224(self):
+    def test_look_by_name_raise_vir_err_no_domain(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1005,7 +1005,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_225(self):
+    def test_libvirt_stopped_when_look_by_name(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1047,7 +1047,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_226(self):
+    def test_virt_dom_destroy_raise_libvirt_error(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1091,7 +1091,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_227(self):
+    def test_virt_dom_destroy_raise_vir_err_no_domain(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1135,7 +1135,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_228(self):
+    def test_libvirt_stopped_when_virt_dom_destroy(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1177,7 +1177,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_229(self):
+    def test_virt_dom_undefine_raise_libvirt_error(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1221,7 +1221,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_230(self):
+    def test_virt_dom_undefine_raise_vir_err_no_domain(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1265,7 +1265,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_231(self):
+    def test_libvirt_stopped_when_virt_dom_undefine(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1307,7 +1307,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_232(self):
+    def test_del_port_raise_execution_error(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1348,13 +1348,15 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_233(self):
+    def test_del_port_no_response(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
 
         """
         Execute command is no response
+        virt/libvirt/vif.py
+        LibvirtOpenVswitchDriver.unplug
         utils.execute('ovs-vsctl', 'del-port',FLAGS.libvirt_ovs_bridge, dev, run_as_root=True)
         """
 
@@ -1364,9 +1366,9 @@ class DeleteServerTest(unittest.TestCase):
         """ assert
             response:204
             deleted:1
-            status::deleted-none
+            status:active-deleting
             virsh:-
-            instance dir:exist
+            instance dir:non-exist
             Error:nova-compute.log
         """
         self.assertEqual('204', resp['status'])
@@ -1389,7 +1391,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_234(self):
+    def test_ip_link_delete_raise_execution_error(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1430,7 +1432,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_235(self):
+    def test_ip_link_delete_no_response(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1446,9 +1448,9 @@ class DeleteServerTest(unittest.TestCase):
         """ assert
             response:204
             deleted:1
-            status:deleted-none
+            status:active-deleting
             virsh:-
-            instance dir:exist
+            instance dir:non-exist
             Error:nova-compute.log
         """
         self.assertEqual('204', resp['status'])
@@ -1459,9 +1461,9 @@ class DeleteServerTest(unittest.TestCase):
                                                     self.config, server_id))
         self.assertEqual('deleted', utils.get_instance_vm_state_in_db(
                                                     self.config, server_id))
-        self.assertEqual('NULL', utils.get_instance_task_state_in_db(
+        self.assertEqual('ACTIVE', utils.get_instance_task_state_in_db(
                                                     self.config, server_id))
-        self.assertEqual('0', utils.get_instance_power_state_in_db(
+        self.assertEqual('deleting', utils.get_instance_power_state_in_db(
                                                     self.config, server_id))
         self.assertRaises(Exception, utils.get_instance_exist_fixed_ips_in_db(
                                                     self.config, server_id))
@@ -1471,7 +1473,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_236(self):
+    def test_del_ip_tables_raise_execution_error(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1512,7 +1514,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_D02_237(self):
+    def test_shutil_rmtree_raise_io_error(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1553,7 +1555,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_d02_238(self):
+    def test_db_stopped_when_instance_update_deleting(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1580,7 +1582,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_d02_239(self):
+    def test_db_except_when_instance_update_deleting(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1620,7 +1622,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_d02_240(self):
+    def test_db_stopped_when_instance_destroy(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1649,7 +1651,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_d02_241(self):
+    def test_db_except_when_instance_destroy(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1690,7 +1692,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_ds001(self):
+    def test_rabbitmq_is_stopped(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1730,7 +1732,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_ds002(self):
+    def test_nova_cpu_is_stopped_when_update_instance_then_delete(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1771,7 +1773,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_ds003(self):
+    def test_nova_cpu_is_stopped_when_update_instance(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1812,7 +1814,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_ds004(self):
+    def test_melange_is_stopped(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1852,7 +1854,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_ds005(self):
+    def test_one_of_vifs_failed_to_delete(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1892,7 +1894,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_ds006(self):
+    def test_one_of_ports_failed_to_delete(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1932,7 +1934,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_ds007(self):
+    def test_dnsmasq_is_stopped(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -1972,7 +1974,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_ds008(self):
+    def test_stop_instruction_from_libvirt(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -2012,7 +2014,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def test_ds009(self):
+    def test_nvp_is_stopped(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -2052,7 +2054,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def d02_225_X(self):
+    def test_libvirt_stopped_when_lookup_by_name(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -2097,7 +2099,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def d02_228_X(self):
+    def test_libvirt_stopped_when_virt_dom_destroy_with_destroy(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -2142,7 +2144,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def d02_231_X(self):
+    def test_libvirt_stopped_when_virt_dom_undefine_with_destroy(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -2186,7 +2188,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def d002_X(self):
+    def test_nova_cpu_is_stopped_when_update_instance_then_delete_assert_reboot(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
@@ -2227,7 +2229,7 @@ class DeleteServerTest(unittest.TestCase):
 
     @test.skip_test('ignore this case')
     @attr(kind='large')
-    def d003_X(self):
+    def test_nova_cpu_is_stopped_when_update_instance_assert_reboot(self):
 
         # create server
         server_id = self._create_server(self._testMethodName)
