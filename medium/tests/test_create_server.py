@@ -85,6 +85,7 @@ def tearDownModule(module):
 class NetworkWrapper(object):
     def __init__(self, config):
         self.path = config.nova.directory
+        self.network_node = config.nova.network_node
 
     def _nova_manage_network(self, action, params):
         flags = "--flagfile=etc/nova.conf"
@@ -96,7 +97,7 @@ class NetworkWrapper(object):
     def create_network(self, label, ip_range, size, bridge, tenant, uuid, gw, dhcp):
         params = "--label=%s --fixed_range_v4=%s --num_networks=1 --network_size=%s\
  --bridge_interface=%s --project_id=%s --uuid=%s --gateway=%s --dhcp_server=%s --host=%s" %\
-         (label, ip_range, size, bridge, tenant, uuid, gw, dhcp, socket.gethostname())
+         (label, ip_range, size, bridge, tenant, uuid, gw, dhcp, self.network_node )
         return self._nova_manage_network('create', params)
 
     def delete_network(self, uuid):
