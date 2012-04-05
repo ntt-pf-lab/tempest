@@ -69,6 +69,10 @@ class NovaConfig(object):
         """path of nova.conf. Defaults to /opt/openstack/nova/etc/nova.conf"""
         return self.get("config", "/opt/openstack/nova/etc/nova.conf")
 
+    @property
+    def network_node(self):
+        """ Network node of network"""
+        return self.get("network_node", "127.0.0.1")
 
 class EnvironmentConfig(object):
     def __init__(self, conf):
