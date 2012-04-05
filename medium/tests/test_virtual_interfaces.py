@@ -128,7 +128,7 @@ class VirtualInterfacesTest(FunctionalTest):
                               '--network_size=32 '
                               '--gateway=%s '
                               '--host=%s '
-                              % (self.config.nova.config, cidr, gw, socket.gethostname()),
+                              % (self.config.nova.config, cidr, gw, self.config.nova.network_node),
                               cwd=self.config.nova.directory, shell=True)
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
@@ -183,7 +183,7 @@ class VirtualInterfacesTest(FunctionalTest):
                               '--network_size=32 '
                               '--gateway=%s '
                               '--host=%s '
-                              % (self.config.nova.config, cidr, gw, socket.gethostname()),
+                              % (self.config.nova.config, cidr, gw, self.config.nova.network_node),
                               cwd=self.config.nova.directory, shell=True)
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
@@ -342,7 +342,7 @@ class VirtualInterfacesTest(FunctionalTest):
                               '--network_size=32 '
                               '--gateway=%s '
                               '--host=%s '
-                              % (self.config.nova.config, cidr, gw, socket.gethostname()),
+                              % (self.config.nova.config, cidr, gw, self.config.nova.network_node),
                               cwd=self.config.nova.directory, shell=True)
         sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
               'WHERE cidr = \'%s\';' % cidr
@@ -399,7 +399,7 @@ class VirtualInterfacesTest(FunctionalTest):
                                   '--network_size=32 '
                                   '--gateway=%s '
                                   '--host=%s '
-                                  % (self.config.nova.config, cidr, gw, socket.gethostname()),
+                                  % (self.config.nova.config, cidr, gw, self.config.nova.network_node),
                                   cwd=self.config.nova.directory, shell=True)
             sql = 'SELECT dhcp_start, uuid, gateway FROM networks ' + \
                            'WHERE cidr = \'%s\';' % cidr
