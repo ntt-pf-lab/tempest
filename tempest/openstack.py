@@ -41,12 +41,13 @@ class Manager(object):
     Top level manager for OpenStack Compute clients
     """
 
-    def __init__(self):
+    def __init__(self, username=None, password=None, tenant_name=None):
         self.config = tempest.config.TempestConfig()
 
-        username = self.config.compute.username
-        password = self.config.compute.password
-        tenant_name = self.config.compute.tenant_name
+        if None in (username, password, tenant_name):
+            username = self.config.compute.username
+            password = self.config.compute.password
+            tenant_name = self.config.compute.tenant_name
 
         if None in (username, password, tenant_name):
             msg = ("Missing required credentials. "

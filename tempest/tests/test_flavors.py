@@ -5,9 +5,9 @@ from tempest import openstack
 import tempest.config
 
 config = tempest.config.TempestConfig()
-username = config.identity.username
-password = config.identity.password
-tenant_name = config.identity.tenant_name
+username = config.compute.username
+password = config.compute.password
+tenant_name = config.compute.tenant_name
 
 
 class FlavorsTest(unittest.TestCase):
@@ -15,7 +15,7 @@ class FlavorsTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         # Setup Client object for user with admin role
-        cls.admin_os = openstack.Manager(username, password, tenant_name)
+        cls.admin_os = openstack.AdminManager()
         cls.admin_client = cls.admin_os.flavors_client
 
         cls.os = openstack.Manager()
@@ -156,7 +156,7 @@ class FlavorsTest(unittest.TestCase):
         self.assertEqual(flavor['vcpus'], self.vcpus)
         self.assertEqual(flavor['disk'], self.disk)
         self.assertEqual(flavor['ram'], self.ram)
-        self.assertEqual(flavor['id'], self.new_flavor_id)
+        self.assertEqual(int(flavor['id']), self.new_flavor_id)
         self.assertEqual(flavor['swap'], self.swap)
         self.assertEqual(flavor['rxtx_factor'], self.rxtx)
         self.assertEqual(flavor['OS-FLV-EXT-DATA:ephemeral'], self.ephemeral)
