@@ -12,8 +12,6 @@ tenant_name = config.identity.tenant_name
 
 class FlavorsTest(unittest.TestCase):
 
-    release = tempest.config.TempestConfig().compute.release_name
-
     @classmethod
     def setUpClass(cls):
         # Setup Client object for user with admin role
@@ -61,7 +59,6 @@ class FlavorsTest(unittest.TestCase):
         self.assertRaises(exceptions.NotFound, self.client.get_flavor_details,
                           999)
 
-    @unittest.skipIf(release == 'diablo', 'bug in diablo')
     @attr(type='positive', bug='lp912922')
     def test_list_flavors_limit_results(self):
         """Only the expected number of flavors should be returned"""
@@ -69,7 +66,6 @@ class FlavorsTest(unittest.TestCase):
         resp, flavors = self.client.list_flavors(params)
         self.assertEqual(1, len(flavors))
 
-    @unittest.skipIf(release == 'diablo', 'bug in diablo')
     @attr(type='positive', bug='lp912922')
     def test_list_flavors_detailed_limit_results(self):
         """Only the expected number of flavors (detailed) should be returned"""
@@ -77,8 +73,7 @@ class FlavorsTest(unittest.TestCase):
         resp, flavors = self.client.list_flavors_with_detail(params)
         self.assertEqual(1, len(flavors))
 
-    @unittest.expectedFailure
-    @attr(type='positive', bug='lp912922')
+    @attr(type='positive')
     def test_list_flavors_using_marker(self):
         """The list of flavors should start from the provided marker"""
         resp, flavors = self.client.list_flavors()
@@ -89,8 +84,7 @@ class FlavorsTest(unittest.TestCase):
         self.assertFalse(any([i for i in flavors if i['id'] == flavor_id]),
                         'The list of flavors did not start after the marker.')
 
-    @unittest.expectedFailure
-    @attr(type='positive', bug='lp912922')
+    @attr(type='positive')
     def test_list_flavors_detailed_using_marker(self):
         """The list of flavors should start from the provided marker"""
         resp, flavors = self.client.list_flavors_with_detail()
@@ -101,7 +95,6 @@ class FlavorsTest(unittest.TestCase):
         self.assertFalse(any([i for i in flavors if i['id'] == flavor_id]),
                         'The list of flavors did not start after the marker.')
 
-    @unittest.skipIf(release == 'diablo', 'bug in diablo')
     @attr(type='positive')
     def test_list_flavors_detailed_filter_by_min_disk(self):
         """The detailed list of flavors should be filtered by disk space"""
@@ -113,7 +106,6 @@ class FlavorsTest(unittest.TestCase):
         resp, flavors = self.client.list_flavors_with_detail(params)
         self.assertFalse(any([i for i in flavors if i['id'] == flavor_id]))
 
-    @unittest.skipIf(release == 'diablo', 'bug in diablo')
     @attr(type='positive')
     def test_list_flavors_detailed_filter_by_min_ram(self):
         """The detailed list of flavors should be filtered by RAM"""
@@ -125,7 +117,6 @@ class FlavorsTest(unittest.TestCase):
         resp, flavors = self.client.list_flavors_with_detail(params)
         self.assertFalse(any([i for i in flavors if i['id'] == flavor_id]))
 
-    @unittest.skipIf(release == 'diablo', 'bug in diablo')
     @attr(type='positive')
     def test_list_flavors_filter_by_min_disk(self):
         """The list of flavors should be filtered by disk space"""
@@ -137,7 +128,6 @@ class FlavorsTest(unittest.TestCase):
         resp, flavors = self.client.list_flavors(params)
         self.assertFalse(any([i for i in flavors if i['id'] == flavor_id]))
 
-    @unittest.skipIf(release == 'diablo', 'bug in diablo')
     @attr(type='positive')
     def test_list_flavors_filter_by_min_ram(self):
         """The list of flavors should be filtered by RAM"""
