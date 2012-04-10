@@ -31,6 +31,8 @@ from tempest.services.nova.json.floating_ips_client import FloatingIPsClient
 from tempest.services.nova.json.keypairs_client import KeyPairsClient
 from tempest.services.quantum.json.quantum_client import QuantumClient
 from tempest.services.nova.json.volumes_client import VolumesClient
+from tempest.services.keystone.json.keystone_client import KeystoneClient
+from tempest.services.keystone.json.keystone_client import TokenClient
 
 LOG = logging.getLogger(__name__)
 
@@ -42,12 +44,20 @@ class Manager(object):
     """
 
     def __init__(self, username=None, password=None, tenant_name=None):
+        """
+        We allow overriding of the credentials used within the various
+        client classes managed by the Manager object. Left as None, the
+        standard username/password/tenant_name is used.
+
+        :param username: Override of the username
+        :param password: Override of the password
+        :param tenant_name: Override of the tenant name
+        """
         self.config = tempest.config.TempestConfig()
 
-        if None in (username, password, tenant_name):
-            username = self.config.compute.username
-            password = self.config.compute.password
-            tenant_name = self.config.compute.tenant_name
+        username = username or self.config.compute.username
+        password = password or self.config.compute.password
+        tenant_name = tenant_name or self.config.compute.tenant_name
 
         if None in (username, password, tenant_name):
             msg = ("Missing required credentials. "
@@ -62,7 +72,6 @@ class Manager(object):
                            tenant_name)
         else:
             client_args = (self.config, username, password, auth_url)
-
         self.servers_client = ServersClient(*client_args)
         self.flavors_client = FlavorsClient(*client_args)
         self.images_client = ImagesClient(*client_args)
@@ -73,8 +82,18 @@ class Manager(object):
         self.floating_ips_client = FloatingIPsClient(*client_args)
         self.networks_client = QuantumClient(*client_args)
         self.volumes_client = VolumesClient(*client_args)
+        self.keystone_client = KeystoneClient(*client_args)
+        #self.tokens_client = TokenClient(self.config)
+        self.tokens_client = TokenClient(*client_args)
+
 
 class AltManager(Manager):
+
+    """
+    Manager object that uses the alt_XXX credentials for its
+    managed client objects
+    """
+
     def __init__(self):
         self.config = tempest.config.TempestConfig()
         super(AltManager, self).__init__(self.config.compute.alt_username,
@@ -83,11 +102,19 @@ class AltManager(Manager):
 
 
 class AdminManager(Manager):
+
+    """
+    Manager object that uses the alt_XXX credentials for its
+    managed client objects
+    """
+
     def __init__(self):
         self.config = tempest.config.TempestConfig()
         super(AdminManager, self).__init__(self.config.compute_admin.username,
                                            self.config.compute_admin.password,
                                            self.config.compute_admin.tenant_name)
+        # TODO(jaypipes): Add Admin-Only client class construction below...
+
 
 class ServiceManager(object):
 

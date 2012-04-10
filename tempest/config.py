@@ -40,7 +40,9 @@ class BaseConfig(object):
 
 class IdentityConfig(BaseConfig):
 
-    """Provides configuration information for authenticating with Keystone."""
+    """
+    Provides configuration information for authenticating with Keystone.
+    """
 
     SECTION_NAME = "identity"
 
@@ -51,7 +53,7 @@ class IdentityConfig(BaseConfig):
 
     @property
     def port(self):
-        """Port for the Identity service."""
+        """Port for the Identity Service API."""
         return self.get("port", "5000")
 
     @property
@@ -65,19 +67,19 @@ class IdentityConfig(BaseConfig):
         return self.get("path", "/")
 
     @property
+    def use_ssl(self):
+        """Specifies if we are using https."""
+        return self.get("use_ssl", 'false').lower() != 'false'
+
+    @property
     def auth_url(self):
         """The Identity URL (derived)"""
         auth_url = data_utils.build_url(self.host,
                                         self.port,
-                                        self.api_version,
-                                        self.path,
+                                        api_version=self.api_version,
+                                        path=self.path,
                                         use_ssl=self.use_ssl)
         return auth_url
-
-    @property
-    def use_ssl(self):
-        """Specifies if we are using https."""
-        return self.get("use_ssl", 'false').lower() != 'false'
 
     @property
     def strategy(self):
@@ -203,9 +205,34 @@ class ComputeAdminConfig(BaseConfig):
 
     @property
     def username(self):
-        """Username to use for administrative API requests. Defaults to
-        'admin'."""
+        """Administrative Username to use for Nova API requests."""
         return self.get("username", "admin")
+
+    @property
+    def tenant_name(self):
+        """Administrative Tenant name to use for Nova API requests."""
+        return self.get("tenant_name", "admin")
+
+    @property
+    def password(self):
+        """API key to use when authenticating as admin."""
+        return self.get("password", "admimpass")
+
+
+class IdentityAdminConfig(IdentityConfig):
+
+    """
+    Provides configuration information for the administrative usage of the
+    Identity API.
+    """
+
+    SECTION_NAME = "identity-admin"
+
+    @property
+    def username(self):
+        """Username to use for Identity administrative API requests. Defaults
+        to 'key_admin'."""
+        return self.get("username", "key_admin")
 
     @property
     def tenant_name(self):
@@ -216,6 +243,16 @@ class ComputeAdminConfig(BaseConfig):
     def password(self):
         """Password of administrative user."""
         return self.get("password", "admimpass")
+
+    @property
+    def port(self):
+        """Port for the Identity Admin API"""
+        return self.get("port", "35357")
+
+    @property
+    def api_version(self):
+        """Version of the Identity API"""
+        return self.get("api_version", "v1.1")
 
 
 class ImagesConfig(BaseConfig):
@@ -276,7 +313,8 @@ def singleton(cls):
 
     @property
     def registry_config(self):
-        """Path to Images registry config. Defaults to etc/glance-registry.conf"""
+        """Path to Images registry config.
+        Defaults to etc/glance-registry.conf"""
         return self.get("registry_config", "etc/glance-registry.conf")
 
     @property
@@ -287,8 +325,8 @@ def singleton(cls):
 
 class NetworkConfig(object):
     """Provides configuration information for connecting to an
-	OpenStack Network Service.
-	"""
+    OpenStack Network Service.
+    """
 
     def __init__(self, conf):
         """Initialize a quantum-specific configuration object."""
@@ -321,6 +359,7 @@ class NetworkConfig(object):
     def api_version(self):
         """Version of Quantum API"""
         return self.get("api_version", "v1.0")
+
 
 class MySQLConfig(object):
     """Provides configuration information for connecting to MySQL."""
@@ -373,6 +412,7 @@ class TempestConfig:
             self.DEFAULT_CONFIG_FILE)
 
         path = os.path.join(conf_dir, conf_file)
+        print path
 
         LOG.info("Using tempest config file %s" % path)
 
@@ -384,6 +424,7 @@ class TempestConfig:
         self.identity = IdentityConfig(self._conf)
         self.compute = ComputeConfig(self._conf)
         self.compute_admin = ComputeAdminConfig(self._conf)
+        self.identity_admin = IdentityAdminConfig(self._conf)
         self.images = ImagesConfig(self._conf)
         self.network = NetworkConfig(self._conf)
         self.mysql = MySQLConfig(self._conf)
