@@ -216,43 +216,7 @@ class ComputeAdminConfig(BaseConfig):
     @property
     def password(self):
         """API key to use when authenticating as admin."""
-        return self.get("password", "admimpass")
-
-
-class IdentityAdminConfig(IdentityConfig):
-
-    """
-    Provides configuration information for the administrative usage of the
-    Identity API.
-    """
-
-    SECTION_NAME = "identity-admin"
-
-    @property
-    def username(self):
-        """Username to use for Identity administrative API requests. Defaults
-        to 'key_admin'."""
-        return self.get("username", "key_admin")
-
-    @property
-    def tenant_name(self):
-        """Tenant name of administrative user."""
-        return self.get("tenant_name", "admin")
-
-    @property
-    def password(self):
-        """Password of administrative user."""
-        return self.get("password", "admimpass")
-
-    @property
-    def port(self):
-        """Port for the Identity Admin API"""
-        return self.get("port", "35357")
-
-    @property
-    def api_version(self):
-        """Version of the Identity API"""
-        return self.get("api_version", "v1.1")
+        return self.get("password", "pass")
 
 
 class ImagesConfig(BaseConfig):
@@ -421,10 +385,9 @@ class TempestConfig:
             raise RuntimeError(msg)
 
         self._conf = self.load_config(path)
-        self.identity = IdentityConfig(self._conf)
         self.compute = ComputeConfig(self._conf)
         self.compute_admin = ComputeAdminConfig(self._conf)
-        self.identity_admin = IdentityAdminConfig(self._conf)
+        self.identity = IdentityConfig(self._conf)
         self.images = ImagesConfig(self._conf)
         self.network = NetworkConfig(self._conf)
         self.mysql = MySQLConfig(self._conf)
