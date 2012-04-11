@@ -13,9 +13,6 @@ def build_url(host, port, api_version=None, path=None,
     """Build the request URL from given host, port, path and parameters"""
 
     pattern = 'v\d\.\d'
-    if re.match(pattern, path):
-        message = 'Version should not be included in path.'
-        raise exceptions.InvalidConfiguration(message=message)
 
     if use_ssl:
         url = "https://" + host
@@ -27,10 +24,14 @@ def build_url(host, port, api_version=None, path=None,
     url += "/"
 
     if api_version is not None:
-        url += api_version + "/"
+        url += api_version
 
     if path is not None:
-        url += path
+        if re.match(pattern, path):
+            message = 'Version should not be included in path.'
+            raise exceptions.InvalidConfiguration(message=message)
+
+        url += "/" + path
 
     if params is not None:
         url += "?"

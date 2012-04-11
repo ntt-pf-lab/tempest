@@ -15,80 +15,53 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 import subprocess
-import logging
-
 import unittest2 as unittest
 from nose.plugins.attrib import attr
 
-import tempest.config
-from kong import tests
 from tempest import openstack
-from tempest.common import rest_client
-from tempest.common.rest_client import RestClientLogging
-from tempest.services.keystone.json.keystone_client import TokenClient
-from nose.plugins import skip
+from tempest.common.utils.data_utils import rand_name
+import tempest.config
+from tempest import exceptions
 
-LOG = logging.getLogger("large.tests.test_keystone")
-messages = []
-
-def setUpModule(module):
-    rest_client.rest_logging = KeystoneLogging()
-
-def tearDownModule(module):
-    print "\nAll keystone tests done. Dump message infos."
-    for m in messages:
-        print "Test: %s\nMessages %s" % m
-
-class KeystoneLogging(RestClientLogging):
-
-    def do_auth(self, creds):
-        LOG.info("Authenticate %s" % creds)
-
-    def do_request(self, req_url, method, headers, body):
-        LOG.info(">>> Send Request %s %s" % (method, req_url))
-        LOG.debug(">>> Headers %s" % headers)
-        LOG.debug(">>> Request Body %s" % body)
-
-    def do_response(self, resp, body):
-        LOG.info("<<< Receive Response %s" % resp)
-        LOG.debug("<<< Response Body %s" % body)
 
 class FunctionalTest(unittest.TestCase):
 
     def setUp(self):
-        default_config = tempest.config.TempestConfig('etc/large.conf')
-        self.os = openstack.Manager(default_config)
+        self.os = openstack.AdminManager()
         self.client = self.os.keystone_client
-        self.token_client = TokenClient(default_config)
+        self.token_client = self.os.tokens_client
         self.data = DataGenerator(self.client)
-        self.db = DBController(default_config)
+        self.config = tempest.config.TempestConfig()
+        self.db = DBController(self.config)
 
     def tearDown(self):
         self.data.teardown_all()
 
     @attr(kind='large')
     def swap_user(self, user, password, tenant_name):
-        config = tempest.config.TempestConfig('etc/large.conf')
-        config.identity.conf.set('identity', 'username', user)
-        config.identity.conf.set('identity', 'password', password)
-        config.identity.conf.set('identity', 'tenant_name', tenant_name)
-        self.os = openstack.Manager(config)
+        '''Recreate client object for different user'''
+        self.config.compute_admin.conf.set('compute-admin', 'username', user)
+        self.config.compute_admin.conf.set('compute-admin', 'password',
+                                            password)
+        self.config.compute_admin.conf.set('compute-admin', 'tenant_name',
+                                            tenant_name)
+        self.os = openstack.Manager()
         self.client = self.os.keystone_client
 
     @attr(kind='large')
-    def diable_user(self, user_name):
+    def disable_user(self, user_name):
         user = self.get_user_by_name(user_name)
         self.client.enable_disable_user(user['id'], False)
 
     @attr(kind='large')
-    def diable_tenant(self, tenant_name):
+    def disable_tenant(self, tenant_name):
         tenant = self.get_tenant_by_name(tenant_name)
         self.client.update_tenant(tenant['id'], tenant['description'], False)
 
     @attr(kind='large')
     def get_user_by_name(self, name):
         _, body = self.client.get_users()
-        users = body['users']['values']
+        users = body['users']
         user = [u for u in users if u['name'] == name]
         if len(user) > 0:
             return user[0]
@@ -96,7 +69,7 @@ class FunctionalTest(unittest.TestCase):
     @attr(kind='large')
     def get_tenant_by_name(self, name):
         _, body = self.client.get_tenants()
-        tenants = body['tenants']['values']
+        tenants = body['tenants']
         tenant = [t for t in tenants if t['name'] == name]
         if len(tenant) > 0:
             return tenant[0]
@@ -104,20 +77,22 @@ class FunctionalTest(unittest.TestCase):
     @attr(kind='large')
     def get_role_by_name(self, name):
         _, body = self.client.get_roles()
-        roles = body['roles']['values']
+        roles = body['roles']
         role = [r for r in roles if r['name'] == name]
         if len(role) > 0:
             return role[0]
 
     @attr(kind='large')
     def expire_token(self, user_id, tenant_id):
-        sql = "update token set expires = '2000-01-01' where user_id=%s and \
+        sql = "update token set expires = '2000-01-01' where extra like \
+        '%\"user\"%\"id\"=\%\"%s\"% \
                 tenant_id=%s" % (user_id, tenant_id)
         self.db.exec_mysql(sql)
 
     @attr(kind='large')
     def remove_token(self, user_id, tenant_id):
-        sql = "delete from token where user_id=%s and tenant_id=%s" % \
+        sql = "delete from token where extra like '%\"user\"%\"id\": \
+            \"%s\"%\"tenantId\": \"%s\"'" % \
                 (user_id, tenant_id)
         self.db.exec_mysql(sql)
 
@@ -127,14 +102,12 @@ class DBController(object):
         self.config = config
 
     def exec_mysql(self, sql):
-        LOG.debug("Execute sql %s" % sql)
         exec_sql = 'mysql -h %s -u %s -p%s keystone -Ns -e "' + sql + '"'
         result = subprocess.check_output(exec_sql % (
                                          self.config.mysql.host,
                                          self.config.mysql.user,
                                          self.config.mysql.password),
                                          shell=True)
-        LOG.debug("SQL Execution Result %s" % result)
 
 
 class DataGenerator(object):
@@ -154,13 +127,8 @@ class DataGenerator(object):
         self.users.append(user['user'])
 
     def setup_role(self):
-        _, services = self.client.get_services()
-        services = services['OS-KSADM:services']
-        service_name = services[0]['name']
-        service_id = services[0]['id']
-        _, roles = self.client.create_role(service_name + ':test1' ,
-                                        'Test role', service_id)
-        self.role_name = service_name + ':test1'
+        self.role_name = rand_name('role')
+        _, roles = self.client.create_role(self.role_name)
         self.roles.append(roles['role'])
 
     def teardown_all(self):
@@ -171,178 +139,152 @@ class DataGenerator(object):
         for r in self.roles:
             self.client.delete_role(r['id'])
 
-class KeystoneTest(FunctionalTest):
+
+class IdentityAdminTest(FunctionalTest):
 
     @attr(kind='large')
     def test_get_tenants(self):
         self.data.setup_one_user()
         _, body = self.client.get_tenants()
-        tenants = body['tenants']['values']
-        self.assertIn('test_tenant1', [t['name'] for t in tenants],
+        tenants = body['tenants']
+        self.assertIn('admin', [t['name'] for t in tenants],
                         "test_tenant1 should be include.")
 
     @attr(kind='large')
-    def test_get_tenants_with_no_grant(self):
+    def test_get_tenants_by_unauthorized_user(self):
         self.data.setup_one_user()
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        resp, body = self.client.get_tenants()
-        self.assertEqual('401', resp['status'])
-        messages.append(('test_get_tenants_with_no_grant',body))
+        self.assertRaises(exceptions.Unauthorized, self.client.get_tenants)
 
     @attr(kind='large')
-    def test_get_tenants_with_expired_user(self):
+    @unittest.skip("devstack")
+    def test_get_tenants_by_user_with_expired_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_tenants()
         self.expire_token(user['id'], user['tenantId'])
-        resp, body = self.client.get_tenants()
-        self.assertEqual('403', resp['status'])
-        messages.append(('test_get_tenants_with_expired_user', body))
+        self.assertRaises(exceptions.Unauthorized, self.client.get_tenants)
 
     @attr(kind='large')
-    def test_get_tenants_with_no_token(self):
+    #@unittest.skip("devstack")
+    def test_get_tenants_request_without_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
-        self.client.get_tenants()
         self.remove_token(user['id'], user['tenantId'])
-        resp, body = self.client.get_tenants()
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_get_tenants_with_no_token', body))
+        self.assertRaises(exceptions.Unauthorized, self.client.get_tenants)
 
     @attr(kind='large')
-    def test_create_tenants(self):
+    def test_create_tenant(self):
         _, body = self.client.create_tenant("test_tenant1", "tenant_for_test")
         self.data.tenants.append(body['tenant'])
         self.assertEquals('test_tenant1', body['tenant']['name'])
         self.assertEquals('tenant_for_test', body['tenant']['description'])
-        messages.append(('test_create_tenants', body))
 
     @attr(kind='large')
-    def test_create_tenants_with_no_grant(self):
+    def test_create_tenant_by_unauthorized_user(self):
         self.data.setup_one_user()
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        resp, body = self.client.create_tenant("test_no_grant", "not created")
-        self.assertEqual('401', resp['status'])
-        messages.append(('test_create_tenants_with_no_grant',body))
+        self.assertRaises(exceptions.Unauthorized, self.client.create_tenant,
+                        "test_no_grant", "not created")
 
     @attr(kind='large')
-    def test_create_tenants_with_expired_user(self):
+#    @unittest.skip("devstack")
+    def test_create_tenant_by_user_with_expired_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
-        self.client.get_tenants()
+        #self.client.get_tenants()
         self.expire_token(user['id'], user['tenantId'])
-        resp, body = self.client.create_tenant('test_expired', 'not created')
-        self.assertEqual('403', resp['status'])
-        messages.append(('test_create_tenants_with_expired_user', body))
+        self.assertRaises(exceptions.Unauthorized, self.client.create_tenant,
+                        'test_expired', 'not created')
 
     @attr(kind='large')
-    def test_create_tenants_with_no_token(self):
+    @unittest.skip("devstack")
+    def test_create_tenant_request_without_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_tenants()
         self.remove_token(user['id'], user['tenantId'])
-        resp, body = self.client.create_tenant('test_no_token', 'not_created')
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_get_tenants_with_no_token', body))
+        self.assertRaises(exceptions.NotFound, self.client.create_tenant,
+                            'test_no_token', 'not_created')
 
     @attr(kind='large')
-    def test_create_tenants_conflict(self):
+    def test_create_tenant_with_duplicate_name(self):
         self.data.setup_one_user()
-        resp, body = self.client.create_tenant("test_tenant1",
-                                            "tenant_for_test")
-        self.assertEqual('409', resp['status'])
-        messages.append(('test_create_tenants_conflict', body))
+        self.assertRaises(exceptions.Duplicate, self.client.create_tenant,
+                            "test_tenant1", "tenant_for_test")
 
     @attr(kind='large')
-    @tests.skip_test('Unable to create bad object')
-    def test_create_tenants_bad_object(self):
-        resp, body = self.client.create_tenant(True, "tenant_for_test")
-        self.assertEqual('400', resp['status'])
-        messages.append(('test_create_tenants_bad_object', body))
+    @unittest.skip('Unable to create bad object')
+    def test_create_tenant_bad_object(self):
+        self.assertRaises(exceptions.BadRequest, self.client.create_tenant,
+                            True, "tenant_for_test")
 
     @attr(kind='large')
-    def test_create_tenants_empty_name(self):
-        resp, body = self.client.create_tenant("", "tenant_for_test")
-        self.assertEqual('400', resp['status'])
-        messages.append(('test_create_tenants_empty_name', body))
+    @unittest.skip("Skipping due to FAIL: BadRequest not raised")
+    def test_create_tenant_empty_name(self):
+        self.assertRaises(exceptions.BadRequest, self.client.create_tenant, "",
+                "tenant_for_test")
 
     @attr(kind='large')
-    @tests.skip_test('Not check 256 value in tenant name.')
-    def test_create_tenants_over_256_name(self):
-        resp, body = self.client.create_tenant("a" * 256, "tenant_for_test")
-        self.assertEqual('400', resp['status'])
-        messages.append(('test_create_tenants_over_256_name', body))
+    @unittest.skip('Skipping until Bug #966249 is fixed')
+    def test_create_tenant_name_length_over_64(self):
+        self.assertRaises(exceptions.BadRequest, self.client.create_tenant,
+                            "a" * 64, "tenant_for_test")
 
     @attr(kind='large')
-    @tests.skip_test('Not check 256 value in tenant description.')
-    def test_create_tenants_over_256_description(self):
-        resp, body = self.client.create_tenant("a" * 256, "tenant_for_test")
-        self.assertEqual('400', resp['status'])
-        messages.append(('test_create_tenants_over_256_description', body))
-
-    @attr(kind='large')
-    def test_delete_tenants(self):
+    def test_delete_tenant(self):
         _, body = self.client.create_tenant("test_tenant1", "tenant_for_test")
         resp, body = self.client.delete_tenant(body['tenant']['id'])
         self.assertEquals('204', resp['status'])
-        messages.append(('test_delete_tenants', body))
 
     @attr(kind='large')
-    def test_delete_tenants_with_no_grant(self):
+    def test_delete_tenant_by_unauthorized_user(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        resp, body = self.client.delete_tenant(tenant['id'])
-        self.assertEqual('401', resp['status'])
-        messages.append(('test_delete_tenants_with_no_grant',body))
+        self.assertRaises(exceptions.Unauthorized, self.client.delete_tenant,
+                            tenant['id'])
 
     @attr(kind='large')
-    def test_delete_tenants_with_expired_user(self):
+    @unittest.skip("devstack")
+    def test_delete_tenant_by_user_with_expired_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_tenants()
         self.expire_token(user['id'], user['tenantId'])
-        resp, body = self.client.delete_tenant(user['tenantId'])
-        self.assertEqual('403', resp['status'])
-        messages.append(('test_delete_tenants_with_expired_user', body))
+        self.assertRaises(exceptions.Unauthorized, self.client.delete_tenant,
+                        user['tenantId'])
 
     @attr(kind='large')
-    def test_delete_tenants_with_no_token(self):
+    @unittest.skip("devstack")
+    def test_delete_tenant_request_without_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_tenants()
         self.remove_token(user['id'], user['tenantId'])
-        resp, body = self.client.delete_tenant(user['tenantId'])
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_delete_tenants_with_no_token', body))
+        self.assertRaises(exceptions.NotFound, self.client.delete_tenant,
+                            user['tenantId'])
 
     @attr(kind='large')
-    def test_delete_tenants_with_no_exist_id(self):
+    def test_delete_non_existant_tenant(self):
         self.data.setup_one_user()
-        resp, body = self.client.delete_tenant('99999999')
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_delete_tenants_with_no_exist_id', body))
+        self.assertRaises(exceptions.NotFound, self.client.delete_tenant,
+                            '99999999abc')
 
     @attr(kind='large')
-    def test_auth(self):
+    def test_user_authentication(self):
         self.data.setup_one_user()
         # create token.
         self.token_client.auth('test_user1', 'password', 'test_tenant1')
@@ -350,10 +292,10 @@ class KeystoneTest(FunctionalTest):
         resp, body = self.token_client.auth('test_user1', 'password',
                                             'test_tenant1')
         self.assertEqual('200', resp['status'])
-        messages.append(('test_auth', body))
 
     @attr(kind='large')
-    def test_auth_with_expire_token(self):
+    @unittest.skip("devstack")
+    def test_authentication_with_expired_token(self):
         self.data.setup_one_user()
         # create token.
         self.token_client.auth('test_user1', 'password', 'test_tenant1')
@@ -361,13 +303,12 @@ class KeystoneTest(FunctionalTest):
         tenant = self.get_tenant_by_name('test_tenant1')
         self.expire_token(user['id'], tenant['id'])
         # reauth
-        resp, body = self.token_client.auth('test_user1', 'password',
-                                            'test_tenant1')
-        self.assertEqual('200', resp['status'])
-        messages.append(('test_auth_with_expire_token', body))
+        self.assertRaises(exceptions.Unauthorized, self.token_client.auth,
+                            'test_user1', 'password','test_tenant1')
 
     @attr(kind='large')
-    def test_auth_with_none_token(self):
+    @unittest.skip("devstack")
+    def test_authentication_without_any_token(self):
         self.data.setup_one_user()
         # create token.
         self.token_client.auth('test_user1', 'password', 'test_tenant1')
@@ -378,91 +319,76 @@ class KeystoneTest(FunctionalTest):
         resp, body = self.token_client.auth('test_user1', 'password',
                                             'test_tenant1')
         self.assertEqual('200', resp['status'])
-        messages.append(('test_auth_with_none_token', body))
 
     @attr(kind='large')
-    def test_auth_with_disable_user(self):
+    def test_authentication_for_disabled_user(self):
         self.data.setup_one_user()
-        self.diable_user('test_user1')
+        self.disable_user('test_user1')
+        self.assertRaises(exceptions.Unauthorized, self.token_client.auth,
+                            'test_user1', 'password', 'test_tenant1')
+
+    @attr(kind='large')
+    def test_authentication_when_tenant_is_disabled(self):
+        self.data.setup_one_user()
+        self.disable_tenant('test_tenant1')
         resp, body = self.token_client.auth('test_user1', 'password',
                                             'test_tenant1')
-        self.assertEqual('403', resp['status'])
-        messages.append(('test_auth_with_diable_user', body))
+        self.assertRaises(exceptions.Unauthorized, self.token_client.auth,
+                          'test_user1', 'password', 'test_tenant1')
 
     @attr(kind='large')
-    def test_auth_with_disable_tenant(self):
+    def test_authentication_with_invalid_username(self):
         self.data.setup_one_user()
-        self.diable_tenant('test_tenant1')
-        resp, body = self.token_client.auth('test_user1', 'password',
-                                            'test_tenant1')
-        self.assertEqual('403', resp['status'])
-        messages.append(('test_auth_with_disable_tenant', body))
+        self.assertRaises(exceptions.Unauthorized, self.token_client.auth,
+                            'junkname1234', 'password', 'test_tenant1')
 
     @attr(kind='large')
-    def test_auth_with_illigal_password(self):
+    def test_authentication_with_invalid_password(self):
         self.data.setup_one_user()
-        resp, body = self.token_client.auth('test_user1', 'test',
-                                            'test_tenant1')
-        self.assertEqual('401', resp['status'])
-        messages.append(('test_auth_with_illigal_password', body))
+        self.assertRaises(exceptions.Unauthorized, self.token_client.auth,
+                            'test_user1', 'junkpass1234', 'test_tenant1')
 
     @attr(kind='large')
-    def test_auth_with_illigal_name(self):
+    def test_authentication_with_invalid_tenant(self):
         self.data.setup_one_user()
-        resp, body = self.token_client.auth('not_exist', 'password',
-                                            'test_tenant1')
-        self.assertEqual('401', resp['status'])
-        messages.append(('test_auth_with_illigal_name', body))
-
-    @attr(kind='large')
-    def test_auth_with_illigal_tenant(self):
-        self.data.setup_one_user()
-        resp, body = self.token_client.auth('test_user1', 'password',
-                                            'test_tenant99')
-        self.assertEqual('401', resp['status'])
-        messages.append(('test_auth_with_illigal_tenant', body))
+        self.assertRaises(exceptions.Unauthorized, self.token_client.auth,
+                            'test_user1', 'password', 'junktenant1234')
 
     @attr(kind='large')
     def test_get_users(self):
         self.data.setup_one_user()
         _, body = self.client.get_users()
-        users = body['users']['values']
+        users = body['users']
         self.assertIn('test_user1', [u['name'] for u in users],
                         "test_user1 should be include.")
 
     @attr(kind='large')
-    def test_get_users_with_no_grant(self):
+    def test_get_users_by_unauthorized_user(self):
         self.data.setup_one_user()
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        resp, body = self.client.get_users()
-        self.assertEqual('401', resp['status'])
-        messages.append(('test_get_users_with_no_grant',body))
+        self.assertRaises(exceptions.Unauthorized, self.client.get_users)
 
     @attr(kind='large')
-    def test_get_users_with_expired_user(self):
+    @unittest.skip("devstack")
+    def test_get_users_by_user_with_expired_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_users()
         self.expire_token(user['id'], user['tenantId'])
-        resp, body = self.client.get_users()
-        self.assertEqual('403', resp['status'])
-        messages.append(('test_get_users_with_expired_user', body))
+        self.assertRaises(exceptions.Unauthorized, self.client.get_users)
 
     @attr(kind='large')
-    def test_get_users_with_no_token(self):
+    @unittest.skip("devstack")
+    def test_get_users_request_without_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_users()
         self.remove_token(user['id'], user['tenantId'])
-        resp, body = self.client.get_users()
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_get_users_with_no_token', body))
+        self.assertRaises(exceptions.NotFound, self.client.get_users)
 
     @attr(kind='large')
     def test_create_user(self):
@@ -471,119 +397,93 @@ class KeystoneTest(FunctionalTest):
         resp, body = self.client.create_user('test_user2', 'password',
                                             tenant['id'], 'user2@test.com')
         self.data.users.append(body['user'])
-        self.assertEqual('201', resp['status'])
+        self.assertEqual('200', resp['status'])
         self.assertEqual('test_user2', body['user']['name'])
-        messages.append(('test_create_user',body))
 
     @attr(kind='large')
-    def test_create_users_with_no_grant(self):
+    def test_create_user_by_unauthorized_user(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        resp, body = self.client.create_user('test_user2', 'password',
-                                            tenant['id'], 'user2@test.com')
-        self.assertEqual('401', resp['status'])
-        messages.append(('test_create_users_with_no_grant',body))
+        self.assertRaises(exceptions.Unauthorized, self.client.create_user
+                            ,'test_user2', 'password', tenant['id'],
+                            'user2@test.com')
 
     @attr(kind='large')
-    def test_create_users_with_expired_user(self):
+    @unittest.skip("devstack")
+    def test_create_user_with_expired_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
         tenant = self.get_tenant_by_name('test_tenant1')
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_users()
         self.expire_token(user['id'], user['tenantId'])
-        resp, body = self.client.create_user('test_user2', 'password',
-                                            tenant['id'], 'user2@test.com')
-        self.assertEqual('403', resp['status'])
-        messages.append(('test_get_users_with_expired_user', body))
+        self.assertRaises(exceptions.Unauthorized, self.client.create_user,
+                            'test_user2', 'password', tenant['id'],
+                            'user2@test.com')
 
     @attr(kind='large')
-    def test_create_users_with_no_token(self):
+    @unittest.skip("devstack")
+    def test_create_user_request_without_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
         tenant = self.get_tenant_by_name('test_tenant1')
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_users()
         self.remove_token(user['id'], user['tenantId'])
-        resp, body = self.client.create_user('test_user2', 'password',
-                                            tenant['id'], 'user2@test.com')
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_create_users_with_no_token', body))
+        self.assertRaises(exceptions.NotFound, self.client.create_user,
+                            'test_user2', 'password', tenant['id'],
+                            'user2@test.com')
 
     @attr(kind='large')
-    def test_create_users_with_conflict_name(self):
+    def test_create_user_with_duplicate_name(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
-        resp, body = self.client.create_user('test_user1', 'password',
-                                            tenant['id'], 'user2@test.com')
-        self.assertEqual('409', resp['status'])
-        messages.append(('test_create_users_with_conflict_name',body))
+        self.assertRaises(exceptions.Duplicate, self.client.create_user,
+                                            'test_user1',
+                                            'password',
+                                            tenant['id'],
+                                            'user2@test.com')
 
     @attr(kind='large')
-    def test_create_users_with_conflict_email(self):
+    @unittest.skip('Skipping until Bug #966249 is fixed')
+    def test_create_user_with_name_length_over_64(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
-        resp, body = self.client.create_user('test_user2', 'password',
-                                            tenant['id'], 'user1@mail.com')
-        self.assertEqual('409', resp['status'])
-        messages.append(('test_create_users_with_conflict_email',body))
+        self.assertRaises(exceptions.BadRequest, self.client.create_user,
+                            'a' * 64, 'password', tenant['id'],
+                            'user2@test.com')
 
     @attr(kind='large')
-    @tests.skip_test("Not check 256 value on user name")
-    def test_create_users_with_over_256_name(self):
+    def test_create_user_with_empty_name(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
-        resp, body = self.client.create_user('a' * 256, 'password',
-                                            tenant['id'], 'user2@test.com')
-        self.assertEqual('400', resp['status'])
-        messages.append(('test_create_users_with_over_256_name',body))
+        self.assertRaises(exceptions.BadRequest, self.client.create_user,
+                            '', 'password', tenant['id'], 'user2@test.com')
 
     @attr(kind='large')
-    def test_create_users_with_empty_name(self):
+    def test_create_user_with_empty_password(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
-        resp, body = self.client.create_user('', 'password',
-                                            tenant['id'], 'user2@test.com')
-        self.assertEqual('400', resp['status'])
-        messages.append(('test_create_users_with_empty_name',body))
+        self.assertRaises(exceptions.BadRequest, self.client.create_user,
+                        'test_user2', '', tenant['id'], 'user2@test.com')
 
     @attr(kind='large')
-    @tests.skip_test("Not check 256 value on user password")
-    def test_create_users_with_over_256_password(self):
+    @unittest.skip("Skipped: Does not validate e-mail format")
+    def test_create_user_with_invalid_email_format(self):
         self.data.setup_one_user()
         tenant = self.get_tenant_by_name('test_tenant1')
-        resp, body = self.client.create_user('test_user2', 'p' * 256, tenant['id'], 'user2@test.com')
-        self.assertEqual('400', resp['status'])
-        messages.append(('test_create_users_with_over_256_name',body))
+        self.assertRaises(exceptions.BadRequest, self.client.create_user,
+                        'test_user2', 'password', tenant['id'], '12345')
 
     @attr(kind='large')
-    def test_create_users_with_empty_password(self):
+    def test_create_user_for_non_existant_tenant(self):
         self.data.setup_one_user()
-        tenant = self.get_tenant_by_name('test_tenant1')
-        resp, body = self.client.create_user('test_user2', '', tenant['id'], 'user2@test.com')
-        self.assertEqual('400', resp['status'])
-        messages.append(('test_create_users_with_empty_password',body))
-
-    @attr(kind='large')
-    @tests.skip_test("Not check mail format")
-    def test_create_users_with_bad_mail_format(self):
-        self.data.setup_one_user()
-        tenant = self.get_tenant_by_name('test_tenant1')
-        resp, body = self.client.create_user('test_user2', 'password', tenant['id'], '12345')
-        self.assertEqual('400', resp['status'])
-        messages.append(('test_create_users_with_bad_mail_format',body))
-
-    @attr(kind='large')
-    def test_create_users_with_non_exist_tenant(self):
-        self.data.setup_one_user()
-        resp, body = self.client.create_user('test_user2', 'password', '99999999', 'user2@test.com')
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_create_users_with_non_exist_tenant',body))
+        self.assertRaises(exceptions.NotFound, self.client.create_user,
+                            'test_user2', 'password', '9999999abc',
+                            'user2@test.com')
 
     @attr(kind='large')
     def test_delete_user(self):
@@ -592,32 +492,30 @@ class KeystoneTest(FunctionalTest):
         _, body = self.client.create_user('test_user2', 'password', tenant['id'], 'user2@test.com')
         resp, body = self.client.delete_user(body['user']['id'])
         self.assertEquals('204', resp['status'])
-        messages.append(('test_delete_user', body))
 
     @attr(kind='large')
-    def test_delete_users_with_no_grant(self):
+    def test_delete_users_by_unauthorized_user(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        resp, body = self.client.delete_user(user['id'])
-        self.assertEqual('401', resp['status'])
-        messages.append(('test_delete_users_with_no_grant',body))
+        self.assertRaises(exceptions.Unauthorized, self.client.delete_user,
+                            user['id'])
 
     @attr(kind='large')
-    def test_delete_user_with_expired_user(self):
+    @unittest.skip("devstack")
+    def test_delete_user_by_user_with_expired_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_tenants()
         self.expire_token(user['id'], user['tenantId'])
-        resp, body = self.client.delete_user(user['id'])
-        self.assertEqual('403', resp['status'])
-        messages.append(('test_delete_user_with_expired_user', body))
+        self.assertRaises(exceptions.Unauthorized, self.client.delete_user,
+                            user['id'])
 
     @attr(kind='large')
-    def test_delete_user_with_no_token(self):
+    @unittest.skip("devstack")
+    def test_delete_user_request_without_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
         # create a new token for test_user1.
@@ -625,63 +523,55 @@ class KeystoneTest(FunctionalTest):
         # maybe gone well.
         self.client.get_tenants()
         self.remove_token(user['id'], user['tenantId'])
-        resp, body = self.client.delete_user(user['id'])
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_delete_user_with_no_token', body))
+        self.assertEqual(exceptions.NotFound, self.client.delete_user,
+                        user['id'])
 
     @attr(kind='large')
-    def test_delete_user_with_no_exist_id(self):
+    def test_delete_non_existant_user(self):
         self.data.setup_one_user()
-        resp, body = self.client.delete_user('99999999')
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_delete_user_with_no_exist_id', body))
+        self.assertRaises(exceptions.NotFound, self.client.delete_user,
+                            '99999999')
 
     @attr(kind='large')
-    def test_get_roles(self):
+    def test_get_role(self):
         self.data.setup_role()
         _, body = self.client.get_roles()
-        roles = body['roles']['values']
+        roles = body['roles']
         role_names = [r['name'] for r in roles]
         self.assertIn(self.data.role_name, role_names)
 
     @attr(kind='large')
-    def test_get_roles_with_no_grant(self):
+    def test_get_role_by_unauthorized_user(self):
         self.data.setup_one_user()
         self.data.setup_role()
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        resp, body = self.client.get_roles()
-        self.assertEqual('401', resp['status'])
-        messages.append(('test_get_roles_with_no_grant',body))
+        self.assertRaises(exceptions.Unauthorized, self.client.get_roles)
 
     @attr(kind='large')
-    def test_get_roles_with_expired_user(self):
+    @unittest.skip("devstack")
+    def test_get_role_with_expired_token(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_users()
         self.expire_token(user['id'], user['tenantId'])
-        resp, body = self.client.get_roles()
-        self.assertEqual('403', resp['status'])
-        messages.append(('test_get_roles_with_expired_user', body))
+        self.assertRaises(exceptions.Unauthorized, self.client.get_roles)
 
     @attr(kind='large')
-    def test_get_roles_with_no_token(self):
+    @unittest.skip("devstack")
+    def test_get_role_request_without_token(self):
         self.data.setup_one_user()
         user = self.get_user_by_name('test_user1')
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_users()
         self.remove_token(user['id'], user['tenantId'])
-        resp, body = self.client.get_roles()
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_get_roles_with_no_token', body))
+        self.assertRaises(exceptions.NotFound, self.client.get_roles)
 
     @attr(kind='large')
-    def test_get_user_roles(self):
+    def test_get_user_role(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
@@ -689,11 +579,11 @@ class KeystoneTest(FunctionalTest):
         role = self.get_role_by_name(self.data.role_name)
         self.client.create_role_ref(user['id'], role['id'], tenant['id'])
         _, body = self.client.get_user_roles(user['id'])
-        roles = body['roles']['values']
+        roles = body['roles']
         self.assertEquals(tenant['id'], roles[0]['tenantId'])
 
     @attr(kind='large')
-    def test_get_user_roles_with_no_grant(self):
+    def test_get_user_role_by_unauthorized_user(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
@@ -702,12 +592,12 @@ class KeystoneTest(FunctionalTest):
         self.client.create_role_ref(user['id'], role['id'], tenant['id'])
 
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        resp, body = self.client.get_user_roles(user['id'])
-        self.assertEqual('401', resp['status'])
-        messages.append(('test_get_user_roles_with_no_grant',body))
+        self.assertRaises(exceptions.Unauthorized, self.client.get_user_roles,
+                        user['id'])
 
     @attr(kind='large')
-    def test_get_user_roles_with_expired_user(self):
+    @unittest.skip("devstack")
+    def test_get_user_role_with_expired_token(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
@@ -716,15 +606,14 @@ class KeystoneTest(FunctionalTest):
         self.client.create_role_ref(user['id'], role['id'], tenant['id'])
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_users()
         self.expire_token(user['id'], user['tenantId'])
-        resp, body = self.client.get_user_roles(user['id'])
-        self.assertEqual('403', resp['status'])
-        messages.append(('test_get_user_roles_with_expired_user', body))
+        self.assertRaises(exceptions.Unauthorized, self.client.get_user_roles,
+                            user['id'])
 
     @attr(kind='large')
-    def test_get_user_roles_with_no_token(self):
+    @unittest.skip("devstack")
+    def test_get_user_role_request_without_token(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
@@ -733,15 +622,14 @@ class KeystoneTest(FunctionalTest):
         self.client.create_role_ref(user['id'], role['id'], tenant['id'])
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_users()
         self.remove_token(user['id'], user['tenantId'])
-        resp, body = self.client.get_user_roles(user['id'])
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_get_user_roles_with_no_token', body))
+        self.assertRaises(exceptions.NotFound, self.client.get_user_roles,
+                            user['id'])
 
     @attr(kind='large')
-    def test_get_user_roles_with_not_exist_user(self):
+    @unittest.skip("Skipped: NotFound not raised for non existant user")
+    def test_get_user_role_non_existant_user(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
@@ -749,12 +637,11 @@ class KeystoneTest(FunctionalTest):
         role = self.get_role_by_name(self.data.role_name)
         self.client.create_role_ref(user['id'], role['id'], tenant['id'])
         # create a new token for test_user1.
-        resp, body = self.client.get_user_roles('999999')
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_get_user_roles_with_not_exist_user', body))
+        self.assertRaises(exceptions.NotFound, self.client.get_user_roles,
+                        '999999abc')
 
     @attr(kind='large')
-    def test_create_user_roles(self):
+    def test_create_user_role(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
@@ -762,24 +649,23 @@ class KeystoneTest(FunctionalTest):
         role = self.get_role_by_name(self.data.role_name)
         self.client.create_role_ref(user['id'], role['id'], tenant['id'])
         _, body = self.client.get_user_roles(user['id'])
-        roles = body['roles']['values']
+        roles = body['roles']
         self.assertEquals(tenant['id'], roles[0]['tenantId'])
 
     @attr(kind='large')
-    def test_create_user_roles_with_no_grant(self):
+    def test_create_user_role_by_unauthorized_user(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
         tenant = self.get_tenant_by_name('test_tenant1')
         role = self.get_role_by_name(self.data.role_name)
-
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        resp, body = self.client.create_role_ref(user['id'], role['id'], tenant['id'])
-        self.assertEqual('401', resp['status'])
-        messages.append(('test_create_user_roles_with_no_grant',body))
+        self.assertRaises(exceptions.Unauthorized, self.client.create_role_ref,
+                          user['id'], role['id'], tenant['id'])
 
     @attr(kind='large')
-    def test_create_user_roles_with_expired_user(self):
+    @unittest.skip("devstack")
+    def test_create_user_role_with_expired_token(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
@@ -787,15 +673,15 @@ class KeystoneTest(FunctionalTest):
         role = self.get_role_by_name(self.data.role_name)
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_users()
         self.expire_token(user['id'], user['tenantId'])
-        resp, body = self.client.create_role_ref(user['id'], role['id'], tenant['id'])
-        self.assertEqual('403', resp['status'])
-        messages.append(('test_create_user_roles_with_expired_user', body))
+        self.assertRaises(exceptions.Unauthorized,
+                        self.client.create_role_ref, user['id'], role['id'],
+                        tenant['id'])
 
     @attr(kind='large')
-    def test_create_user_roles_with_no_token(self):
+    @unittest.skip("devstack")
+    def test_create_user_role_request_without_token(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
@@ -803,59 +689,56 @@ class KeystoneTest(FunctionalTest):
         role = self.get_role_by_name(self.data.role_name)
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_users()
         self.remove_token(user['id'], user['tenantId'])
-        resp, body = self.client.create_role_ref(user['id'], role['id'], tenant['id'])
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_create_user_roles_with_no_token', body))
+        self.assertRaises(exceptions.NotFound, self.client.create_role_ref,
+                            user['id'], role['id'], tenant['id'])
 
     @attr(kind='large')
-    def test_create_user_roles_with_not_exist_user(self):
+    def test_create_user_role_non_existant_user(self):
         self.data.setup_one_user()
         self.data.setup_role()
         tenant = self.get_tenant_by_name('test_tenant1')
         role = self.get_role_by_name(self.data.role_name)
-        resp, body = self.client.create_role_ref('999999', role['id'], tenant['id'])
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_create_user_roles_with_not_exist_user', body))
+        self.assertRaises(exceptions.NotFound, self.client.create_role_ref,
+                            '999999', role['id'], tenant['id'])
 
     @attr(kind='large')
-    def test_create_user_roles_with_not_exist_role(self):
+    @unittest.skip("devstack")
+    def test_create_user_role_non_existant_role(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
         tenant = self.get_tenant_by_name('test_tenant1')
         self.remove_token(user['id'], user['tenantId'])
-        resp, body = self.client.create_role_ref(user['id'], '999999', tenant['id'])
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_create_user_roles_with_not_exist_role', body))
+        self.assertRaises(exceptions.NotFound, self.client.create_role_ref,
+                            user['id'], '999999', tenant['id'])
 
     @attr(kind='large')
-    def test_create_user_roles_with_not_exist_tenant(self):
+    @unittest.skip("devstack")
+    def test_create_user_role_non_existant_tenant(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
         role = self.get_role_by_name(self.data.role_name)
         self.remove_token(user['id'], user['tenantId'])
-        resp, body = self.client.create_role_ref(user['id'], role['id'], '999999')
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_create_user_roles_with_not_exist_user', body))
+        self.assertRaises(exceptions.NontFound, self.client.create_role_ref,
+                            user['id'], role['id'], '999999')
 
     @attr(kind='large')
-    @tests.skip_test("Duplicate entry returned 500 error")
-    def test_create_user_roles_with_conflict(self):
+    @unittest.skip("Skipped: AssertionError: Duplicate not raised")
+    def test_create_user_role_duplicate_role(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
         tenant = self.get_tenant_by_name('test_tenant1')
         role = self.get_role_by_name(self.data.role_name)
         self.client.create_role_ref(user['id'], role['id'], tenant['id'])
-        resp, body = self.client.create_role_ref(user['id'], role['id'], tenant['id'])
-        self.assertEqual('409', resp['status'])
-        messages.append(('test_create_user_roles_with_conflict', body))
+        self.assertRaises(exceptions.Duplicate, self.client.create_role_ref,
+                            user['id'], role['id'], tenant['id'])
 
     @attr(kind='large')
+    @unittest.skip("Skipped: 500 Internal Server Error")
     def test_delete_user_role(self):
         self.data.setup_one_user()
         self.data.setup_role()
@@ -868,22 +751,22 @@ class KeystoneTest(FunctionalTest):
         self.assertEquals('204', resp['status'])
 
     @attr(kind='large')
-    def test_delete_user_roles_with_no_grant(self):
+    def test_delete_user_role_by_unauthorized_user(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
         tenant = self.get_tenant_by_name('test_tenant1')
         role = self.get_role_by_name(self.data.role_name)
-        _, body = self.client.create_role_ref(user['id'], role['id'], tenant['id'])
+        _, body = self.client.create_role_ref(user['id'], role['id'],
+                                                tenant['id'])
         role = body['role']
-
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        resp, body = self.client.delete_role_ref(user['id'], role['id'])
-        self.assertEqual('401', resp['status'])
-        messages.append(('test_delete_user_roles_with_no_grant',body))
+        self.assertRaises(exceptions.Unauthorized, self.client.delete_role_ref,
+                                                    user['id'], role['id'])
 
     @attr(kind='large')
-    def test_delete_user_roles_with_expired_user(self):
+    @unittest.skip("devstack")
+    def test_delete_user_role_with_expired_token(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
@@ -893,15 +776,14 @@ class KeystoneTest(FunctionalTest):
         role = body['role']
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_users()
         self.expire_token(user['id'], user['tenantId'])
-        resp, body = self.client.delete_role_ref(user['id'], role['id'])
-        self.assertEqual('403', resp['status'])
-        messages.append(('test_create_user_roles_with_expired_user', body))
+        self.assertRaises(self.client.delete_role_ref,
+                            user['id'], role['id'])
 
     @attr(kind='large')
-    def test_delete_user_roles_with_no_token(self):
+    @unittest.skip("devstack")
+    def test_delete_user_role_request_without_token(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
@@ -911,16 +793,14 @@ class KeystoneTest(FunctionalTest):
         role = body['role']
         # create a new token for test_user1.
         self.swap_user('test_user1', 'password', 'test_tenant1')
-        # maybe gone well.
         self.client.get_users()
         self.remove_token(user['id'], user['tenantId'])
-        resp, body = self.client.delete_role_ref(user['id'], role['id'])
-        self.assertEqual('404', resp['status'])
-        messages.append(('test_create_user_roles_with_no_token', body))
+        self.assertRaises(exceptions.NotFound, self.client.delete_role_ref,
+                            user['id'], role['id'])
 
     @attr(kind='large')
-    @tests.skip_test("None exist user not occured exception")
-    def test_delete_user_role_with_not_exist_user(self):
+    @unittest.skip("Skipped: 500 Internal Server Error")
+    def test_delete_user_role_non_existant_user(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
@@ -928,13 +808,12 @@ class KeystoneTest(FunctionalTest):
         role = self.get_role_by_name(self.data.role_name)
         _, body = self.client.create_role_ref(user['id'], role['id'], tenant['id'])
         role = body['role']
-        resp, body = self.client.delete_role_ref('999999', role['id'])
-        self.assertEquals('404', resp['status'])
-        messages.append(('test_delete_user_role_with_not_exist_user', body))
+        self.assertRaises(exceptions.NotFound, self.client.delete_role_ref,
+                                    '999999abc', role['id'])
 
     @attr(kind='large')
-    @tests.skip_test("None exist role not occured exception")
-    def test_delete_user_role_with_not_exist_role(self):
+    @unittest.skip("Skipped: 500 Internal Server Error")
+    def test_delete_user_role_non_existant_role(self):
         self.data.setup_one_user()
         self.data.setup_role()
         user = self.get_user_by_name('test_user1')
@@ -942,6 +821,5 @@ class KeystoneTest(FunctionalTest):
         role = self.get_role_by_name(self.data.role_name)
         _, body = self.client.create_role_ref(user['id'], role['id'], tenant['id'])
         role = body['role']
-        resp, body = self.client.delete_role_ref(user['id'], '999999')
-        self.assertEquals('404', resp['status'])
-        messages.append(('test_delete_user_role_with_not_exist_role', body))
+        self.assertRaises(exceptions.NotFound, self.client.delete_role_ref,
+                            user['id'], '999999abc')

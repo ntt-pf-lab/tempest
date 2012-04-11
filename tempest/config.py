@@ -112,8 +112,8 @@ class ComputeConfig(BaseConfig):
         return self.get("tenant_name", "demo")
 
     def tenant_id(self):
-        """Tenant id to use for Nova API requests. Defaults to 'admin'."""
-        return self.get("tenant_id", "admin")
+        """Tenant id of the above tenant."""
+        return self.get("tenant_id", "1")
 
     @property
     def password(self):
@@ -214,6 +214,11 @@ class ComputeAdminConfig(BaseConfig):
         return self.get("tenant_name", "admin")
 
     @property
+    def tenant_id(self):
+        """Tenant id of the above tenant"""
+        return self.get("tenant_id", "1")
+
+    @property
     def password(self):
         """API key to use when authenticating as admin."""
         return self.get("password", "pass")
@@ -292,6 +297,8 @@ class NetworkConfig(object):
     OpenStack Network Service.
     """
 
+    SECTION_NAME = "network"
+
     def __init__(self, conf):
         """Initialize a quantum-specific configuration object."""
         self.conf = conf
@@ -327,6 +334,8 @@ class NetworkConfig(object):
 
 class MySQLConfig(object):
     """Provides configuration information for connecting to MySQL."""
+
+    SECTION_NAME = "mysql"
 
     def __init__(self, conf):
         """Initialize a mysql-specific configuration object."""

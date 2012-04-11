@@ -18,20 +18,21 @@
 
 from tempest.common import rest_client
 import json
+import logging
 import httplib2
+from tempest import exceptions
 from cloudfiles.fjson import json_loads
+LOG = logging.getLogger("tempest.tests.identity.admin.test_identity")
+
 
 class KeystoneClient(object):
 
-    def __init__(self, username, password, url, tenant, config=None):
-        self.client = rest_client.RestClient(username, password, url,
-                                             tenant_name=tenant,
-                                             config=config,
-                                             service="keystone")
-        self.admin_client = rest_client.RestAdminClient(username, password, url,
-                                                        tenant_name=tenant,
-                                                        config=config,
-                                                        service="keystone")
+    def __init__(self, config, username, password, url, tenant=None):
+        self.admin_client = rest_client.RestAdminClient(config, username,
+                                                        password,
+                                                        url,
+                                                        service="identity",
+                                                        tenant_name=tenant)
         self.headers = {'Content-Type': 'application/json',
                         'Accept': 'application/json'}
 
@@ -102,14 +103,13 @@ class KeystoneClient(object):
         body = json.loads(body)
         return resp, body
 
-    def create_role(self, name, description, service_id):
+    def create_role(self, name):
         post_body = {
-            'name': name,
-            'description': description,
-            'serviceId': service_id
+            'name': name
         }
         post_body = json.dumps({'role': post_body})
-        resp, body = self.admin_client.post('OS-KSADM/roles', post_body, self.headers)
+        resp, body = self.admin_client.post(
+                                    'OS-KSADM/roles', post_body, self.headers)
         body = json.loads(body)
         return resp, body
 
@@ -128,12 +128,25 @@ class KeystoneClient(object):
             'tenantId': tenant_id
         }
         post_body = json.dumps({'role': post_body})
-        resp, body = self.admin_client.post('users/%s/roleRefs' % user_id, post_body, self.headers)
+        resp, body = self.admin_client.post(
+                        'users/%s/roleRefs' % user_id, post_body, self.headers)
         body = json.loads(body)
         return resp, body
 
     def delete_role_ref(self, user_id, role_id):
         resp, body = self.admin_client.delete('users/%s/roleRefs/%s' % (user_id, role_id))
+        return resp, body
+
+    def create_service(self, name, service_type, description):
+        post_body = {
+            'name': name,
+            'type': service_type,
+            'description': description
+        }
+        post_body = json.dumps({'OS_KSADM:service': post_body})
+        resp, body = self.admin_client.post('OS-KSADM/services', post_body,
+                                            self.headers)
+        body = json.loads(body)
         return resp, body
 
     def get_services(self):
@@ -143,9 +156,9 @@ class KeystoneClient(object):
         return resp, body
 
 
-class TokenClient(object):
+class TokenClient(rest_client.RestClient):
 
-    def __init__(self, config):
+    def __init__(self, config, username, password, url, tenant=None):
         self.auth_url = config.identity.auth_url
 
     def auth(self, user, password, tenant):
@@ -157,23 +170,10 @@ class TokenClient(object):
                 'tenantName': tenant
             }
         }
-
         headers = {'Content-Type': 'application/json'}
         body = json.dumps(creds)
         resp, body = self.post(self.auth_url,headers=headers, body=body)
         return resp, body
-
-    def post(self, url, body, headers):
-        return self.request('POST', url, headers, body)
-
-    def get(self, url):
-        return self.request('GET', url)
-
-    def delete(self, url):
-        return self.request('DELETE', url)
-
-    def put(self, url, body, headers):
-        return self.request('PUT', url, headers, body)
 
     def request(self, method, url, headers=None, body=None):
         """A simple HTTP request interface."""
@@ -181,9 +181,15 @@ class TokenClient(object):
         if headers == None:
             headers = {}
 
-        resp, body = self.http_obj.request(url, method,
+        resp, resp_body = self.http_obj.request(url, method,
                                            headers=headers, body=body)
-        return resp, body
+
+
+        if resp.status in (401, 403):
+            resp_body = json.loads(resp_body)
+            raise exceptions.Unauthorized(resp_body['error']['message'])
+
+        return resp, resp_body
 
     def get_token(self, user, password, tenant):
         resp, body = self.auth(user, password, tenant)

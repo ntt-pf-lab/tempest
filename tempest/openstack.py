@@ -83,37 +83,7 @@ class Manager(object):
         self.networks_client = QuantumClient(*client_args)
         self.volumes_client = VolumesClient(*client_args)
         self.keystone_client = KeystoneClient(*client_args)
-        #self.tokens_client = TokenClient(self.config)
         self.tokens_client = TokenClient(*client_args)
-
-
-class AltManager(Manager):
-
-    """
-    Manager object that uses the alt_XXX credentials for its
-    managed client objects
-    """
-
-    def __init__(self):
-        self.config = tempest.config.TempestConfig()
-        super(AltManager, self).__init__(self.config.compute.alt_username,
-                                         self.config.compute.alt_password,
-                                         self.config.compute.alt_tenant_name)
-
-
-class AdminManager(Manager):
-
-    """
-    Manager object that uses the alt_XXX credentials for its
-    managed client objects
-    """
-
-    def __init__(self):
-        self.config = tempest.config.TempestConfig()
-        super(AdminManager, self).__init__(self.config.compute_admin.username,
-                                           self.config.compute_admin.password,
-                                           self.config.compute_admin.tenant_name)
-        # TODO(jaypipes): Add Admin-Only client class construction below...
 
 
 class AltManager(Manager):
