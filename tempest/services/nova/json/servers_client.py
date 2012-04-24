@@ -26,7 +26,7 @@ class ServersClient(object):
         flavor_ref (Required): The flavor used to build the server.
         Following optional keyword arguments are accepted:
         adminPass: Sets the initial root password.
-        metadata: A dictionary of values to be used as metadata.
+        meta: A dictionary of values to be used as metadata.
         personality: A list of dictionaries for files to be injected into
         the server.
         security_groups: A list of security group dicts.
@@ -37,25 +37,28 @@ class ServersClient(object):
         accessIPv6: The IPv6 access address for the server.
         min_count: Count of minimum number of instances to launch.
         max_count: Count of maximum number of instances to launch.
+        disk_config: Determines if user or admin controls disk configuration.
         """
         post_body = {
             'name': name,
             'imageRef': image_ref,
-            'flavorRef': flavor_ref,
-            'metadata': kwargs.get('meta'),
-            'personality': kwargs.get('personality'),
-            'adminPass': kwargs.get('adminPass'),
-            'security_groups': kwargs.get('security_groups'),
-            'networks': kwargs.get('networks'),
-            'user_data': kwargs.get('user_data'),
-            'availability_zone': kwargs.get('availability_zone'),
-            'accessIPv4': kwargs.get('accessIPv4'),
-            'accessIPv6': kwargs.get('accessIPv6'),
-            'min_count': kwargs.get('min_count'),
-            'max_count': kwargs.get('max_count'),
-            'key_name': kwargs.get('key_name')
+            'flavorRef': flavor_ref
         }
 
+        for option in ['personality', 'adminPass',
+                        'security_groups', 'networks', 'user_data',
+                        'availability_zone', 'accessIPv4', 'accessIPv6',
+                        'min_count', 'max_count', ('metadata', 'meta'),
+                        ('OS-DCF:diskConfig', 'disk_config')]:
+            if isinstance(option, tuple):
+                post_param = option[0]
+                key = option[1]
+            else:
+                post_param = option
+                key = option
+            value = kwargs.get(key)
+            if value != None:
+                post_body[post_param] = value
         post_body = json.dumps({'server': post_body})
         resp, body = self.client.post('servers', post_body, self.headers)
 
@@ -236,7 +239,7 @@ class ServersClient(object):
                                 post_body, self.headers)
 
     def rebuild(self, server_id, image_ref, name=None, meta=None,
-                personality=None, adminPass=None):
+                personality=None, adminPass=None, disk_config=None):
         """Rebuilds a server with a new image"""
         post_body = {
                 'imageRef': image_ref,
@@ -254,6 +257,9 @@ class ServersClient(object):
         if personality != None:
             post_body['personality'] = personality
 
+        if disk_config != None:
+            post_body['OS-DCF:diskConfig'] = disk_config
+
         post_body = json.dumps({'rebuild': post_body})
         resp, body = self.client.post('servers/%s/action' %
                                       str(server_id), post_body,
@@ -261,13 +267,16 @@ class ServersClient(object):
         body = json.loads(body)
         return resp, body['server']
 
-    def resize(self, server_id, flavor_ref):
+    def resize(self, server_id, flavor_ref, disk_config=None):
         """Changes the flavor of a server."""
         post_body = {
             'resize': {
                 'flavorRef': flavor_ref,
             }
         }
+
+        if disk_config != None:
+            post_body['resize']['OS-DCF:diskConfig'] = disk_config
 
         post_body = json.dumps(post_body)
         resp, body = self.client.post('servers/%s/action' %
