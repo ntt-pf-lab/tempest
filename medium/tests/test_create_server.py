@@ -16,7 +16,6 @@
 # under the License.
 import base64
 import re
-import socket
 import subprocess
 import sys
 
@@ -35,16 +34,12 @@ To test this. Setup environment with the devstack of github.com/ntt-pf-lab/.
 # Inner L2 network, bridge, gateway, dhcp
 NW1= ('10.0.0.0/24', 'br_int', '10.0.0.1', '10.0.0.2')
 NW2 = ('10.0.1.0/24', 'br_int', '10.0.1.1', '10.0.1.2')
-default_config = tempest.config.TempestConfig('etc/medium.conf')
-test_config = tempest.config.TempestConfig('etc/medium_test.conf')
-config = default_config
 environ_processes = []
-quantum_client = None
+networks_client = None
 nw_wrapper = None
 nw1_uuid = None
 nw2_uuid = None
 nova_id = 'nova'
-tenant_id = '1'
 
 def setUpModule(module):
     # environ_processes = module.environ_processes
@@ -53,16 +48,19 @@ def setUpModule(module):
     Create networks.
 
     """
-    os = openstack.Manager(config=default_config)
-    quantum_client = os.quantum_client
-    nw_wrapper = NetworkWrapper(default_config)
+    os = openstack.AdminManager()
+    nw_wrapper = NetworkWrapper()
+    config = tempest.config.TempestConfig()
+    tenant_id = config.compute_admin.tenant_id
     # create network 1.
-    _, body = quantum_client.create_network('mt_network1', nova_id)
+    _, body = os.networks_client.create_network('mt_network1', nova_id)
     module.nw1_uuid = body['network']['id']
-    nw_wrapper.create_network('mt_nw1', NW1[0], 255, NW1[1], tenant_id, module.nw1_uuid, NW1[2], NW1[3])
-    _, body = quantum_client.create_network('mt_network2', nova_id)
+    nw_wrapper.create_network('mt_nw1', NW1[0], 255, NW1[1], tenant_id,
+                            module.nw1_uuid, NW1[2], NW1[3])
+    _, body = networks_client.create_network('mt_network2', nova_id)
     module.nw2_uuid = body['network']['id']
-    nw_wrapper.create_network('mt_nw2', NW2[0], 255, NW2[1], tenant_id, module.nw2_uuid, NW2[2], NW2[3])
+    nw_wrapper.create_network('mt_nw2', NW2[0], 255, NW2[1], tenant_id,
+                            module.nw2_uuid, NW2[2], NW2[3])
 
 
 def tearDownModule(module):
@@ -71,21 +69,22 @@ def tearDownModule(module):
     Remove networks.
 
     """
-    os = openstack.Manager(config=default_config)
-    quantum_client = os.quantum_client
-    _, body = quantum_client.delete_network(module.nw1_uuid)
-    _, body = quantum_client.delete_network(module.nw2_uuid)
-    nw_wrapper = NetworkWrapper(default_config)
+    os = openstack.AdminManager()
+    networks_client = os.networks_client
+    _, body = networks_client.delete_network(module.nw1_uuid)
+    _, body = networks_client.delete_network(module.nw2_uuid)
+    nw_wrapper = NetworkWrapper()
     nw_wrapper.delete_network(module.nw1_uuid)
     nw_wrapper.delete_network(module.nw2_uuid)
 
 
 class NetworkWrapper(object):
-    def __init__(self, config):
-        self.path = config.compute.source_dir
+    def __init__(self):
+        self.config = tempest.config.TempestConfig()
+        self.path = self.config.compute.source_dir
 
     def _nova_manage_network(self, action, params):
-        flags = "--flagfile=etc/nova.conf"
+        flags = "--flagfile=%s" % self.config.compute.config
         cmd = "bin/nova-manage %s network %s %s" % (flags, action, params)
         print "Running command %s" % cmd
         result = subprocess.check_output(cmd, cwd=self.path, shell=True)
@@ -93,8 +92,8 @@ class NetworkWrapper(object):
 
     def create_network(self, label, ip_range, size, bridge, tenant, uuid, gw, dhcp):
         params = "--label=%s --fixed_range_v4=%s --num_networks=1 --network_size=%s\
- --bridge_interface=%s --project_id=%s --uuid=%s --gateway=%s --dhcp_server=%s --host=%s" %\
-         (label, ip_range, size, bridge, tenant, uuid, gw, dhcp, socket.gethostname())
+ --bridge_interface=%s --project_id=%s --uuid=%s --gateway=%s" %\
+         (label, ip_range, size, bridge, tenant, uuid, gw)
         return self._nova_manage_network('create', params)
 
     def delete_network(self, uuid):
@@ -103,12 +102,9 @@ class NetworkWrapper(object):
 
 class FunctionalTest(unittest.TestCase):
 
-    config = default_config
-    config2 = test_config
-
     def setUp(self):
-        self.os = openstack.Manager(config=self.config)
-        self.os2 = openstack.Manager(config=self.config2)
+        self.os = openstack.AdminManager()
+        self.os2 = openstack.Manager()
         self.testing_processes = []
 
     def tearDown(self):
