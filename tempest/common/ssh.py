@@ -1,7 +1,6 @@
 import time
 import socket
 import warnings
-from tempest import exceptions
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -10,11 +9,13 @@ with warnings.catch_warnings():
 
 class Client(object):
 
-    def __init__(self, host, username, password, timeout=60):
+    def __init__(self, host, username, password, timeout=300,
+                 channel_timeout=10):
         self.host = host
         self.username = username
         self.password = password
         self.timeout = int(timeout)
+        self.channel_timeout = int(channel_timeout)
 
     def _get_ssh_connection(self):
         """Returns an ssh connection to the specified host"""
@@ -27,7 +28,8 @@ class Client(object):
         while not self._is_timed_out(self.timeout, _start_time):
             try:
                 ssh.connect(self.host, username=self.username,
-                    password=self.password, timeout=20)
+                    password=self.password, look_for_keys=False,
+                    timeout=20)
                 _timeout = False
                 break
             except socket.error:
@@ -36,9 +38,7 @@ class Client(object):
                 time.sleep(15)
                 continue
         if _timeout:
-            raise exceptions.SSHTimeout(host=self.host,
-                                        user=self.username,
-                                        password=self.password)
+            raise socket.error("SSH connect timed out")
         return ssh
 
     def _is_timed_out(self, timeout, start_time):
@@ -64,11 +64,22 @@ class Client(object):
         :returns: data read from standard output of the command
 
         """
-        ssh = self._get_ssh_connection()
-        stdin, stdout, stderr = ssh.exec_command(cmd)
-        output = stdout.read()
-        ssh.close()
-        return output
+        try:
+            ssh = self._get_ssh_connection()
+            stdin, stdout, stderr = ssh.exec_command(cmd)
+            stdin.flush()
+            stdin.channel.shutdown_write()
+            status = stdout.channel.recv_exit_status()
+            stdout.channel.settimeout(self.channel_timeout)
+            try:
+                output = stdout.read()
+            except socket.timeout:
+                if status == 0:
+                    return None, status
+            ssh.close()
+            return status, output
+        except:
+            raise
 
     def test_connection_auth(self):
         """ Returns true if ssh can connect to server"""

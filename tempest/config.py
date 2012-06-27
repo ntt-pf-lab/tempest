@@ -229,6 +229,16 @@ class ComputeConfig(BaseConfig):
         """Level for logging compute API calls."""
         return self.get("log_level", 'ERROR')
 
+    @property
+    def source_dir(self):
+        """Path of nova source directory"""
+        return self.get("source_dir", "/opt/stack/nova")
+
+    @property
+    def config(self):
+        """Path of nova configuration file"""
+        return self.get("config", "/etc/nova/nova.conf")
+
 
 class ComputeAdminConfig(BaseConfig):
 
@@ -308,6 +318,29 @@ class NetworkConfig(BaseConfig):
         return self.get("api_version", "v1.1")
 
 
+class WhiteBoxConfig(BaseConfig):
+    """Provides configuration information required by white-box tests to access
+    OpenStack internals
+    """
+
+    SECTION_NAME = "whitebox"
+
+    @property
+    def db_host(self):
+        """Host IP of the OpenStack database server"""
+        return self.get("db_host", "localhost")
+
+    @property
+    def db_username(self):
+        """User of OpenStack database server"""
+        return self.get("db_username", "root")
+
+    @property
+    def db_password(self):
+        """Password of database user"""
+        return self.get("db_password", "nova")
+
+
 # TODO(jaypipes): Move this to a common utils (not data_utils...)
 def singleton(cls):
     """Simple wrapper for classes that should only have a single instance"""
@@ -356,6 +389,7 @@ class TempestConfig:
         self.identity_admin = IdentityAdminConfig(self._conf)
         self.images = ImagesConfig(self._conf)
         self.network = NetworkConfig(self._conf)
+        self.whitebox = WhiteBoxConfig(self._conf)
 
     def load_config(self, path):
         """Read configuration from given path and return a config object."""

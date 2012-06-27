@@ -92,3 +92,7 @@ class SSHTimeout(TempestException):
 
 class ServerUnreachable(TempestException):
     message = "The server is not reachable via the configured network"
+
+
+class SQLException(TempestException):
+    message = "MySQL error: %(message)s"
