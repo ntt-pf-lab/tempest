@@ -229,16 +229,6 @@ class ComputeConfig(BaseConfig):
         """Level for logging compute API calls."""
         return self.get("log_level", 'ERROR')
 
-    @property
-    def source_dir(self):
-        """Path of nova source directory"""
-        return self.get("source_dir", "/opt/stack/nova")
-
-    @property
-    def config(self):
-        """Path of nova configuration file"""
-        return self.get("config", "/etc/nova/nova.conf")
-
 
 class ComputeAdminConfig(BaseConfig):
 
@@ -339,6 +329,21 @@ class WhiteBoxConfig(BaseConfig):
     def db_password(self):
         """Password of database user"""
         return self.get("db_password", "nova")
+
+    @property
+    def compute_source_dir(self):
+        """Path of nova source directory"""
+        return self.get("compute_source_dir", "/opt/stack/nova")
+
+    @property
+    def compute_config_path(self):
+        """Path of nova configuration file"""
+        return self.get("compute_config_path", "/etc/nova/nova.conf")
+
+    @property
+    def compute_bin_dir(self):
+        """Directory containing nova binaries such as nova-manage"""
+        return self.get("compute_binary_dir", "/usr/local/bin/")
 
 
 # TODO(jaypipes): Move this to a common utils (not data_utils...)

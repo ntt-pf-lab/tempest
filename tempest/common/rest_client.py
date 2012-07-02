@@ -41,6 +41,7 @@ class RestClient(object):
         self.service = None
         self.token = None
         self.base_url = None
+        self.tenant_id = None
         self.config = config
         self.region = 0
         self.endpoint_url = 'publicURL'
@@ -132,7 +133,7 @@ class RestClient(object):
             for ep in auth_data['serviceCatalog']:
                 if ep["type"] == service:
                     mgmt_url = ep['endpoints'][self.region][self.endpoint_url]
-                    tenant_id = auth_data['token']['tenant']['id']
+                    self.tenant_id = auth_data['token']['tenant']['id']
                     break
 
             if mgmt_url == None:
@@ -142,7 +143,7 @@ class RestClient(object):
                 # Keystone does not return the correct endpoint for
                 # quantum. Handle this separately.
                 mgmt_url = mgmt_url + self.config.network.api_version + \
-                             "/tenants/" + tenant_id
+                             "/tenants/" + self.tenant_id
 
             return token, mgmt_url
 

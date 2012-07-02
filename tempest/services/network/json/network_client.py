@@ -58,18 +58,18 @@ class NetworkClient(RestClient):
         }
         headers = {'Content-Type': 'application/json'}
         body = json.dumps(post_body)
-        resp, body = self.post('networks/%s/ports.json' % network_id,
+        resp, body = self.post('networks/%s/ports' % network_id,
                                         headers=headers, body=body)
         body = json.loads(body)
         return resp, body
 
     def delete_port(self, network_id, port_id):
-        resp, body = self.delete('networks/%s/ports/%s.json' %
+        resp, body = self.delete('networks/%s/ports/%s' %
                                             (network_id, port_id))
         return resp, body
 
     def list_ports(self, network_id):
-        resp, body = self.get('networks/%s/ports.json' % network_id)
+        resp, body = self.get('networks/%s/ports' % network_id)
         body = json.loads(body)
         return resp, body
 
@@ -87,17 +87,17 @@ class NetworkClient(RestClient):
         }
         headers = {'Content-Type': 'application/json'}
         body = json.dumps(post_body)
-        url = 'networks/%s/ports/%s/attachment.json' % (network_id, port_id)
+        url = 'networks/%s/ports/%s/attachment' % (network_id, port_id)
         resp, body = self.put(url, headers=headers, body=body)
         return resp, body
 
     def detach_port(self, network_id, port_id):
-        url = 'networks/%s/ports/%s/attachment.json' % (network_id, port_id)
+        url = 'networks/%s/ports/%s/attachment' % (network_id, port_id)
         resp, body = self.delete(url)
         return resp, body
 
     def list_port_attachment(self, network_id, port_id):
-        url = 'networks/%s/ports/%s/attachment.json' % (network_id, port_id)
+        url = 'networks/%s/ports/%s/attachment' % (network_id, port_id)
         resp, body = self.get(url)
         body = json.loads(body)
         return resp, body
