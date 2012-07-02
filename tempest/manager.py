@@ -19,6 +19,7 @@ import os
 import sys
 import logging
 import subprocess
+import MySQLdb.cursors
 import MySQLdb as mdb
 from contextlib import closing
 
@@ -149,7 +150,9 @@ class WhiteBoxManager(Manager):
         db_host = self.config.whitebox.db_host
         try:
             self.conn = mdb.connect(host=db_host, user=db_username,
-                               passwd=db_password, db=database)
+                                    passwd=db_password, db=database,
+                                    cursorclass=MySQLdb.cursors.DictCursor)
+            self.conn.autocommit(True)
         except mdb.Error, e:
             raise exceptions.SQLException(message=e.args[1])
 
@@ -162,15 +165,19 @@ class WhiteBoxManager(Manager):
             # Extract the first word i.e operation from the sql query
             sql_op = sql.split(' ', 1)[0].upper()
 
-            with closing(self.conn.cursor(mdb.cursors.DictCursor)) as cursor:
+            with closing(self.conn.cursor()) as cursor:
                 cursor.execute(sql, args)
 
                 if sql_op in ('INSERT', 'UPDATE', 'DELETE'):
-                    self.conn.commit()
-                if num_records == 'one':
-                    record_set = cursor.fetchone()
-                elif num_records == 'all':
-                    record_set = cursor.fetchall()
+                    try:
+                        self.conn.commit()
+                    except:
+                        self.conn.rollback()
+                elif sql_op == 'SELECT':
+                    if num_records == 'one':
+                        record_set = cursor.fetchone()
+                    elif num_records == 'all':
+                        record_set = cursor.fetchall()
                 return record_set
 
         except mdb.Error, e:
@@ -181,10 +188,7 @@ class WhiteBoxManager(Manager):
         if not(os.path.isdir(self.nova_dir)):
                 sys.exit("Cannot find Nova source: %s" % self.nova_dir)
 
-        flag_file = "--config-file=%s" % self.config.compute.config
-        cmd = "bin/nova-manage %s %s %s %s" % (flag_file, category, action,
-                                                    params)
-
+        cmd = "bin/nova-manage %s %s %s" % (category, action, params)
         result = subprocess.check_output(cmd, cwd=self.nova_dir, shell=True)
         return result
 

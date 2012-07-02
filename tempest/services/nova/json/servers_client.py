@@ -352,4 +352,9 @@ class ServersClient(RestClient):
         """Detaches a volume from a server instance"""
         resp, body = self.delete('servers/%s/os-volume_attachments/%s' %
                                  (server_id, volume_id))
+
+    def list_server_virtual_interfaces(self, server_id):
+        resp, body = self.get("servers/%s/os-virtual-interfaces" %
+                                     str(server_id))
+        body = json.loads(body)
         return resp, body
