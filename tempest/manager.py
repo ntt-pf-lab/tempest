@@ -150,8 +150,8 @@ class WhiteBoxManager(Manager):
         db_host = self.config.whitebox.db_host
         try:
             self.conn = mdb.connect(host=db_host, user=db_username,
-                               passwd=db_password, db=database,
-                               cursorclass=MySQLdb.cursors.DictCursor)
+                                    passwd=db_password, db=database,
+                                    cursorclass=MySQLdb.cursors.DictCursor)
             self.conn.autocommit(True)
         except mdb.Error, e:
             raise exceptions.SQLException(message=e.args[1])
